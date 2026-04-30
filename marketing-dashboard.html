@@ -767,8 +767,8 @@ function renderAdTable(rows){
     th='<th>Ad Set</th><th>Cost(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>曝光</th><th>點擊</th>';
     tdFn=r=>`<td class="aname" title="${r.name}">${r.name}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.cpc>0?'$'+r.cpc.toFixed(3):'—'}</td><td>${r.ctr>0?(r.ctr*100).toFixed(2)+'%':'—'}</td><td>${r.displays?Math.round(r.displays).toLocaleString():'—'}</td><td>${r.clicks?Math.round(r.clicks).toLocaleString():'—'}</td>`;
   } else {
-    th='<th>廣告活動</th><th>費用(TWD)</th><th>ROAS</th><th>曝光</th><th>點擊</th><th>轉換</th><th>類型</th>';
-    tdFn=r=>`<td class="aname" title="${r.name}">${r.name}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.impressions?Math.round(r.impressions).toLocaleString():'—'}</td><td>${r.clicks?Math.round(r.clicks).toLocaleString():'—'}</td><td>${r.conversions?r.conversions.toFixed(1):'—'}</td><td style="font-size:11px;color:var(--tx3)">${r.type||'—'}</td>`;
+    th='<th>廣告活動</th><th>費用(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>加購物車</th><th>開始結帳</th><th>親臨門市</th><th>類型</th>';
+    tdFn=r=>`<td class="aname" title="${r.name}">${r.name}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.cpc>0?'$'+r.cpc.toFixed(2):'—'}</td><td>${r.ctr>0?(r.ctr*100).toFixed(2)+'%':'—'}</td><td>${r.cart>0?Math.round(r.cart):'—'}</td><td>${r.checkout>0?Math.round(r.checkout):'—'}</td><td>${r.store>0?Math.round(r.store):'—'}</td><td style="font-size:11px;color:var(--tx3)">${r.type||'—'}</td>`;
   }
   document.getElementById('adTbl').innerHTML=`<table class="gtbl"><thead><tr>${th}</tr></thead><tbody>${sorted.map(r=>`<tr>${tdFn(r)}</tr>`).join('')}</tbody></table>`;
 }
@@ -829,14 +829,24 @@ function parseGoogle(wb){
   let hIdx=0;for(let i=0;i<Math.min(arr.length,8);i++){if(arr[i].some(v=>String(v)==='廣告活動狀態')){hIdx=i;break;}}
   const hdrs=arr[hIdx].map(v=>String(v));
   const iN=hdrs.findIndex(h=>h.includes('廣告活動')&&!h.includes('狀態')&&!h.includes('類型'));
-  const iSp=hdrs.findIndex(h=>h==='費用'),iIm=hdrs.findIndex(h=>h==='曝光'),iCl=hdrs.findIndex(h=>h==='點擊');
-  const iCo=hdrs.findIndex(h=>h==='轉換'&&!h.includes('價值')&&!h.includes('率')&&!h.includes('費')&&!h.includes('平台'));
-  const iR=hdrs.findIndex(h=>h==='轉換價值/費用'),iT=hdrs.findIndex(h=>h.includes('廣告活動類型'));
+  const iSp=hdrs.findIndex(h=>h==='費用');
+  const iIm=hdrs.findIndex(h=>h==='曝光');
+  const iCl=hdrs.findIndex(h=>h==='點擊');
+  const iCpc=hdrs.findIndex(h=>h==='平均單次點擊出價');
+  const iCtr=hdrs.findIndex(h=>h==='點閱率');
+  const iRoas=hdrs.findIndex(h=>h==='轉換價值/費用'&&!h.includes('平台'));
+  const iCart=hdrs.findIndex(h=>h==='加入購物車');
+  const iCheckout=hdrs.findIndex(h=>h==='開始結帳');
+  const iStore=hdrs.findIndex(h=>h==='光顧門市');
+  const iT=hdrs.findIndex(h=>h.includes('廣告活動類型'));
   const rows=[];
   for(let i=hIdx+1;i<arr.length;i++){
     const r=arr[i];const name=String(r[iN]||'').trim();if(!name||name==='廣告活動')continue;
     const spend=pNum(r[iSp]);if(!spend)continue;
-    rows.push({name,spend,roas:pNum(r[iR]),impressions:pNum(r[iIm]),clicks:pNum(r[iCl]),conversions:pNum(r[iCo]),type:String(r[iT]||'')});
+    const clicks=pNum(r[iCl]),impressions=pNum(r[iIm]);
+    const cpc=iCpc>=0?pNum(r[iCpc]):(clicks>0?spend/clicks:0);
+    const ctr=iCtr>=0?pNum(r[iCtr]):(impressions>0?clicks/impressions:0);
+    rows.push({name,spend,roas:pNum(r[iRoas]),impressions,clicks,cpc,ctr,cart:pNum(r[iCart]),checkout:pNum(r[iCheckout]),store:pNum(r[iStore]),type:String(r[iT]||'')});
   }
   return rows;
 }
