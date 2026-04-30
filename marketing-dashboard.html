@@ -70,7 +70,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 .gtbl td{padding:8px 12px;border-bottom:1px solid var(--bd);vertical-align:middle}
 .gtbl tr:last-child td{border-bottom:none}
 .gtbl tr:hover td{background:var(--sf2)}
-.tname{max-width:100%;white-space:normal;overflow:visible;text-overflow:unset;font-size:12px;word-break:break-all}
+.tname{max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
 .barmini{height:5px;border-radius:3px;background:#4f86f7;margin-top:3px}
 .barmini-g{background:var(--goo)}.barmini-o{background:#f4845f}
 .range-bar{display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center}
@@ -253,6 +253,21 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     </div>
     <div class="sec">月份對比一覽</div>
     <div class="tbl-wrap" id="ga-compare-tbl"><div class="empty" style="padding:1.5rem"><div class="ico">📊</div>需要至少 2 個月資料</div></div>
+    <div class="sec">累計排名</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:1rem">
+      <div class="tbl-wrap" style="margin-bottom:0">
+        <div style="padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);background:var(--sf2);border-bottom:1px solid var(--bd)">Google Ads 活動 累計</div>
+        <div id="trend-gads"><div class="empty" style="padding:1.5rem"><div class="ico">📋</div>需要資料</div></div>
+      </div>
+      <div class="tbl-wrap" style="margin-bottom:0">
+        <div style="padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);background:var(--sf2);border-bottom:1px solid var(--bd)">熱門頁面 累計</div>
+        <div id="trend-pages"><div class="empty" style="padding:1.5rem"><div class="ico">📄</div>需要資料</div></div>
+      </div>
+      <div class="tbl-wrap" style="margin-bottom:0">
+        <div style="padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);background:var(--sf2);border-bottom:1px solid var(--bd)">自然搜尋關鍵字 累計</div>
+        <div id="trend-kw"><div class="empty" style="padding:1.5rem"><div class="ico">🔍</div>需要資料</div></div>
+      </div>
+    </div>
   </div>
 
   <div id="gv-manage" style="display:none">
@@ -608,6 +623,40 @@ async function renderGaTrend(){
   let tbl='<table class="gtbl"><thead><tr><th>月份</th><th>活躍使用者</th><th>新使用者</th><th>事件計數</th><th>主要來源</th></tr></thead><tbody>';
   months.forEach((r,i)=>{const prev=months[i-1];const delta=(v,pv)=>{if(!pv||!prev||!v)return '';const p=((v-pv)/pv*100).toFixed(1);const up=parseFloat(p)>=0;return `<span class="${up?'up':'dn'}" style="font-size:10px;margin-left:4px">${up?'↑':'↓'}${Math.abs(p)}%</span>`;};const topSrc=r.data.sources&&r.data.sources[0]?r.data.sources[0].s:'—';tbl+=`<tr><td style="font-weight:600">${CY}/${MZ[r.month]}</td><td>${fmtN(r.data.users)}${delta(r.data.users,prev?.data.users)}</td><td>${fmtN(r.data.newUsers)}${delta(r.data.newUsers,prev?.data.newUsers)}</td><td>${fmtN(r.data.events)}${delta(r.data.events,prev?.data.events)}</td><td style="font-size:11px;color:var(--tx2)">${topSrc}</td></tr>`;});
   document.getElementById('ga-compare-tbl').innerHTML=tbl+'</tbody></table>';
+
+  // Cumulative rankings
+  // Google Ads
+  const gadsMap={};
+  months.forEach(r=>(r.data.gads||[]).forEach(g=>{gadsMap[g.name]=(gadsMap[g.name]||0)+g.sessions;}));
+  const gadsRanked=Object.entries(gadsMap).sort((a,b)=>b[1]-a[1]);
+  if(gadsRanked.length){
+    const maxG=gadsRanked[0][1];
+    let h='<table class="gtbl"><thead><tr><th>#</th><th>廣告活動</th><th>累計工作階段</th></tr></thead><tbody>';
+    gadsRanked.forEach(([name,v],i)=>{const bw=((v/maxG)*100).toFixed(1);h+=`<tr><td style="color:var(--tx3);font-size:12px">${i+1}</td><td><div class="tname">${name}</div><div class="barmini barmini-g" style="width:${bw}%"></div></td><td>${fmtN(v)}</td></tr>`;});
+    document.getElementById('trend-gads').innerHTML=h+'</tbody></table>';
+  }
+
+  // Pages
+  const pagesMap={};
+  months.forEach(r=>(r.data.pages||[]).forEach(p=>{pagesMap[p.name]=(pagesMap[p.name]||0)+p.views;}));
+  const pagesRanked=Object.entries(pagesMap).sort((a,b)=>b[1]-a[1]);
+  if(pagesRanked.length){
+    const maxP=pagesRanked[0][1];
+    let h='<table class="gtbl"><thead><tr><th>#</th><th>頁面</th><th>累計瀏覽</th></tr></thead><tbody>';
+    pagesRanked.forEach(([name,v],i)=>{const bw=((v/maxP)*100).toFixed(1);h+=`<tr><td style="color:var(--tx3);font-size:12px">${i+1}</td><td><div class="tname">${name}</div><div class="barmini" style="width:${bw}%"></div></td><td>${fmtN(v)}</td></tr>`;});
+    document.getElementById('trend-pages').innerHTML=h+'</tbody></table>';
+  }
+
+  // Keywords
+  const kwMap={};
+  months.forEach(r=>(r.data.keywords||[]).forEach(k=>{kwMap[k.kw]=(kwMap[k.kw]||0)+k.clicks;}));
+  const kwRanked=Object.entries(kwMap).sort((a,b)=>b[1]-a[1]);
+  if(kwRanked.length){
+    const maxK=kwRanked[0][1];
+    let h='<table class="gtbl"><thead><tr><th>#</th><th>關鍵字</th><th>累計點擊</th></tr></thead><tbody>';
+    kwRanked.forEach(([kw,v],i)=>{const bw=((v/maxK)*100).toFixed(1);h+=`<tr><td style="color:var(--tx3);font-size:12px">${i+1}</td><td><div class="tname">${kw}</div><div class="barmini barmini-o" style="width:${bw}%"></div></td><td>${fmtN(v)}</td></tr>`;});
+    document.getElementById('trend-kw').innerHTML=h+'</tbody></table>';
+  }
 }
 
 // ── Month Manager ─────────────────────────────────────────────
