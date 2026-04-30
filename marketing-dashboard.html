@@ -615,19 +615,19 @@ function parseGaAcq(text){
     }
     // 自然搜尋關鍵字
     if(l.startsWith('自然 Google 搜尋查詢')){
-      let j=i+1;
-      while(j<lines.length&&lines[j]&&!lines[j].startsWith('#')&&lines[j].trim()){
+      let j=i+1,cnt=0;
+      while(j<lines.length&&lines[j]&&!lines[j].startsWith('#')&&lines[j].trim()&&cnt<30){
         const parts=lines[j].split(',');
-        if(parts.length>=2){const v=parseInt(parts[parts.length-1])||0;if(v>0)result.keywords.push({kw:parts[0].trim(),clicks:v});}
+        if(parts.length>=2){const v=parseInt(parts[parts.length-1])||0;if(v>0){result.keywords.push({kw:parts[0].trim(),clicks:v});cnt++;}}
         j++;
       }
     }
     // 手動來源
     if(l.startsWith('工作階段手動來源')){
-      let j=i+1;
-      while(j<lines.length&&lines[j]&&!lines[j].startsWith('#')&&lines[j].trim()){
+      let j=i+1,cnt=0;
+      while(j<lines.length&&lines[j]&&!lines[j].startsWith('#')&&lines[j].trim()&&cnt<50){
         const parts=lines[j].split(',');
-        if(parts.length>=2){const v=parseInt(parts[parts.length-1])||0;if(v>0)result.manual_sources.push({s:parts[0].trim(),v});}
+        if(parts.length>=2){const v=parseInt(parts[parts.length-1])||0;if(v>0){result.manual_sources.push({s:parts[0].trim(),v});cnt++;}}
         j++;
       }
     }
