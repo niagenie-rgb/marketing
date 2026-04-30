@@ -168,10 +168,88 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 </div>
 
 <div class="main-tabs">
+  <button class="mtab" data-tab="overview">總覽</button>
   <button class="mtab active" data-tab="ga4">GA4 流量</button>
   <button class="mtab" data-tab="ad">廣告成效</button>
   <button class="mtab" data-tab="proj">專案時程</button>
   <button class="mtab" data-tab="notes">備注</button>
+</div>
+
+<!-- 總覽 -->
+<div class="tab-panel" id="panel-overview">
+  <!-- 日期範圍選擇 -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap">
+    <div style="display:flex;gap:4px" id="ov-range-btns">
+      <button class="rbtn active" data-ovr="month">本月</button>
+      <button class="rbtn" data-ovr="q">本季</button>
+      <button class="rbtn" data-ovr="year">本年</button>
+      <button class="rbtn" data-ovr="custom">自訂</button>
+    </div>
+    <div id="ov-custom" style="display:none;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <select id="ov-y1" style="padding:5px 8px;font-size:12px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit"></select>
+      <select id="ov-m1" style="padding:5px 8px;font-size:12px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit"></select>
+      <span style="font-size:12px;color:var(--tx3)">至</span>
+      <select id="ov-y2" style="padding:5px 8px;font-size:12px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit"></select>
+      <select id="ov-m2" style="padding:5px 8px;font-size:12px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit"></select>
+      <button class="rbtn active" onclick="renderOverview()" style="font-size:12px">套用</button>
+    </div>
+    <span id="ov-range-label" style="font-size:12px;color:var(--tx3);margin-left:4px"></span>
+  </div>
+
+  <!-- 平台花費指標卡 -->
+  <div class="sec">跨平台總覽</div>
+  <div id="ov-platform-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:1rem"></div>
+
+  <!-- 平台花費比較圖 + 指標切換圖 -->
+  <div class="cgrid">
+    <div class="ccrd">
+      <div class="ctitle">各平台花費趨勢</div>
+      <div class="cw-tall" id="ov-spend-chart"><div class="empty"><div class="ico">📊</div>載入資料中…</div></div>
+    </div>
+    <div class="ccrd">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;flex-wrap:wrap;gap:6px">
+        <span class="ctitle" style="margin-bottom:0">跨平台指標比較</span>
+        <div style="display:flex;gap:4px;flex-wrap:wrap" id="ov-metric-btns">
+          <button class="cmb active" data-ovm="spend">花費</button>
+          <button class="cmb" data-ovm="roas">ROAS</button>
+          <button class="cmb" data-ovm="cpc">CPC</button>
+          <button class="cmb" data-ovm="ctr">CTR</button>
+        </div>
+      </div>
+      <div class="cw-tall" id="ov-metric-chart"><div class="empty"><div class="ico">📈</div>載入資料中…</div></div>
+    </div>
+  </div>
+
+  <!-- 廣告明細比較 -->
+  <div class="sec">廣告明細比較</div>
+  <div style="display:flex;gap:6px;margin-bottom:.85rem;flex-wrap:wrap;align-items:center">
+    <div id="ov-plat-btns" style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="cmb active" data-ovp="all">全部</button>
+      <button class="cmb" data-ovp="meta"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--meta);margin-right:4px;vertical-align:middle"></span>Meta</button>
+      <button class="cmb" data-ovp="criteo"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cri);margin-right:4px;vertical-align:middle"></span>Criteo</button>
+      <button class="cmb" data-ovp="google"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--goo);margin-right:4px;vertical-align:middle"></span>Google</button>
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-left:auto" id="ov-detail-btns">
+      <button class="cmb active" data-ovd="spend">花費</button>
+      <button class="cmb" data-ovd="roas">ROAS</button>
+      <button class="cmb" data-ovd="cpc">CPC</button>
+      <button class="cmb" data-ovd="ctr">CTR</button>
+    </div>
+  </div>
+  <div class="ccrd" style="margin-bottom:1rem">
+    <div style="height:320px;position:relative" id="ov-detail-chart"><div class="empty"><div class="ico">📊</div>載入資料中…</div></div>
+  </div>
+
+  <!-- GA4 趨勢 -->
+  <div class="sec">GA4 流量趨勢</div>
+  <div class="cgrid">
+    <div class="ccrd"><div class="ctitle">活躍使用者</div><div class="cw" id="ov-ga-users"><div class="empty"><div class="ico">📈</div>載入資料中…</div></div></div>
+    <div class="ccrd"><div class="ctitle">新使用者</div><div class="cw" id="ov-ga-new"><div class="empty"><div class="ico">📈</div>載入資料中…</div></div></div>
+  </div>
+  <div class="cgrid">
+    <div class="ccrd"><div class="ctitle">事件計數</div><div class="cw" id="ov-ga-events"><div class="empty"><div class="ico">📈</div>載入資料中…</div></div></div>
+    <div class="ccrd"><div class="ctitle">各來源趨勢</div><div class="cw" id="ov-ga-src"><div class="empty"><div class="ico">📈</div>載入資料中…</div></div></div>
+  </div>
 </div>
 
 <!-- GA4 -->
@@ -408,6 +486,7 @@ function K(y,m){return y+'-'+String(m).padStart(2,'0')}
   const y=new Date().getFullYear();
   for(let i=y-1;i<=y+1;i++){const o=document.createElement('option');o.value=i;o.textContent=i;if(i===y)o.selected=true;sel.appendChild(o);}
   document.getElementById('ga-m-sel').value=CM;
+  initOverview();
   renderAll();
 })();
 
@@ -416,6 +495,7 @@ document.querySelectorAll('.mtab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.mtab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');document.getElementById('panel-'+t.dataset.tab).classList.add('active');
+  if(t.dataset.tab==='overview')renderOverview();
 }));
 document.getElementById('prevBtn').onclick=()=>{CM--;if(CM<0){CM=11;CY--;}renderAll()};
 document.getElementById('nextBtn').onclick=()=>{CM++;if(CM>11){CM=0;CY++;}renderAll()};
@@ -1195,6 +1275,290 @@ window.saveNotes=async function(){
   else{b.textContent='❌ 失敗';setSyncStatus('err','儲存失敗');}
   setTimeout(()=>b.textContent='儲存備注',2000);
 };
+
+// ── Overview ──────────────────────────────────────────────────
+let OV_RANGE='month'; // month | q | year | custom
+let OV_METRIC='spend';
+let OV_PLAT='all';
+let OV_DETAIL='spend';
+let OV_CUSTOM_Y1,OV_CUSTOM_M1,OV_CUSTOM_Y2,OV_CUSTOM_M2;
+
+function ovGetMonths(){
+  const now=new Date();
+  const ty=now.getFullYear(),tm=now.getMonth();
+  if(OV_RANGE==='month') return [{y:ty,m:tm}];
+  if(OV_RANGE==='q'){
+    const qStart=Math.floor(tm/3)*3;
+    return Array.from({length:tm-qStart+1},(_,i)=>({y:ty,m:qStart+i}));
+  }
+  if(OV_RANGE==='year'){
+    return Array.from({length:tm+1},(_,i)=>({y:ty,m:i}));
+  }
+  if(OV_RANGE==='custom'){
+    const y1=OV_CUSTOM_Y1||ty,m1=OV_CUSTOM_M1||0;
+    const y2=OV_CUSTOM_Y2||ty,m2=OV_CUSTOM_M2||tm;
+    const res=[];
+    let cy=y1,cm=m1;
+    while(cy<y2||(cy===y2&&cm<=m2)){res.push({y:cy,m:cm});cm++;if(cm>11){cm=0;cy++;}}
+    return res;
+  }
+  return [{y:ty,m:tm}];
+}
+
+function ovRangeLabel(){
+  const months=ovGetMonths();
+  if(months.length===1) return `${months[0].y}年${MZ[months[0].m]}`;
+  return `${months[0].y}年${MZ[months[0].m]} ～ ${months[months.length-1].y}年${MZ[months[months.length-1].m]}（${months.length}個月）`;
+}
+
+async function renderOverview(){
+  document.getElementById('ov-range-label').textContent=ovRangeLabel();
+  const months=ovGetMonths();
+
+  // 撈所有月份的廣告資料
+  const adPromises=months.map(({y,m})=>Promise.all([
+    dbGet('ad_data',y,m,'&platform=eq.meta'),
+    dbGet('ad_data',y,m,'&platform=eq.criteo'),
+    dbGet('ad_data',y,m,'&platform=eq.google'),
+    dbGet('ga4_data',y,m)
+  ]));
+  const allData=await Promise.all(adPromises);
+
+  // 整理每月各平台加總
+  const monthly=months.map(({y,m},i)=>{
+    const [metaRow,criteoRow,googleRow,ga4Row]=allData[i];
+    const sumRows=(rows)=>{
+      if(!rows||!rows.length)return{spend:0,roas:0,cpc:0,ctr:0,clicks:0,impressions:0,revenue:0};
+      let sp=0,rev=0,cl=0,im=0;
+      rows.forEach(r=>{sp+=r.spend||0;rev+=(r.roas||0)*(r.spend||0);cl+=r.clicks||0;im+=r.impressions||0;});
+      return{spend:sp,roas:sp>0&&rev>0?rev/sp:0,cpc:cl>0?sp/cl:0,ctr:im>0?cl/im:0};
+    };
+    return{
+      label:MZ[m],y,m,
+      meta:sumRows(metaRow?.data?.rows),
+      criteo:sumRows(criteoRow?.data?.rows),
+      google:sumRows(googleRow?.data?.rows),
+      ga4:ga4Row?.data||null
+    };
+  });
+
+  // 平台加總（整個範圍）
+  const platTotal={meta:{spend:0,rev:0,cl:0,im:0},criteo:{spend:0,rev:0,cl:0,im:0},google:{spend:0,rev:0,cl:0,im:0}};
+  monthly.forEach(mo=>{
+    ['meta','criteo','google'].forEach(p=>{
+      platTotal[p].spend+=mo[p].spend;
+      platTotal[p].rev+=mo[p].roas*mo[p].spend;
+      platTotal[p].cl+=mo[p].cpc>0?mo[p].spend/mo[p].cpc:0;
+      platTotal[p].im+=mo[p].ctr>0&&mo[p].cpc>0?(mo[p].spend/mo[p].cpc)/mo[p].ctr:0;
+    });
+  });
+  const platFinal={};
+  ['meta','criteo','google'].forEach(p=>{
+    const t=platTotal[p];
+    platFinal[p]={spend:t.spend,roas:t.spend>0&&t.rev>0?t.rev/t.spend:0,cpc:t.cl>0?t.spend/t.cl:0,ctr:t.im>0?t.cl/t.im:0};
+  });
+
+  // ── 平台 KPI 卡 ──
+  const platColors={meta:'var(--meta)',criteo:'var(--cri)',google:'var(--goo)'};
+  const platNames={meta:'Meta',criteo:'Criteo',google:'Google Ads'};
+  let kpiHtml='';
+  ['meta','criteo','google'].forEach(p=>{
+    const d=platFinal[p];
+    if(!d.spend)return;
+    kpiHtml+=`<div class="kc" style="border-left:3px solid ${platColors[p]}">
+      <div class="kc-l">${platNames[p]}</div>
+      <div class="kc-v">$${Math.round(d.spend).toLocaleString()}</div>
+      <div class="kc-s" style="color:var(--tx2)">ROAS ${d.roas>0?d.roas.toFixed(2)+'x':'—'} ｜ CPC ${d.cpc>0?'$'+d.cpc.toFixed(2):'—'} ｜ CTR ${d.ctr>0?(d.ctr*100).toFixed(2)+'%':'—'}</div>
+    </div>`;
+  });
+  const totalSpend=['meta','criteo','google'].reduce((s,p)=>s+platFinal[p].spend,0);
+  if(totalSpend>0)kpiHtml=`<div class="kc" style="border-left:3px solid var(--ac)"><div class="kc-l">總花費</div><div class="kc-v">$${Math.round(totalSpend).toLocaleString()}</div><div class="kc-s" style="color:var(--tx3)">${ovRangeLabel()}</div></div>`+kpiHtml;
+  document.getElementById('ov-platform-kpis').innerHTML=kpiHtml||'<div style="color:var(--tx3);font-size:13px;padding:.5rem">此期間無廣告資料</div>';
+
+  // ── 各平台花費趨勢折線圖 ──
+  const labels=monthly.map(mo=>mo.label);
+  killChart('ov-spend');
+  document.getElementById('ov-spend-chart').innerHTML='<canvas id="ov-spend"></canvas>';
+  CHARTS['ov-spend']=new Chart(document.getElementById('ov-spend'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Meta',data:monthly.map(mo=>mo.meta.spend),backgroundColor:'#1877f2cc',borderRadius:4},
+      {label:'Criteo',data:monthly.map(mo=>mo.criteo.spend),backgroundColor:'#f15a22cc',borderRadius:4},
+      {label:'Google',data:monthly.map(mo=>mo.google.spend),backgroundColor:'#34a853cc',borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:10}}},scales:{x:{stacked:false,grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>'$'+Math.round(v).toLocaleString(),font:{size:10}}}}}
+  });
+
+  // ── 跨平台指標比較 ──
+  ovRenderMetricChart(monthly,OV_METRIC);
+
+  // ── 廣告明細比較 ──
+  ovRenderDetailChart(months,OV_PLAT,OV_DETAIL);
+
+  // ── GA4 趨勢 ──
+  const ga4Months=monthly.filter(mo=>mo.ga4);
+  const ga4Labels=ga4Months.map(mo=>mo.label);
+  const mkOvLine=(id,label,data,color)=>{
+    killChart(id);
+    if(!data.length){document.getElementById(id).innerHTML=`<div class="empty"><div class="ico">📈</div>此期間無 GA4 資料</div>`;return;}
+    document.getElementById(id).innerHTML=`<canvas id="c-${id}"></canvas>`;
+    CHARTS[id]=new Chart(document.getElementById('c-'+id),{type:'line',data:{labels:ga4Labels,datasets:[{label,data,borderColor:color,backgroundColor:color+'22',fill:true,tension:.35,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:v=>fmtN(v),font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:11}}}}}});
+  };
+  mkOvLine('ov-ga-users','活躍使用者',ga4Months.map(mo=>mo.ga4.users||0),'#4f86f7');
+  mkOvLine('ov-ga-new','新使用者',ga4Months.map(mo=>mo.ga4.newUsers||0),'#58c49a');
+  mkOvLine('ov-ga-events','事件計數',ga4Months.map(mo=>mo.ga4.events||0),'#a78bfa');
+  // 來源趨勢
+  killChart('ov-ga-src');
+  if(ga4Months.length){
+    const srcMap={};ga4Months.forEach(mo=>(mo.ga4.sources||[]).forEach(s=>{srcMap[s.s]=(srcMap[s.s]||0)+s.v;}));
+    const topSrcs=Object.entries(srcMap).sort((a,b)=>b[1]-a[1]).slice(0,4).map(x=>x[0]);
+    document.getElementById('ov-ga-src').innerHTML='<canvas id="c-ov-ga-src"></canvas>';
+    CHARTS['ov-ga-src']=new Chart(document.getElementById('c-ov-ga-src'),{type:'line',data:{labels:ga4Labels,datasets:topSrcs.map((src,i)=>({label:src,data:ga4Months.map(mo=>{const c=(mo.ga4.sources||[]).find(s=>s.s===src);return c?c.v:0;}),borderColor:CC[i],backgroundColor:'transparent',tension:.35,pointRadius:3}))},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:10}}},scales:{y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:v=>fmtN(v),font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:11}}}}}});
+  } else {document.getElementById('ov-ga-src').innerHTML='<div class="empty"><div class="ico">📈</div>此期間無 GA4 資料</div>';}
+}
+
+function ovRenderMetricChart(monthly,metric){
+  const CFG={
+    spend:{label:'花費(TWD)',get:(mo,p)=>mo[p].spend,fmt:v=>'$'+Math.round(v).toLocaleString()},
+    roas:{label:'ROAS',get:(mo,p)=>mo[p].roas,fmt:v=>v.toFixed(2)+'x'},
+    cpc:{label:'CPC',get:(mo,p)=>mo[p].cpc,fmt:v=>'$'+v.toFixed(2)},
+    ctr:{label:'CTR',get:(mo,p)=>mo[p].ctr*100,fmt:v=>v.toFixed(2)+'%'},
+  };
+  const c=CFG[metric]||CFG.spend;
+  const labels=monthly.map(mo=>mo.label);
+  killChart('ov-metric');
+  document.getElementById('ov-metric-chart').innerHTML='<canvas id="ov-metric"></canvas>';
+  CHARTS['ov-metric']=new Chart(document.getElementById('ov-metric'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Meta',data:monthly.map(mo=>c.get(mo,'meta')||0),backgroundColor:'#1877f2cc',borderRadius:4},
+      {label:'Criteo',data:monthly.map(mo=>c.get(mo,'criteo')||0),backgroundColor:'#f15a22cc',borderRadius:4},
+      {label:'Google',data:monthly.map(mo=>c.get(mo,'google')||0),backgroundColor:'#34a853cc',borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:10}},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+c.fmt(ctx.raw)}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>c.fmt(v),font:{size:10}}}}}
+  });
+}
+
+async function ovRenderDetailChart(months,plat,metric){
+  const CFG={
+    spend:{label:'花費(TWD)',get:r=>r.spend,fmt:v=>'$'+Math.round(v).toLocaleString(),tickFmt:v=>'$'+Math.round(v).toLocaleString()},
+    roas:{label:'ROAS',get:r=>r.roas,fmt:v=>v.toFixed(2)+'x',tickFmt:v=>v.toFixed(1)+'x'},
+    cpc:{label:'CPC',get:r=>r.cpc,fmt:v=>'$'+v.toFixed(2),tickFmt:v=>'$'+v.toFixed(0)},
+    ctr:{label:'CTR',get:r=>r.ctr*100,fmt:v=>v.toFixed(2)+'%',tickFmt:v=>v.toFixed(1)+'%'},
+  };
+  const c=CFG[metric]||CFG.spend;
+  const platColors={meta:'#1877f2',criteo:'#f15a22',google:'#34a853'};
+  const platNames={meta:'Meta',criteo:'Criteo',google:'Google Ads'};
+  const plats=plat==='all'?['meta','criteo','google']:[plat];
+
+  // 撈所有月份的廣告明細
+  const allRows=[];
+  for(const{y,m} of months){
+    for(const p of plats){
+      const row=await dbGet('ad_data',y,m,`&platform=eq.${p}`);
+      if(row?.data?.rows){
+        row.data.rows.forEach(r=>{
+          const key=`[${platNames[p]}] ${r.name}`;
+          const existing=allRows.find(x=>x.key===key);
+          if(existing){existing.spend+=r.spend||0;existing.roasW+=(r.roas||0)*(r.spend||0);existing.cl+=r.clicks||0;existing.im+=r.impressions||0;}
+          else allRows.push({key,plat:p,name:r.name,spend:r.spend||0,roasW:(r.roas||0)*(r.spend||0),cl:r.clicks||0,im:r.impressions||0});
+        });
+      }
+    }
+  }
+
+  // 計算最終指標
+  const finalRows=allRows.map(r=>({
+    ...r,
+    roas:r.spend>0&&r.roasW>0?r.roasW/r.spend:0,
+    cpc:r.cl>0?r.spend/r.cl:0,
+    ctr:r.im>0?r.cl/r.im:0,
+  })).filter(r=>c.get(r)>0).sort((a,b)=>c.get(b)-c.get(a)).slice(0,15);
+
+  killChart('ov-detail');
+  if(!finalRows.length){document.getElementById('ov-detail-chart').innerHTML='<div class="empty"><div class="ico">📊</div>此期間無廣告資料</div>';return;}
+  const sn=n=>n.length>18?n.slice(0,18)+'…':n;
+  document.getElementById('ov-detail-chart').innerHTML='<canvas id="ov-detail"></canvas>';
+  CHARTS['ov-detail']=new Chart(document.getElementById('ov-detail'),{
+    type:'bar',
+    data:{
+      labels:finalRows.map(r=>sn(r.key)),
+      datasets:[{
+        data:finalRows.map(r=>c.get(r)),
+        backgroundColor:finalRows.map(r=>platColors[r.plat]+'cc'),
+        borderRadius:4,borderSkipped:false
+      }]
+    },
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>c.fmt(ctx.raw)}}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>c.tickFmt(v),font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+}
+
+// 初始化總覽的選擇器和按鈕事件
+function initOverview(){
+  const now=new Date();
+  const ty=now.getFullYear(),tm=now.getMonth();
+  // 填年份選項
+  ['ov-y1','ov-y2'].forEach(id=>{
+    const sel=document.getElementById(id);
+    for(let y=ty-1;y<=ty+1;y++){const o=document.createElement('option');o.value=y;o.textContent=y;if(y===ty)o.selected=true;sel.appendChild(o);}
+  });
+  // 填月份選項
+  ['ov-m1','ov-m2'].forEach((id,i)=>{
+    const sel=document.getElementById(id);
+    MZ.forEach((label,mi)=>{const o=document.createElement('option');o.value=mi;o.textContent=label;if(mi===(i===0?0:tm))o.selected=true;sel.appendChild(o);});
+  });
+  OV_CUSTOM_Y1=ty;OV_CUSTOM_M1=0;OV_CUSTOM_Y2=ty;OV_CUSTOM_M2=tm;
+  ['ov-y1','ov-m1','ov-y2','ov-m2'].forEach(id=>{
+    document.getElementById(id).addEventListener('change',()=>{
+      OV_CUSTOM_Y1=+document.getElementById('ov-y1').value;
+      OV_CUSTOM_M1=+document.getElementById('ov-m1').value;
+      OV_CUSTOM_Y2=+document.getElementById('ov-y2').value;
+      OV_CUSTOM_M2=+document.getElementById('ov-m2').value;
+    });
+  });
+
+  // 範圍按鈕
+  document.getElementById('ov-range-btns').addEventListener('click',e=>{
+    const b=e.target.closest('.rbtn');if(!b||!b.dataset.ovr)return;
+    document.querySelectorAll('#ov-range-btns .rbtn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');OV_RANGE=b.dataset.ovr;
+    document.getElementById('ov-custom').style.display=OV_RANGE==='custom'?'flex':'none';
+    if(OV_RANGE!=='custom')renderOverview();
+  });
+
+  // 指標按鈕
+  document.getElementById('ov-metric-btns').addEventListener('click',e=>{
+    const b=e.target.closest('.cmb');if(!b||!b.dataset.ovm)return;
+    document.querySelectorAll('#ov-metric-btns .cmb').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');OV_METRIC=b.dataset.ovm;
+    const months=ovGetMonths();
+    const adPromises=months.map(({y,m})=>Promise.all([dbGet('ad_data',y,m,'&platform=eq.meta'),dbGet('ad_data',y,m,'&platform=eq.criteo'),dbGet('ad_data',y,m,'&platform=eq.google')]));
+    Promise.all(adPromises).then(allData=>{
+      const monthly=months.map(({y,m},i)=>{
+        const [mr,cr,gr]=allData[i];
+        const sumRows=(rows)=>{if(!rows||!rows.length)return{spend:0,roas:0,cpc:0,ctr:0};let sp=0,rev=0,cl=0,im=0;rows.forEach(r=>{sp+=r.spend||0;rev+=(r.roas||0)*(r.spend||0);cl+=r.clicks||0;im+=r.impressions||0;});return{spend:sp,roas:sp>0&&rev>0?rev/sp:0,cpc:cl>0?sp/cl:0,ctr:im>0?cl/im:0};};
+        return{label:MZ[m],meta:sumRows(mr?.data?.rows),criteo:sumRows(cr?.data?.rows),google:sumRows(gr?.data?.rows)};
+      });
+      ovRenderMetricChart(monthly,OV_METRIC);
+    });
+  });
+
+  // 平台篩選按鈕
+  document.getElementById('ov-plat-btns').addEventListener('click',e=>{
+    const b=e.target.closest('.cmb');if(!b||!b.dataset.ovp)return;
+    document.querySelectorAll('#ov-plat-btns .cmb').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');OV_PLAT=b.dataset.ovp;
+    ovRenderDetailChart(ovGetMonths(),OV_PLAT,OV_DETAIL);
+  });
+
+  // 明細指標按鈕
+  document.getElementById('ov-detail-btns').addEventListener('click',e=>{
+    const b=e.target.closest('.cmb');if(!b||!b.dataset.ovd)return;
+    document.querySelectorAll('#ov-detail-btns .cmb').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');OV_DETAIL=b.dataset.ovd;
+    ovRenderDetailChart(ovGetMonths(),OV_PLAT,OV_DETAIL);
+  });
+}
 
 // ── Render All ────────────────────────────────────────────────
 async function renderAll(){
