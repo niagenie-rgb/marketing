@@ -1210,7 +1210,7 @@ function parseGoogleCsv(text){
   for(let i=hIdx+1;i<lines.length;i++){
     const cols=lines[i].split(sep).map(v=>v.trim().replace(/"/g,'').replace(/,/g,''));
     const name=(cols[iN]||'').trim();
-    if(!name||name==='廣告活動'||name.startsWith('總計'))continue;
+    if(!name||name==='廣告活動'||name==='--'||name.startsWith('總計'))continue;
     const spend=parseFloat(cols[iSp])||0;if(!spend)continue;
     rows.push({name,spend,roas:parseFloat(cols[iR])||0,impressions:parseFloat(cols[iIm])||0,clicks:parseFloat(cols[iCl])||0,type:(cols[iT]||'').trim()});
   }
@@ -1240,7 +1240,7 @@ function parseGoogle(wb){
   for(let i=hIdx+1;i<arr.length;i++){
     const r=arr[i];
     const name=String(r[iN]||'').trim();
-    if(!name||name==='廣告活動')continue;
+    if(!name||name==='廣告活動'||name==='--'||name.startsWith('總計'))continue;
     const spend=pNum(r[iSp]);if(!spend)continue;
     const clicks=pNum(r[iCl]),impressions=pNum(r[iIm]);
     const cpc=iCpc>=0?pNum(r[iCpc]):(clicks>0?spend/clicks:0);
