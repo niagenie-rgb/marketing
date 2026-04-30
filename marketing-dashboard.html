@@ -979,26 +979,66 @@ function parseMeta(wb){
 }
 
 function parseCriteo(wb){
-  const ws=wb.Sheets[wb.SheetNames[0]];
-  const data=XLSX.utils.sheet_to_json(ws,{defval:0});
+  // 優先用 Download 頁籤（原始明細，最完整）
+  // 如果沒有就 fallback 到第一個頁籤
+  const wsName=wb.SheetNames.find(n=>n==='Download')||wb.SheetNames[0];
+  const ws=wb.Sheets[wsName];
+  const arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  if(!arr.length)return[];
+
+  // 找 header row（第一行）
+  const hdrs=arr[0].map(v=>String(v).trim());
+  const iAdset=hdrs.findIndex(h=>h==='Ad set'||h==='Ad Set');
+  const iDisplays=hdrs.findIndex(h=>h.includes('Displays'));
+  const iClicks=hdrs.findIndex(h=>h.includes('Clicks'));
+  const iCost=hdrs.findIndex(h=>h==='Cost');
+  const iRevenue=hdrs.findIndex(h=>h.includes('Revenue'));
+
+  // 如果找不到 Ad set 欄（非 Download 格式），fallback 到舊邏輯
+  if(iAdset<0){
+    const data=XLSX.utils.sheet_to_json(ws,{defval:0});
+    const map={};
+    data.forEach(r=>{
+      const adset=String(r['Ad set']||r['Ad Set']||'').trim();
+      if(!adset)return;
+      if(!map[adset])map[adset]={name:adset,spend:0,displays:0,clicks:0,revenue:0};
+      const a=map[adset];
+      a.spend+=parseFloat(r['Cost'])||0;
+      a.displays+=parseFloat(r['Displays'])||0;
+      a.clicks+=parseFloat(r['Clicks'])||0;
+      a.revenue+=parseFloat(r['Revenue PC30D+PV1D'])||0;
+    });
+    return Object.values(map).map(a=>({
+      name:a.name,spend:a.spend,
+      roas:a.spend>0?a.revenue/a.spend:0,
+      cpc:a.clicks>0?a.spend/a.clicks:0,
+      ctr:a.displays>0?a.clicks/a.displays:0,
+      displays:a.displays,clicks:a.clicks
+    })).filter(r=>r.spend>0);
+  }
+
+  // 用 Ad set group 加總
   const map={};
-  data.forEach(r=>{
-    const adset=String(r['Ad set']||r['Ad Set']||'').trim();
-    if(!adset)return;
+  for(let i=1;i<arr.length;i++){
+    const r=arr[i];
+    const adset=String(r[iAdset]||'').trim();
+    if(!adset)continue;
+    const cost=parseFloat(r[iCost])||0;
+    if(!cost)continue;
     if(!map[adset])map[adset]={name:adset,spend:0,displays:0,clicks:0,revenue:0};
     const a=map[adset];
-    a.spend+=parseFloat(r['Cost'])||0;
-    a.displays+=parseFloat(r['Displays'])||0;
-    a.clicks+=parseFloat(r['Clicks'])||0;
-    a.revenue+=parseFloat(r['Revenue PC30D+PV1D'])||0;
-  });
+    a.spend+=cost;
+    a.displays+=parseFloat(r[iDisplays])||0;
+    a.clicks+=parseFloat(r[iClicks])||0;
+    a.revenue+=parseFloat(r[iRevenue])||0;
+  }
   return Object.values(map).map(a=>({
     name:a.name,spend:a.spend,
     roas:a.spend>0?a.revenue/a.spend:0,
     cpc:a.clicks>0?a.spend/a.clicks:0,
     ctr:a.displays>0?a.clicks/a.displays:0,
-    displays:a.displays,clicks:a.clicks
-  })).filter(r=>r.spend>0);
+    displays:Math.round(a.displays),clicks:Math.round(a.clicks)
+  })).filter(r=>r.spend>0).sort((a,b)=>b.spend-a.spend);
 }
 
 function parseGoogleCsv(text){
