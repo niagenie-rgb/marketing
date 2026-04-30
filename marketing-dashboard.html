@@ -690,11 +690,23 @@ window.handleAdUpload=async function(e){
   const reader=new FileReader();
   reader.onload=async ev=>{
     try{
-      const wb=XLSX.read(ev.target.result,{type:'array'});
       let rows=[];
-      if(AP==='meta')rows=parseMeta(wb);
-      else if(AP==='criteo')rows=parseCriteo(wb);
-      else rows=parseGoogle(wb);
+      const isCsv=f.name.toLowerCase().endsWith('.csv');
+      if(AP==='meta'){
+        const wb=XLSX.read(ev.target.result,{type:'array'});rows=parseMeta(wb);
+      } else if(AP==='criteo'){
+        const wb=XLSX.read(ev.target.result,{type:'array'});rows=parseCriteo(wb);
+      } else {
+        // Google Ads: try UTF-16 first, then UTF-8
+        if(isCsv){
+          let text='';
+          try{text=new TextDecoder('utf-16').decode(ev.target.result);}
+          catch(e2){text=new TextDecoder('utf-8').decode(ev.target.result);}
+          rows=parseGoogleCsv(text);
+        } else {
+          const wb=XLSX.read(ev.target.result,{type:'array'});rows=parseGoogle(wb);
+        }
+      }
       const ok=await dbUpsert('ad_data',{year:CY,month:CM,platform:AP,data:{rows,_fn:f.name}});
       if(ok){setSyncStatus('ok','雲端已連線 ☁️');showStatus(`✓ 載入成功：${rows.length} 筆廣告`);}
       else{setSyncStatus('err','儲存失敗');showStatus('❌ 儲存失敗',4000);}
@@ -757,6 +769,35 @@ function renderAdTable(rows){
   }
   document.getElementById('adTbl').innerHTML=`<table class="gtbl"><thead><tr>${th}</tr></thead><tbody>${sorted.map(r=>`<tr>${tdFn(r)}</tr>`).join('')}</tbody></table>`;
 }
+function parseGoogleCsv(text){
+  const lines=text.split('
+');
+  // Find header row
+  let hIdx=0;
+  for(let i=0;i<Math.min(lines.length,8);i++){
+    if(lines[i].includes('廣告活動狀態')&&lines[i].includes('費用')){hIdx=i;break;}
+    if(lines[i].includes('廣告活動')&&lines[i].includes('費用')){hIdx=i;break;}
+  }
+  const sep=lines[hIdx].includes('	')?'	':',';
+  const hdrs=lines[hIdx].split(sep).map(v=>v.trim().replace(/"/g,''));
+  const iN=hdrs.findIndex(h=>h.includes('廣告活動')&&!h.includes('狀態')&&!h.includes('類型'));
+  const iSp=hdrs.findIndex(h=>h==='費用'||h==='費用 (TWD)');
+  const iIm=hdrs.findIndex(h=>h==='曝光');
+  const iCl=hdrs.findIndex(h=>h==='點擊');
+  const iCo=hdrs.findIndex(h=>h==='轉換'&&!h.includes('價值')&&!h.includes('率')&&!h.includes('費')&&!h.includes('平台'));
+  const iR=hdrs.findIndex(h=>h==='轉換價值/費用');
+  const iT=hdrs.findIndex(h=>h.includes('廣告活動類型'));
+  const rows=[];
+  for(let i=hIdx+1;i<lines.length;i++){
+    const cols=lines[i].split(sep).map(v=>v.trim().replace(/"/g,'').replace(/,/g,''));
+    const name=(cols[iN]||'').trim();
+    if(!name||name==='廣告活動'||name.startsWith('總計'))continue;
+    const spend=parseFloat(cols[iSp])||0;if(!spend)continue;
+    rows.push({name,spend,roas:parseFloat(cols[iR])||0,impressions:parseFloat(cols[iIm])||0,clicks:parseFloat(cols[iCl])||0,conversions:parseFloat(cols[iCo])||0,type:(cols[iT]||'').trim()});
+  }
+  return rows;
+}
+
 function parseMeta(wb){
   const ws=wb.Sheets['Raw Data Report']||wb.Sheets[wb.SheetNames[0]];
   const arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
