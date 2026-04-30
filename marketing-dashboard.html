@@ -734,9 +734,9 @@ function clearAd(){
   killChart('c1');killChart('c2');
 }
 function renderAdMetrics(rows){
-  let sp=0,cart=0,co=0,totalRevenue=0,totalClicks=0,totalImp=0,cv=[],tv=[];
+  let sp=0,cart=0,co=0,store=0,totalRevenue=0,totalClicks=0,totalImp=0,cv=[],tv=[];
   rows.forEach(r=>{
-    sp+=r.spend||0;cart+=r.cart||0;co+=r.checkout||0;
+    sp+=r.spend||0;cart+=r.cart||0;co+=r.checkout||0;store+=r.store||0;
     // Calculate revenue from ROAS * spend for each row
     if(r.roas>0&&r.spend>0)totalRevenue+=r.roas*r.spend;
     totalClicks+=r.clicks||0;
@@ -758,7 +758,10 @@ function renderAdMetrics(rows){
     {l:'CTR',v:ctr>0?(ctr*100).toFixed(2)+'%':'—'},
     {l:'加到購物車',v:cart>0?Math.round(cart).toLocaleString():'—'},
     {l:'開始結帳',v:co>0?Math.round(co).toLocaleString():'—'},
+    {l:'門市資訊',v:store>0?Math.round(store).toLocaleString():'—'},
   ].map(m=>`<div class="mc"><div class="mc-l">${m.l}</div><div class="mc-v">${m.v}</div></div>`).join('');
+  // hide store card if not meta
+  if(AP!=='meta'){const els=document.getElementById('adMetrics').querySelectorAll('.mc');if(els.length>=7)els[6].style.display='none';}
 }
 function renderAdCharts(rows){
   const top=rows.filter(r=>r.spend>0).sort((a,b)=>b.spend-a.spend).slice(0,10);
@@ -775,8 +778,43 @@ function renderAdTable(rows){
   const sorted=rows.slice().sort((a,b)=>b.spend-a.spend);
   let th,tdFn;
   if(AP==='meta'){
-    th='<th>廣告組合名稱</th><th>花費(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>加購物車</th><th>開始結帳</th><th>門市資訊</th>';
-    tdFn=r=>`<td class="aname" title="${r.name}">${r.name}${r.campaignName?`<div style="font-size:10px;color:var(--tx3)">${r.campaignName}</div>`:''}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.cpc>0?'$'+r.cpc.toFixed(2):'—'}</td><td>${r.ctr>0?(r.ctr*100).toFixed(2)+'%':'—'}</td><td>${r.cart>0?Math.round(r.cart):'—'}</td><td>${r.checkout>0?Math.round(r.checkout):'—'}</td><td>${r.store>0?Math.round(r.store):'—'}</td>`;
+    // Group by campaign for collapsible rows
+    const campMap={};
+    sorted.forEach(r=>{const c=r.campaignName||r.name;if(!campMap[c])campMap[c]={rows:[],collapsed:false};campMap[c].rows.push(r);});
+    let html2='<table class="gtbl"><thead><tr><th>行銷活動 / 廣告組合</th><th>花費(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>加購物車</th><th>開始結帳</th><th>門市資訊</th></tr></thead><tbody>';
+    Object.entries(campMap).forEach(([camp,g],ci)=>{
+      const tot={spend:0,rev:0,clicks:0,imp:0,cart:0,checkout:0,store:0};
+      g.rows.forEach(r=>{tot.spend+=r.spend;tot.rev+=r.roas*r.spend;tot.clicks+=r.clicks||0;tot.imp+=r.impressions||0;tot.cart+=r.cart||0;tot.checkout+=r.checkout||0;tot.store+=r.store||0;});
+      const cRoas=tot.spend>0&&tot.rev>0?tot.rev/tot.spend:0;
+      const cCpc=tot.clicks>0?tot.spend/tot.clicks:0;
+      const cCtr=tot.imp>0?tot.clicks/tot.imp:0;
+      html2+=`<tr style="background:var(--sf2);cursor:pointer" onclick="this.nextSibling&&(this.nextSibling.style.display=this.nextSibling.style.display==='none'?'':'none')">
+        <td style="font-weight:600;font-size:12px">▾ ${camp}</td>
+        <td>$${Math.round(tot.spend).toLocaleString()}</td>
+        <td>${cRoas>0?`<span class="rpill ${cRoas>=2?'rgood':''}">${cRoas.toFixed(2)}x</span>`:'—'}</td>
+        <td>${cCpc>0?'$'+cCpc.toFixed(2):'—'}</td>
+        <td>${cCtr>0?(cCtr*100).toFixed(2)+'%':'—'}</td>
+        <td>${tot.cart>0?Math.round(tot.cart):'—'}</td>
+        <td>${tot.checkout>0?Math.round(tot.checkout):'—'}</td>
+        <td>${tot.store>0?Math.round(tot.store):'—'}</td>
+      </tr>`;
+      html2+='<tr><td colspan="8" style="padding:0"><table style="width:100%;border-collapse:collapse">';
+      g.rows.forEach(r=>{html2+=`<tr style="background:var(--sf)">
+        <td style="padding:7px 12px 7px 28px;font-size:12px;color:var(--tx2);width:100%;border-bottom:1px solid var(--bd)">${r.name}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">$${Math.round(r.spend).toLocaleString()}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">${r.cpc>0?'$'+r.cpc.toFixed(2):'—'}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">${r.ctr>0?(r.ctr*100).toFixed(2)+'%':'—'}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">${r.cart>0?r.cart:'—'}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">${r.checkout>0?r.checkout:'—'}</td>
+        <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">${r.store>0?r.store:'—'}</td>
+      </tr>`;});
+      html2+='</table></td></tr>';
+    });
+    html2+='</tbody></table>';
+    document.getElementById('adTbl').innerHTML=html2;
+    return;
+    th='<th>廣告組合名稱</th>';tdFn=r=>`<td>${r.name}</td>`;
   } else if(AP==='criteo'){
     th='<th>Ad Set</th><th>Cost(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>曝光</th><th>點擊</th>';
     tdFn=r=>`<td class="aname" title="${r.name}">${r.name}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.cpc>0?'$'+r.cpc.toFixed(3):'—'}</td><td>${r.ctr>0?(r.ctr*100).toFixed(2)+'%':'—'}</td><td>${r.displays?Math.round(r.displays).toLocaleString():'—'}</td><td>${r.clicks?Math.round(r.clicks).toLocaleString():'—'}</td>`;
@@ -835,40 +873,51 @@ function parseMeta(wb){
   const iCheckout_old=col('網站開始結帳次數')>=0?col('網站開始結帳次數'):col('結帳');
   const iStore=col('門市資訊');
 
-  // Determine name column: adset level if adset col exists
-  const isAdset=iAdset>=0&&arr[hIdx+1]&&arr[hIdx+1][iAdset];
-  const iName=isAdset?iAdset:iCampaign;
-
-  const rows=[];
+  // Group by adset: merge rows with same campaign+adset
+  const map={};
   for(let i=hIdx+1;i<arr.length;i++){
     const r=arr[i];
-    const name=String(r[iName]||'').trim();
-    if(!name||name.startsWith('META_')||name.startsWith('FB'))continue;
+    const campaign=String(r[iCampaign]||'').trim();
+    const adset=String(r[iAdset]||'').trim();
+    if(!campaign)continue;
     const spend=parseFloat(r[iSp])||0;if(!spend)continue;
 
-    // Cart: use old col or parse from 成果 based on 成果類型
-    let cart=0,checkout=0;
-    if(iCart_old>=0) cart=parseFloat(r[iCart_old])||0;
-    if(iCheckout_old>=0) checkout=parseFloat(r[iCheckout_old])||0;
-    if(iResult>=0&&iResultType>=0){
-      const resultType=String(r[iResultType]||'');
-      const resultVal=parseFloat(r[iResult])||0;
-      if(resultType.includes('購物車'))cart=resultVal;
-      if(resultType.includes('結帳'))checkout=resultVal;
-    }
+    const key=campaign+'|||'+(adset||campaign);
+    if(!map[key])map[key]={name:adset||campaign,campaignName:campaign,spend:0,roas:0,roasW:0,cpc:0,ctr:0,cart:0,checkout:0,store:0,clicks:0,impressions:0};
+    const a=map[key];
 
     const clicks=parseFloat(r[iClicks])||0;
     const imp=parseFloat(r[iImp])||0;
-    const cpc=iCpc>=0?(parseFloat(r[iCpc])||0):(clicks>0?spend/clicks:0);
-    const ctr=imp>0?clicks/imp:0;
-    const store=iStore>=0?parseFloat(r[iStore])||0:0;
-    const campaignName=String(r[iCampaign]||'').trim();
+    const sp=spend;
+    const roas=parseFloat(r[iRoas])||0;
 
-    rows.push({name,campaignName:isAdset?campaignName:'',spend,
-      roas:parseFloat(r[iRoas])||0,cpc,ctr,cart,checkout,store,
-      clicks,impressions:imp});
+    a.spend+=sp;
+    a.clicks+=clicks;
+    a.impressions+=imp;
+    a.store+=iStore>=0?parseFloat(r[iStore])||0:0;
+    // Checkout from dedicated column
+    if(iCheckout_old>=0)a.checkout+=parseFloat(r[iCheckout_old])||0;
+    // Cart from 成果 column based on type
+    if(iResult>=0&&iResultType>=0){
+      const rt=String(r[iResultType]||'');
+      const rv=parseFloat(r[iResult])||0;
+      if(rt.includes('購物車'))a.cart+=rv;
+      else if(rt.includes('結帳')&&iCheckout_old<0)a.checkout+=rv;
+    }
+    if(iCart_old>=0)a.cart+=parseFloat(r[iCart_old])||0;
+    // Weighted ROAS
+    if(roas>0&&sp>0){a.roasW+=roas*sp;}
   }
-  return rows;
+
+  return Object.values(map).map(a=>({
+    name:a.name,campaignName:a.campaignName,
+    spend:a.spend,
+    roas:a.spend>0&&a.roasW>0?a.roasW/a.spend:0,
+    cpc:a.clicks>0?a.spend/a.clicks:0,
+    ctr:a.impressions>0?a.clicks/a.impressions:0,
+    cart:Math.round(a.cart),checkout:Math.round(a.checkout),
+    store:Math.round(a.store),clicks:a.clicks,impressions:a.impressions
+  })).filter(r=>r.spend>0);
 }
 function parseCriteo(wb){
   const ws=wb.Sheets[wb.SheetNames[0]];
