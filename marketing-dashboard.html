@@ -18,76 +18,87 @@
 body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;font-size:14px;line-height:1.6}
 .wrap{max-width:1100px;margin:0 auto;padding:2rem 1.5rem 5rem}
 
-/* ── Top bar ── */
+/* Top bar */
 .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;padding-bottom:1.25rem;border-bottom:1px solid var(--bd);flex-wrap:wrap;gap:1rem}
 .brand{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)}
 .mnav{display:flex;align-items:center;gap:10px}
 .nbtn{width:32px;height:32px;border-radius:50%;border:1px solid var(--bdm);background:var(--sf);cursor:pointer;font-size:15px;color:var(--tx2);display:flex;align-items:center;justify-content:center}
 .nbtn:hover{background:var(--sf2)}
 .mlabel{font-size:21px;font-weight:700;min-width:130px;text-align:center;letter-spacing:-.02em}
+.sync-indicator{font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:5px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#ccc}
+.sync-dot.ok{background:var(--up)}
+.sync-dot.syncing{background:#f59e0b;animation:pulse 1s infinite}
+.sync-dot.err{background:var(--dn)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-/* ── Section ── */
-.sec{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);margin:2rem 0 .85rem;display:flex;align-items:center;gap:8px}
-.sec::after{content:'';flex:1;height:1px;background:var(--bd)}
-
-/* ── Tabs (top-level: GA4 / 廣告 / 時程) ── */
-.main-tabs{display:flex;gap:0;margin-bottom:0;border-bottom:1px solid var(--bd)}
+/* Main tabs */
+.main-tabs{display:flex;gap:0;border-bottom:1px solid var(--bd)}
 .mtab{padding:10px 22px;border:none;background:transparent;font-size:14px;font-weight:500;cursor:pointer;color:var(--tx3);font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s}
 .mtab.active{color:var(--tx);border-bottom-color:var(--ac)}
 .mtab:hover:not(.active){color:var(--tx2)}
 .tab-panel{display:none;padding-top:1.5rem}
 .tab-panel.active{display:block}
 
-/* ── GA4 view tabs ── */
+/* GA4 subtabs */
 .ga-vtabs{display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap}
 .gvtab{padding:5px 16px;border-radius:20px;border:1px solid var(--bd);background:transparent;font-size:13px;cursor:pointer;color:var(--tx2);font-family:inherit;transition:all .15s}
 .gvtab.active{background:var(--ac);color:#fff;border-color:var(--ac)}
 
-/* ── Month manager ── */
-.month-manager{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:1rem 1.25rem;margin-bottom:1.25rem}
-.mm-title{font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:.75rem}
-.mm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin-bottom:.85rem}
-.mm-cell{border-radius:var(--r);border:1px solid var(--bd);padding:8px 10px;text-align:center;cursor:pointer;transition:all .15s;position:relative}
-.mm-cell.has-data{background:var(--sf2);border-color:var(--bdm)}
-.mm-cell.has-data:hover{border-color:#555}
-.mm-cell.selected{border-color:var(--ac);background:#f0f0f0}
-.mm-cell.empty{border-style:dashed;color:var(--tx3);cursor:default}
-.mm-month{font-size:13px;font-weight:600;display:block}
-.mm-status{font-size:10px;color:var(--tx3);margin-top:2px}
-.mm-cell.has-data .mm-status{color:var(--up)}
-.mm-del{position:absolute;top:3px;right:5px;font-size:11px;color:var(--tx3);cursor:pointer;display:none}
-.mm-cell.has-data:hover .mm-del{display:block}
-.mm-del:hover{color:var(--dn)}
-.mm-upload-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.usel{padding:7px 11px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit;outline:none}
-.ubtn{padding:7px 16px;border-radius:var(--r);border:1px solid var(--bdm);background:var(--sf);font-size:13px;cursor:pointer;color:var(--tx2);font-family:inherit;display:flex;align-items:center;gap:6px}
-.ubtn:hover{background:var(--sf2)}
-.uinput{display:none}
+/* Upload area */
+.uarea{border:1.5px dashed var(--bdm);border-radius:var(--rl);padding:1rem 1.25rem;background:var(--sf);display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:10px}
+.uarea:hover{border-color:#888;background:var(--sf2)}
+.uarea.loaded{border-color:var(--up);border-style:solid;background:#f0fdf4}
+.uicon{font-size:20px;flex-shrink:0}
+.utxt strong{display:block;font-size:13px;font-weight:600}
+.utxt span{font-size:11px;color:var(--tx3)}
+.ubadge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#dcfce7;color:#15803d;display:none}
+.ufile{display:none}
 
-/* ── Range selector ── */
+/* GA4 upload row */
+.ga-upload-wrap{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:1rem 1.25rem;margin-bottom:1.25rem}
+.ga-upload-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.75rem}
+.ga-upload-row select{padding:7px 11px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit;outline:none}
+.ga-upload-btn{display:flex;align-items:center;gap:6px;padding:7px 16px;border-radius:var(--r);border:1px solid var(--bdm);background:var(--sf);font-size:13px;cursor:pointer;color:var(--tx2);font-family:inherit}
+.ga-upload-btn:hover{background:var(--sf2)}
+.ga-status{font-size:12px;color:var(--tx3)}
+
+/* Month grid */
+.mm-title{font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:.75rem}
+.mm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px;margin-bottom:.85rem}
+.mm-cell{border-radius:var(--r);border:1px solid var(--bd);padding:8px 10px;text-align:center;cursor:default;transition:all .15s;position:relative}
+.mm-cell.has{background:var(--sf2);border-color:var(--bdm);cursor:pointer}
+.mm-cell.has:hover{border-color:#555}
+.mm-cell.sel{border-color:var(--ac);background:#ebebeb;font-weight:700}
+.mm-month{font-size:13px;font-weight:600;display:block}
+.mm-st{font-size:10px;color:var(--tx3);margin-top:2px;display:block}
+.mm-cell.has .mm-st{color:var(--up)}
+.mm-del{position:absolute;top:3px;right:5px;font-size:11px;color:var(--tx3);cursor:pointer;display:none;background:none;border:none;line-height:1}
+.mm-cell.has:hover .mm-del{display:block}
+.mm-del:hover{color:var(--dn)}
+
+/* Range bar */
 .range-bar{display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center}
 .rbtn{padding:5px 14px;border-radius:20px;border:1px solid var(--bd);background:transparent;font-size:12px;cursor:pointer;color:var(--tx2);font-family:inherit}
 .rbtn.active{background:var(--ac);color:#fff;border-color:var(--ac)}
 .range-info{font-size:12px;color:var(--tx3);margin-left:auto}
 
-/* ── KPI cards ── */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:1rem}
+/* KPI */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:1rem}
 .kc{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:16px 18px}
-.kc-label{font-size:11px;color:var(--tx3);margin-bottom:5px;font-weight:500}
-.kc-val{font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
-.kc-sub{font-size:11px;margin-top:4px}
+.kc-l{font-size:11px;color:var(--tx3);margin-bottom:5px;font-weight:500}
+.kc-v{font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
+.kc-s{font-size:11px;margin-top:4px}
 .up{color:var(--up)}.dn{color:var(--dn)}
 
-/* ── Charts ── */
+/* Charts */
 .cgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:1rem}
-.cgrid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:1rem}
 .ccrd{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:1.1rem 1.25rem}
 .ctitle{font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:.85rem;text-transform:uppercase;letter-spacing:.06em}
 .cw{position:relative;height:220px}
 .cw-tall{position:relative;height:260px}
-.cw-sm{position:relative;height:180px}
 
-/* ── Top pages table ── */
+/* Pages table */
 .ptbl-wrap{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);overflow:hidden;margin-bottom:1rem}
 .ptbl{width:100%;border-collapse:collapse;font-size:13px}
 .ptbl th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);background:var(--sf2);border-bottom:1px solid var(--bd);white-space:nowrap}
@@ -95,9 +106,9 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 .ptbl tr:last-child td{border-bottom:none}
 .ptbl tr:hover td{background:var(--sf2)}
 .pname{max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
-.bar-mini{height:5px;border-radius:3px;background:#4f86f7;margin-top:3px}
+.barmini{height:5px;border-radius:3px;background:#4f86f7;margin-top:3px}
 
-/* ── AD section ── */
+/* Ad section */
 .ptabs{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
 .ptab{padding:5px 16px;border-radius:20px;border:1px solid var(--bd);background:transparent;font-size:13px;cursor:pointer;color:var(--tx2);font-family:inherit;display:flex;align-items:center;gap:6px}
 .ptab.active{background:var(--ac);color:#fff;border-color:var(--ac)}
@@ -118,17 +129,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 .rpill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;background:#fef9c3;color:#854d0e}
 .rgood{background:#dcfce7;color:#15803d}
 
-/* ── Upload (ad) ── */
-.uarea{border:1.5px dashed var(--bdm);border-radius:var(--rl);padding:1rem 1.25rem;background:var(--sf);display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:10px}
-.uarea:hover{border-color:#888;background:var(--sf2)}
-.uarea.loaded{border-color:var(--up);border-style:solid;background:#f0fdf4}
-.uicon{font-size:20px;flex-shrink:0}
-.utxt strong{display:block;font-size:13px;font-weight:600}
-.utxt span{font-size:11px;color:var(--tx3)}
-.ubadge-ok{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#dcfce7;color:#15803d;display:none}
-.ufile{display:none}
-
-/* ── Gantt ── */
+/* Gantt */
 .gantt{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);overflow:hidden}
 .gh{display:flex;background:var(--sf2);border-bottom:1px solid var(--bd)}
 .gncol{width:180px;flex-shrink:0;padding:9px 14px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);border-right:1px solid var(--bd)}
@@ -154,28 +155,27 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 .btn-p{padding:7px 18px;border-radius:var(--r);border:1px solid var(--ac);background:var(--ac);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
 .btn-p:hover{opacity:.85}
 
-/* ── Notes ── */
+/* Notes */
 .nta{width:100%;padding:12px 14px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf);color:var(--tx);resize:vertical;min-height:80px;font-family:inherit;line-height:1.7;outline:none}
 .nsave{margin-top:7px;padding:6px 16px;border-radius:var(--r);border:1px solid var(--bd);background:var(--sf);font-size:12px;cursor:pointer;color:var(--tx2);font-family:inherit}
 .nsave:hover{background:var(--sf2)}
 
-/* ── Status ── */
+/* Status */
 .statusbar{position:fixed;bottom:0;left:0;right:0;background:var(--ac);color:#fff;font-size:12px;padding:9px 20px;text-align:center;transform:translateY(100%);transition:transform .3s;z-index:300}
 .statusbar.show{transform:translateY(0)}
 
-/* ── Empty ── */
+/* Empty */
 .empty{text-align:center;padding:2rem;color:var(--tx3);font-size:13px}
 .empty .ico{font-size:28px;margin-bottom:.5rem}
 
-/* ── Misc ── */
-.btn-sm{padding:5px 12px;border-radius:var(--r);border:1px solid var(--bdm);background:var(--sf);font-size:12px;cursor:pointer;color:var(--tx2);font-family:inherit}
-.btn-sm:hover{background:var(--sf2)}
-.flex-end{display:flex;justify-content:flex-end;margin-bottom:.5rem}
+/* Section */
+.sec{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);margin:2rem 0 .85rem;display:flex;align-items:center;gap:8px}
+.sec::after{content:'';flex:1;height:1px;background:var(--bd)}
 
 @media(max-width:600px){
-  .kpi-grid,.mgrid{grid-template-columns:repeat(2,1fr)}
+  .kgrid,.mgrid{grid-template-columns:repeat(2,1fr)}
   .gncol,.grn{width:120px}
-  .cgrid,.cgrid-3{grid-template-columns:1fr}
+  .cgrid{grid-template-columns:1fr}
   .main-tabs{overflow-x:auto}
 }
 </style>
@@ -185,7 +185,13 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 
 <!-- Top bar -->
 <div class="topbar">
-  <span class="brand">迪奧斯 · 月份行銷報告</span>
+  <div>
+    <span class="brand">迪奧斯 · 月份行銷報告</span>
+    <div class="sync-indicator" style="margin-top:4px">
+      <span class="sync-dot" id="syncDot"></span>
+      <span id="syncLabel">連線中…</span>
+    </div>
+  </div>
   <div class="mnav">
     <button class="nbtn" id="prevBtn">&#8592;</button>
     <span class="mlabel" id="monthLabel"></span>
@@ -201,103 +207,93 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
   <button class="mtab" data-tab="notes">備注</button>
 </div>
 
-<!-- ═══════════ GA4 Panel ═══════════ -->
+<!-- ═══ GA4 Panel ═══ -->
 <div class="tab-panel active" id="panel-ga4">
-
-  <!-- GA4 view subtabs -->
   <div class="ga-vtabs">
     <button class="gvtab active" data-gv="month">單月</button>
     <button class="gvtab" data-gv="trend">跨月趨勢</button>
     <button class="gvtab" data-gv="manage">管理月份資料</button>
   </div>
 
-  <!-- ── 單月 view ── -->
+  <!-- 單月 -->
   <div id="gv-month">
-    <div class="kpi-grid" id="ga-kpi">
-      <div class="kc"><div class="kc-label">活躍使用者</div><div class="kc-val" id="gk-u">—</div><div class="kc-sub" id="gk-u-s"></div></div>
-      <div class="kc"><div class="kc-label">新使用者</div><div class="kc-val" id="gk-n">—</div><div class="kc-sub" id="gk-n-s"></div></div>
-      <div class="kc"><div class="kc-label">事件計數</div><div class="kc-val" id="gk-e">—</div><div class="kc-sub" id="gk-e-s"></div></div>
-      <div class="kc"><div class="kc-label">平均參與時間</div><div class="kc-val" id="gk-t">—</div><div class="kc-sub" id="gk-t-s"></div></div>
+    <!-- GA4 upload -->
+    <div class="ga-upload-wrap">
+      <div class="ga-upload-row">
+        <select id="ga-y-sel"></select>
+        <select id="ga-m-sel">
+          <option value="0">1月</option><option value="1">2月</option><option value="2">3月</option>
+          <option value="3">4月</option><option value="4">5月</option><option value="5">6月</option>
+          <option value="6">7月</option><option value="7">8月</option><option value="8">9月</option>
+          <option value="9">10月</option><option value="10">11月</option><option value="11">12月</option>
+        </select>
+        <label class="ga-upload-btn" for="ga-file">
+          📁 上傳 GA4 Excel
+          <input type="file" id="ga-file" class="ufile" accept=".xlsx" onchange="handleGaUpload(event)">
+        </label>
+        <span class="ga-status" id="ga-upload-st"></span>
+      </div>
+      <div style="font-size:11px;color:var(--tx3)">GA4 → 報表 → 右上角「分享」→「下載 Excel (.xlsx)」→ 選好年月後上傳</div>
+    </div>
+
+    <div class="kgrid">
+      <div class="kc"><div class="kc-l">活躍使用者</div><div class="kc-v" id="gk-u">—</div><div class="kc-s" id="gk-u-s"></div></div>
+      <div class="kc"><div class="kc-l">新使用者</div><div class="kc-v" id="gk-n">—</div><div class="kc-s" id="gk-n-s"></div></div>
+      <div class="kc"><div class="kc-l">事件計數</div><div class="kc-v" id="gk-e">—</div><div class="kc-s" id="gk-e-s"></div></div>
+      <div class="kc"><div class="kc-l">平均參與時間</div><div class="kc-v" id="gk-t">—</div><div class="kc-s" id="gk-t-s"></div></div>
     </div>
     <div class="cgrid">
       <div class="ccrd"><div class="ctitle">流量來源 (活躍使用者)</div><div class="cw-tall" id="ga-bar-wrap"><div class="empty"><div class="ico">📡</div>上傳此月 GA4 Excel 後顯示</div></div></div>
       <div class="ccrd"><div class="ctitle">來源佔比</div><div class="cw" id="ga-pie-wrap"><div class="empty"><div class="ico">🥧</div>上傳此月 GA4 Excel 後顯示</div></div></div>
     </div>
     <div class="sec">熱門頁面 Top 10</div>
-    <div class="ptbl-wrap" id="ga-pages-wrap">
-      <div class="empty" style="padding:1.5rem"><div class="ico">📄</div>上傳此月 GA4 Excel 後顯示</div>
-    </div>
+    <div class="ptbl-wrap" id="ga-pages-wrap"><div class="empty" style="padding:1.5rem"><div class="ico">📄</div>上傳此月 GA4 Excel 後顯示</div></div>
   </div>
 
-  <!-- ── 跨月趨勢 view ── -->
+  <!-- 跨月趨勢 -->
   <div id="gv-trend" style="display:none">
     <div class="range-bar" id="rangeBar">
-      <button class="rbtn active" data-range="all">全部</button>
-      <button class="rbtn" data-range="q1">Q1 (1-3月)</button>
-      <button class="rbtn" data-range="q2">Q2 (4-6月)</button>
-      <button class="rbtn" data-range="q3">Q3 (7-9月)</button>
-      <button class="rbtn" data-range="q4">Q4 (10-12月)</button>
+      <button class="rbtn active" data-range="all">全年</button>
+      <button class="rbtn" data-range="q1">Q1</button>
+      <button class="rbtn" data-range="q2">Q2</button>
+      <button class="rbtn" data-range="q3">Q3</button>
+      <button class="rbtn" data-range="q4">Q4</button>
       <span class="range-info" id="range-info"></span>
     </div>
     <div class="cgrid">
       <div class="ccrd"><div class="ctitle">活躍使用者趨勢</div><div class="cw" id="t-users"><div class="empty"><div class="ico">📈</div>需要至少 2 個月資料</div></div></div>
-      <div class="ccrd"><div class="ctitle">事件計數趨勢</div><div class="cw" id="t-events"><div class="empty"><div class="ico">📈</div>需要至少 2 個月資料</div></div></div>
+      <div class="ccrd"><div class="ctitle">新使用者趨勢</div><div class="cw" id="t-new"><div class="empty"><div class="ico">📈</div>需要至少 2 個月資料</div></div></div>
     </div>
     <div class="cgrid">
-      <div class="ccrd"><div class="ctitle">新使用者趨勢</div><div class="cw" id="t-new"><div class="empty"><div class="ico">📈</div>需要至少 2 個月資料</div></div></div>
-      <div class="ccrd"><div class="ctitle">各來源工作階段趨勢</div><div class="cw" id="t-channel"><div class="empty"><div class="ico">📈</div>需要至少 2 個月資料</div></div></div>
+      <div class="ccrd"><div class="ctitle">事件計數趨勢</div><div class="cw" id="t-events"><div class="empty"><div class="ico">📈</div>需要至少 2 個月資料</div></div></div>
+      <div class="ccrd"><div class="ctitle">各來源流量趨勢</div><div class="cw" id="t-channel"><div class="empty"><div class="ico">📈</div>需要至少 2 個月資料</div></div></div>
     </div>
     <div class="sec">月份對比一覽</div>
-    <div class="ptbl-wrap" id="ga-compare-tbl">
-      <div class="empty" style="padding:1.5rem"><div class="ico">📊</div>需要至少 2 個月資料</div>
-    </div>
+    <div class="ptbl-wrap" id="ga-compare-tbl"><div class="empty" style="padding:1.5rem"><div class="ico">📊</div>需要至少 2 個月資料</div></div>
   </div>
 
-  <!-- ── 管理月份 view ── -->
+  <!-- 管理月份 -->
   <div id="gv-manage" style="display:none">
-    <div class="month-manager">
-      <div class="mm-title">已上傳月份（點擊選取，hover 可刪除）</div>
+    <div class="ga-upload-wrap">
+      <div class="mm-title" id="mm-title">已上傳月份</div>
       <div class="mm-grid" id="mm-grid"></div>
-      <div class="mm-upload-row">
-        <select class="usel" id="mm-year-sel"></select>
-        <select class="usel" id="mm-month-sel">
-          <option value="0">1月</option><option value="1">2月</option><option value="2">3月</option>
-          <option value="3">4月</option><option value="4">5月</option><option value="5">6月</option>
-          <option value="6">7月</option><option value="7">8月</option><option value="8">9月</option>
-          <option value="9">10月</option><option value="10">11月</option><option value="11">12月</option>
-        </select>
-        <label class="ubtn" for="ga-file-input">
-          <span>📁</span> 上傳 GA4 Excel
-          <input type="file" class="ufile" id="ga-file-input" accept=".xlsx" onchange="handleGaUpload(event)">
-        </label>
-        <span id="ga-upload-status" style="font-size:12px;color:var(--tx3)"></span>
-      </div>
-    </div>
-    <div style="font-size:12px;color:var(--tx3);line-height:1.8;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:1rem">
-      <strong style="color:var(--tx2)">上傳說明</strong><br>
-      1. 到 GA4 → 報表 → 點右上角「分享這份報表」→「下載檔案」→ 選 <strong>Excel (.xlsx)</strong><br>
-      2. 選好年份月份後，點「上傳 GA4 Excel」<br>
-      3. 系統會自動解析：KPI 摘要、流量來源、熱門頁面<br>
-      4. 上傳後切換到「單月」或「跨月趨勢」查看
     </div>
   </div>
 </div>
 
-<!-- ═══════════ 廣告 Panel ═══════════ -->
+<!-- ═══ 廣告 Panel ═══ -->
 <div class="tab-panel" id="panel-ad">
   <div class="ptabs" id="ptabs">
     <button class="ptab active" data-p="meta"><span class="dot dm"></span>Meta</button>
     <button class="ptab" data-p="criteo"><span class="dot dc"></span>Criteo</button>
     <button class="ptab" data-p="google"><span class="dot dg"></span>Google Ads</button>
   </div>
-
-  <div class="uarea" id="ad-uarea" onclick="document.getElementById('ad-file').click()">
+  <div class="uarea" id="ad-uarea">
     <span class="uicon">📁</span>
     <div class="utxt"><strong id="ad-ulabel">上傳 Meta Excel 報表</strong><span id="ad-uname">支援 .xlsx 格式</span></div>
-    <span class="ubadge-ok" id="ad-ubadge">✓ 已載入</span>
+    <span class="ubadge" id="ad-ubadge">✓ 已載入</span>
     <input type="file" class="ufile" id="ad-file" accept=".xlsx,.csv" onchange="handleAdUpload(event)">
   </div>
-
   <div class="mgrid" id="adMetrics">
     <div class="mc"><div class="mc-l">花費 (TWD)</div><div class="mc-v">—</div></div>
     <div class="mc"><div class="mc-l">平均 ROAS</div><div class="mc-v">—</div></div>
@@ -306,18 +302,14 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     <div class="mc"><div class="mc-l">加到購物車</div><div class="mc-v">—</div></div>
     <div class="mc"><div class="mc-l">開始結帳</div><div class="mc-v">—</div></div>
   </div>
-
   <div class="cgrid" style="margin-top:14px">
-    <div class="ccrd"><div class="ctitle" id="ct1">各廣告花費佔比</div><div class="cw-tall" id="cw1"><div class="empty"><div class="ico">📊</div>上傳報表後顯示</div></div></div>
-    <div class="ccrd"><div class="ctitle" id="ct2">各廣告 ROAS 比較</div><div class="cw-tall" id="cw2"><div class="empty"><div class="ico">📈</div>上傳報表後顯示</div></div></div>
+    <div class="ccrd"><div class="ctitle">各廣告花費</div><div class="cw-tall" id="cw1"><div class="empty"><div class="ico">📊</div>上傳報表後顯示</div></div></div>
+    <div class="ccrd"><div class="ctitle">各廣告 ROAS</div><div class="cw-tall" id="cw2"><div class="empty"><div class="ico">📈</div>上傳報表後顯示</div></div></div>
   </div>
-
-  <div class="tbl-wrap" id="adTbl">
-    <div class="empty" style="padding:2rem"><div class="ico">📋</div>上傳廣告報表後顯示各廣告明細</div>
-  </div>
+  <div class="tbl-wrap" id="adTbl"><div class="empty" style="padding:2rem"><div class="ico">📋</div>上傳廣告報表後顯示各廣告明細</div></div>
 </div>
 
-<!-- ═══════════ 時程 Panel ═══════════ -->
+<!-- ═══ 時程 Panel ═══ -->
 <div class="tab-panel" id="panel-proj">
   <div class="gantt" id="ganttWrap"></div>
   <div class="addrow">
@@ -329,16 +321,50 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
   </div>
 </div>
 
-<!-- ═══════════ 備注 Panel ═══════════ -->
+<!-- ═══ 備注 Panel ═══ -->
 <div class="tab-panel" id="panel-notes">
   <textarea class="nta" id="nta" placeholder="策略重點、異常觀察、下月計畫…"></textarea><br>
   <button class="nsave" id="nsave" onclick="saveNotes()">儲存備注</button>
 </div>
 
-</div><!-- /wrap -->
+</div>
 <div class="statusbar" id="statusbar"></div>
 
 <script>
+// ═══════════════════════════════════════════════
+// Supabase Config
+// ═══════════════════════════════════════════════
+const SUPA_URL = 'https://yrroqndpcgaqvgxeydgn.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlycm9xbmRwY2dhcXZneGV5ZGduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1MTE0NjYsImV4cCI6MjA5MzA4NzQ2Nn0.4Zw2GWnuzbusCWrplOJSbV1_Nqp7KR_GWwQ-Ed0CDxE';
+const HEADERS = {'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'resolution=merge-duplicates'};
+
+async function dbGet(table, year, month, extra=''){
+  try{
+    let url=`${SUPA_URL}/rest/v1/${table}?year=eq.${year}&month=eq.${month}${extra}&limit=1`;
+    const r=await fetch(url,{headers:{...HEADERS,'Prefer':''}});
+    const d=await r.json();
+    return d&&d[0]?d[0]:null;
+  }catch(e){return null;}
+}
+async function dbUpsert(table, payload){
+  try{
+    const r=await fetch(`${SUPA_URL}/rest/v1/${table}`,{method:'POST',headers:HEADERS,body:JSON.stringify(payload)});
+    return r.ok;
+  }catch(e){return false;}
+}
+async function dbGetAll(table, year){
+  try{
+    const r=await fetch(`${SUPA_URL}/rest/v1/${table}?year=eq.${year}&order=month.asc`,{headers:{...HEADERS,'Prefer':''}});
+    return await r.json();
+  }catch(e){return[];}
+}
+async function dbDelete(table, year, month){
+  try{
+    const r=await fetch(`${SUPA_URL}/rest/v1/${table}?year=eq.${year}&month=eq.${month}`,{method:'DELETE',headers:{...HEADERS,'Prefer':''}});
+    return r.ok;
+  }catch(e){return false;}
+}
+
 // ═══════════════════════════════════════════════
 // Constants & State
 // ═══════════════════════════════════════════════
@@ -346,18 +372,9 @@ const MZ=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月'
 const BC=['bp','bt','ba','bc','bb','bk'];
 const CC=['#4f86f7','#f4845f','#58c49a','#f7c94f','#a78bfa','#f472b6','#34d399','#fb923c','#60a5fa','#e879f9'];
 const CHARTS={};
-
 let CY=new Date().getFullYear(), CM=new Date().getMonth(), AP='meta';
 let GA4_VIEW='month', GA4_RANGE='all';
-
-// ═══════════════════════════════════════════════
-// Storage
-// ═══════════════════════════════════════════════
-const K=(y,m)=>y+'-'+String(m).padStart(2,'0');
-const LS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
-const LG=(k)=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
-const LD=()=>{try{return JSON.parse(localStorage.getItem('ga4_all')||'{}')}catch(e){return{}}};
-const SD=(d)=>{try{localStorage.setItem('ga4_all',JSON.stringify(d))}catch(e){}};
+let GA4_CACHE={};  // in-memory cache for this session
 
 // ═══════════════════════════════════════════════
 // Helpers
@@ -365,7 +382,6 @@ const SD=(d)=>{try{localStorage.setItem('ga4_all',JSON.stringify(d))}catch(e){}}
 function fmtN(v){
   const n=parseFloat(String(v||'').replace(/,/g,''));
   if(isNaN(n)||v==null)return '—';
-  if(n>=100000000)return (n/100000000).toFixed(1)+'億';
   if(n>=10000)return (n/10000).toFixed(1)+'萬';
   return Math.round(n).toLocaleString('zh-TW');
 }
@@ -381,6 +397,33 @@ function showStatus(msg,dur=2400){
   setTimeout(()=>b.classList.remove('show'),dur);
 }
 function killChart(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id]}}
+function setSyncStatus(state, label){
+  const dot=document.getElementById('syncDot');
+  const lbl=document.getElementById('syncLabel');
+  dot.className='sync-dot '+(state==='ok'?'ok':state==='syncing'?'syncing':'err');
+  lbl.textContent=label;
+}
+
+// ═══════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════
+(async()=>{
+  setSyncStatus('syncing','連線中…');
+  // Test connection
+  try{
+    const r=await fetch(`${SUPA_URL}/rest/v1/ga4_data?limit=1`,{headers:{...HEADERS,'Prefer':''}});
+    if(r.ok){setSyncStatus('ok','雲端已連線 ☁️');}
+    else{setSyncStatus('err','連線失敗');}
+  }catch(e){setSyncStatus('err','無法連線');}
+
+  // Init year selector
+  const sel=document.getElementById('ga-y-sel');
+  const y=new Date().getFullYear();
+  for(let i=y-1;i<=y+1;i++){const o=document.createElement('option');o.value=i;o.textContent=i;if(i===y)o.selected=true;sel.appendChild(o);}
+  document.getElementById('ga-m-sel').value=CM;
+
+  renderAll();
+})();
 
 // ═══════════════════════════════════════════════
 // Main Tabs
@@ -392,15 +435,11 @@ document.querySelectorAll('.mtab').forEach(t=>t.addEventListener('click',()=>{
   document.getElementById('panel-'+t.dataset.tab).classList.add('active');
 }));
 
-// ═══════════════════════════════════════════════
-// Month Nav
-// ═══════════════════════════════════════════════
+// Month nav
 document.getElementById('prevBtn').onclick=()=>{CM--;if(CM<0){CM=11;CY--;}renderAll()};
 document.getElementById('nextBtn').onclick=()=>{CM++;if(CM>11){CM=0;CY++;}renderAll()};
 
-// ═══════════════════════════════════════════════
-// GA4 View Tabs
-// ═══════════════════════════════════════════════
+// GA4 subtabs
 document.querySelectorAll('.gvtab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.gvtab').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
@@ -411,312 +450,18 @@ document.querySelectorAll('.gvtab').forEach(t=>t.addEventListener('click',()=>{
   if(GA4_VIEW==='month')renderGaMonth();
 }));
 
-// ═══════════════════════════════════════════════
-// Range Bar
-// ═══════════════════════════════════════════════
+// Range bar
 document.getElementById('rangeBar').addEventListener('click',e=>{
   const b=e.target.closest('.rbtn');if(!b)return;
   document.querySelectorAll('.rbtn').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');
-  GA4_RANGE=b.dataset.range;
+  b.classList.add('active');GA4_RANGE=b.dataset.range;
   renderGaTrend();
 });
 
-// ═══════════════════════════════════════════════
-// GA4 UPLOAD & PARSE
-// ═══════════════════════════════════════════════
-// Init year selector
-(()=>{
-  const sel=document.getElementById('mm-year-sel');
-  const y=new Date().getFullYear();
-  for(let i=y-1;i<=y+1;i++){const o=document.createElement('option');o.value=i;o.textContent=i;if(i===y)o.selected=true;sel.appendChild(o);}
-  // Set month selector to current month
-  document.getElementById('mm-month-sel').value=CM;
-})();
+// Ad upload area click
+document.getElementById('ad-uarea').onclick=()=>document.getElementById('ad-file').click();
 
-window.handleGaUpload=function(e){
-  const f=e.target.files[0];if(!f)return;
-  const uy=parseInt(document.getElementById('mm-year-sel').value);
-  const um=parseInt(document.getElementById('mm-month-sel').value);
-  showStatus('解析中…',8000);
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    try{
-      const wb=XLSX.read(ev.target.result,{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
-      const parsed=parseGa4Excel(rows,uy,um,f.name);
-      const all=LD();
-      all[K(uy,um)]=parsed;
-      SD(all);
-      document.getElementById('ga-upload-status').textContent='✓ 已儲存 '+uy+'/'+MZ[um];
-      showStatus('✓ GA4 '+uy+'/'+MZ[um]+' 上傳成功');
-      renderMmGrid();
-      if(uy===CY&&um===CM)renderGaMonth();
-    }catch(err){showStatus('❌ 解析失敗：'+err.message,5000);console.error(err);}
-  };
-  reader.readAsArrayBuffer(f);
-  e.target.value='';
-};
-
-function parseGa4Excel(rows,y,m,fname){
-  const result={year:y,month:m,fname,
-    users:0,newUsers:0,events:0,avgTime:0,
-    channels:[],pages:[]};
-
-  // Find KPI row (row after header row '活躍使用者')
-  for(let i=0;i<rows.length;i++){
-    const r=rows[i];
-    if(r&&r[0]==='活躍使用者'&&r[1]==='新使用者人數'){
-      const d=rows[i+1];
-      if(d){result.users=parseFloat(d[0])||0;result.newUsers=parseFloat(d[1])||0;result.avgTime=parseFloat(d[2])||0;result.events=parseFloat(d[3])||0;}
-      break;
-    }
-  }
-
-  // Find channels section (最初招攬到使用者的來源/媒介)
-  for(let i=0;i<rows.length;i++){
-    const r=rows[i];
-    if(r&&r[0]==='最初招攬到使用者的來源/媒介'){
-      let j=i+1;
-      while(j<rows.length&&rows[j]&&rows[j][0]&&!String(rows[j][0]).startsWith('#')){
-        const src=String(rows[j][0]).trim();
-        const val=parseFloat(rows[j][1])||0;
-        if(src&&val>0)result.channels.push({s:src,v:val});
-        j++;
-      }
-      break;
-    }
-  }
-
-  // Find pages (網頁標題與畫面類別)
-  for(let i=0;i<rows.length;i++){
-    const r=rows[i];
-    if(r&&r[0]==='網頁標題與畫面類別'&&r[1]==='瀏覽'){
-      let j=i+1,cnt=0;
-      while(j<rows.length&&rows[j]&&rows[j][0]&&cnt<15){
-        const pg=String(rows[j][0]).trim();
-        const views=parseFloat(rows[j][1])||0;
-        const users=parseFloat(rows[j][2])||0;
-        const bounce=parseFloat(rows[j][4])||0;
-        if(pg&&views>0){result.pages.push({name:pg,views,users,bounce});cnt++;}
-        j++;
-      }
-      break;
-    }
-  }
-  return result;
-}
-
-// ═══════════════════════════════════════════════
-// Month Manager Grid
-// ═══════════════════════════════════════════════
-function renderMmGrid(){
-  const all=LD();
-  const grid=document.getElementById('mm-grid');
-  const y=CY;
-  let html='';
-  for(let m=0;m<12;m++){
-    const k=K(y,m);
-    const has=!!all[k];
-    if(has){
-      html+=`<div class="mm-cell has-data${CY===y&&CM===m?' selected':''}" onclick="selectMonth(${y},${m})">
-        <span class="mm-del" onclick="event.stopPropagation();delGaMonth('${k}')">✕</span>
-        <span class="mm-month">${MZ[m]}</span>
-        <span class="mm-status">✓ 已上傳</span>
-      </div>`;
-    } else {
-      html+=`<div class="mm-cell empty">
-        <span class="mm-month" style="color:var(--tx3)">${MZ[m]}</span>
-        <span class="mm-status">—</span>
-      </div>`;
-    }
-  }
-  grid.innerHTML=html;
-  // Show year in title
-  document.querySelector('.mm-title').textContent=`${y} 年已上傳月份`;
-}
-
-window.selectMonth=function(y,m){CY=y;CM=m;renderAll();};
-window.delGaMonth=function(k){
-  if(!confirm('確定刪除此月份的 GA4 資料？'))return;
-  const all=LD();delete all[k];SD(all);
-  renderMmGrid();showStatus('已刪除');
-};
-
-// ═══════════════════════════════════════════════
-// GA4 Month View
-// ═══════════════════════════════════════════════
-function renderGaMonth(){
-  const all=LD();
-  const d=all[K(CY,CM)];
-
-  // KPIs
-  const setKpi=(id,val,prev)=>{
-    document.getElementById('gk-'+id).textContent=fmtN(val)||'—';
-    const sub=document.getElementById('gk-'+id+'-s');
-    if(prev&&val&&prev>0){
-      const pct=((val-prev)/prev*100).toFixed(1);
-      const up=parseFloat(pct)>=0;
-      sub.className='kc-sub '+(up?'up':'dn');
-      sub.textContent=(up?'↑':'↓')+Math.abs(pct)+'% vs 上月';
-    } else sub.textContent='';
-  };
-
-  // Get prev month data for delta
-  let prevM=CM-1,prevY=CY;
-  if(prevM<0){prevM=11;prevY--;}
-  const prev=all[K(prevY,prevM)];
-
-  if(d){
-    setKpi('u',d.users,prev?.users);
-    setKpi('n',d.newUsers,prev?.newUsers);
-    setKpi('e',d.events,prev?.events);
-    // Avg time: format as mm:ss or seconds
-    const t=d.avgTime||0;
-    document.getElementById('gk-t').textContent=t>60?(Math.floor(t/60)+'分'+Math.round(t%60)+'秒'):Math.round(t)+'秒';
-    document.getElementById('gk-t-s').textContent='';
-
-    renderGaChannelCharts(d.channels);
-    renderGaPages(d.pages);
-  } else {
-    ['u','n','e','t'].forEach(id=>{document.getElementById('gk-'+id).textContent='—';document.getElementById('gk-'+id+'-s').textContent='';});
-    document.getElementById('ga-bar-wrap').innerHTML='<div class="empty"><div class="ico">📡</div>尚未上傳此月 GA4 資料<br><small>到「管理月份資料」上傳</small></div>';
-    document.getElementById('ga-pie-wrap').innerHTML='<div class="empty"><div class="ico">🥧</div>尚未上傳</div>';
-    document.getElementById('ga-pages-wrap').innerHTML='<div class="empty" style="padding:1.5rem"><div class="ico">📄</div>尚未上傳此月 GA4 資料</div>';
-    killChart('ga-bar');killChart('ga-pie');
-  }
-}
-
-function renderGaChannelCharts(channels){
-  if(!channels||!channels.length)return;
-  const top=channels.slice(0,8);
-  const labels=top.map(c=>c.s);
-  const vals=top.map(c=>c.v);
-  const total=vals.reduce((a,b)=>a+b,0);
-
-  // Bar
-  document.getElementById('ga-bar-wrap').innerHTML='<canvas id="ga-bar"></canvas>';
-  killChart('ga-bar');
-  CHARTS['ga-bar']=new Chart(document.getElementById('ga-bar'),{
-    type:'bar',
-    data:{labels,datasets:[{data:vals,backgroundColor:CC.map(c=>c+'cc'),borderRadius:4,borderSkipped:false}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmtN(ctx.raw)+' 人'}}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>fmtN(v),font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
-  });
-
-  // Pie
-  document.getElementById('ga-pie-wrap').innerHTML='<canvas id="ga-pie"></canvas>';
-  killChart('ga-pie');
-  CHARTS['ga-pie']=new Chart(document.getElementById('ga-pie'),{
-    type:'doughnut',
-    data:{labels,datasets:[{data:vals,backgroundColor:CC,borderWidth:2,borderColor:'#fff'}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10,padding:6}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${((ctx.raw/total)*100).toFixed(1)}%`}}}}
-  });
-}
-
-function renderGaPages(pages){
-  if(!pages||!pages.length){
-    document.getElementById('ga-pages-wrap').innerHTML='<div class="empty" style="padding:1.5rem"><div class="ico">📄</div>無熱門頁面資料</div>';
-    return;
-  }
-  const maxV=pages[0].views;
-  let html=`<table class="ptbl"><thead><tr><th>#</th><th>頁面標題</th><th>瀏覽次數</th><th>活躍使用者</th><th>跳出率</th></tr></thead><tbody>`;
-  pages.forEach((p,i)=>{
-    const bw=((p.views/maxV)*100).toFixed(1);
-    html+=`<tr>
-      <td style="color:var(--tx3);font-size:12px">${i+1}</td>
-      <td><div class="pname" title="${p.name}">${p.name}</div><div class="bar-mini" style="width:${bw}%"></div></td>
-      <td>${fmtN(p.views)}</td>
-      <td>${fmtN(p.users)}</td>
-      <td>${p.bounce?(p.bounce*100).toFixed(1)+'%':'—'}</td>
-    </tr>`;
-  });
-  html+='</tbody></table>';
-  document.getElementById('ga-pages-wrap').innerHTML=html;
-}
-
-// ═══════════════════════════════════════════════
-// GA4 Trend View
-// ═══════════════════════════════════════════════
-function getFilteredMonths(){
-  const all=LD();
-  const entries=Object.entries(all)
-    .map(([k,d])=>({k,y:d.year,m:d.month,d}))
-    .sort((a,b)=>a.k.localeCompare(b.k));
-
-  if(GA4_RANGE==='all')return entries.filter(e=>e.y===CY);
-  const qmap={q1:[0,1,2],q2:[3,4,5],q3:[6,7,8],q4:[9,10,11]};
-  const qm=qmap[GA4_RANGE]||[];
-  return entries.filter(e=>e.y===CY&&qm.includes(e.m));
-}
-
-function renderGaTrend(){
-  const months=getFilteredMonths();
-  document.getElementById('range-info').textContent=`${CY} 年，共 ${months.length} 個月資料`;
-
-  if(months.length<1){
-    ['t-users','t-events','t-new','t-channel'].forEach(id=>{
-      document.getElementById(id).innerHTML='<div class="empty"><div class="ico">📈</div>需要至少 1 個月資料</div>';
-    });
-    document.getElementById('ga-compare-tbl').innerHTML='<div class="empty" style="padding:1.5rem"><div class="ico">📊</div>需要至少 1 個月資料</div>';
-    return;
-  }
-
-  const labels=months.map(e=>MZ[e.m]);
-
-  const makeLine=(canvasId,label,data,color)=>{
-    document.getElementById(canvasId).innerHTML='<canvas id="c-'+canvasId+'"></canvas>';
-    killChart(canvasId);
-    CHARTS[canvasId]=new Chart(document.getElementById('c-'+canvasId),{
-      type:'line',
-      data:{labels,datasets:[{label,data,borderColor:color,backgroundColor:color+'22',fill:true,tension:.35,pointRadius:4,pointHoverRadius:6}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>label+': '+fmtN(ctx.raw)}}},scales:{y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:v=>fmtN(v),font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:11}}}}}
-    });
-  };
-
-  makeLine('t-users','活躍使用者',months.map(e=>e.d.users),'#4f86f7');
-  makeLine('t-events','事件計數',months.map(e=>e.d.events),'#a78bfa');
-  makeLine('t-new','新使用者',months.map(e=>e.d.newUsers),'#58c49a');
-
-  // Channel trend (top 4 sources from all months combined)
-  const srcSet={};
-  months.forEach(e=>(e.d.channels||[]).forEach(c=>{srcSet[c.s]=(srcSet[c.s]||0)+c.v;}));
-  const topSrcs=Object.entries(srcSet).sort((a,b)=>b[1]-a[1]).slice(0,5).map(x=>x[0]);
-  const datasets=topSrcs.map((src,i)=>({
-    label:src,
-    data:months.map(e=>{const ch=(e.d.channels||[]).find(c=>c.s===src);return ch?ch.v:0;}),
-    borderColor:CC[i],backgroundColor:'transparent',tension:.35,pointRadius:3,
-  }));
-  document.getElementById('t-channel').innerHTML='<canvas id="c-t-channel"></canvas>';
-  killChart('t-channel');
-  CHARTS['t-channel']=new Chart(document.getElementById('c-t-channel'),{
-    type:'line',data:{labels,datasets},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:10,padding:6}}},scales:{y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:v=>fmtN(v),font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:11}}}}}
-  });
-
-  // Comparison table
-  let tbl=`<table class="ptbl"><thead><tr><th>月份</th><th>活躍使用者</th><th>新使用者</th><th>事件計數</th><th>平均參與</th><th>主要來源</th></tr></thead><tbody>`;
-  months.forEach((e,i)=>{
-    const prev=months[i-1];
-    const delta=(v,pv)=>{if(!pv||!prev)return '';const p=((v-pv)/pv*100).toFixed(1);const up=parseFloat(p)>=0;return `<span class="${up?'up':'dn'}" style="font-size:10px;margin-left:4px">${up?'↑':'↓'}${Math.abs(p)}%</span>`;};
-    const topSrc=e.d.channels&&e.d.channels[0]?e.d.channels[0].s:'—';
-    const t=e.d.avgTime||0;
-    const tstr=t>60?(Math.floor(t/60)+'m'+Math.round(t%60)+'s'):Math.round(t)+'s';
-    tbl+=`<tr><td style="font-weight:600">${e.y}/${MZ[e.m]}</td>
-      <td>${fmtN(e.d.users)}${delta(e.d.users,prev?.d.users)}</td>
-      <td>${fmtN(e.d.newUsers)}${delta(e.d.newUsers,prev?.d.newUsers)}</td>
-      <td>${fmtN(e.d.events)}${delta(e.d.events,prev?.d.events)}</td>
-      <td>${tstr}</td>
-      <td style="font-size:11px;color:var(--tx2)">${topSrc}</td>
-    </tr>`;
-  });
-  tbl+='</tbody></table>';
-  document.getElementById('ga-compare-tbl').innerHTML=tbl;
-}
-
-// ═══════════════════════════════════════════════
-// AD SECTION
-// ═══════════════════════════════════════════════
+// Ad platform tabs
 document.getElementById('ptabs').onclick=function(e){
   const b=e.target.closest('.ptab');if(!b)return;
   AP=b.dataset.p;
@@ -726,33 +471,272 @@ document.getElementById('ptabs').onclick=function(e){
   renderAd();
 };
 
-window.handleAdUpload=function(e){
+// ═══════════════════════════════════════════════
+// GA4 Upload & Parse
+// ═══════════════════════════════════════════════
+window.handleGaUpload=async function(e){
+  const f=e.target.files[0];if(!f)return;
+  const uy=parseInt(document.getElementById('ga-y-sel').value);
+  const um=parseInt(document.getElementById('ga-m-sel').value);
+  const st=document.getElementById('ga-upload-st');
+  st.textContent='解析中…';
+  setSyncStatus('syncing','上傳中…');
+
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+      const parsed=parseGa4Excel(rows,uy,um,f.name);
+
+      // Save to Supabase
+      const ok=await dbUpsert('ga4_data',{year:uy,month:um,data:parsed});
+      if(ok){
+        GA4_CACHE[`${uy}-${um}`]=parsed;
+        st.textContent=`✓ ${uy}/${MZ[um]} 已儲存至雲端`;
+        setSyncStatus('ok','雲端已連線 ☁️');
+        showStatus(`✓ GA4 ${uy}/${MZ[um]} 上傳成功`);
+        if(uy===CY&&um===CM)renderGaMonth();
+        if(GA4_VIEW==='manage')renderMmGrid();
+        if(GA4_VIEW==='trend')renderGaTrend();
+      } else {
+        st.textContent='❌ 儲存失敗';
+        setSyncStatus('err','儲存失敗');
+      }
+    }catch(err){
+      st.textContent='❌ 解析失敗：'+err.message;
+      setSyncStatus('err','錯誤');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(f);
+  e.target.value='';
+};
+
+function parseGa4Excel(rows,y,m,fname){
+  const result={year:y,month:m,fname,users:0,newUsers:0,events:0,avgTime:0,channels:[],pages:[]};
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    if(r&&r[0]==='活躍使用者'&&r[1]==='新使用者人數'){
+      const d=rows[i+1];
+      if(d){result.users=parseFloat(d[0])||0;result.newUsers=parseFloat(d[1])||0;result.avgTime=parseFloat(d[2])||0;result.events=parseFloat(d[3])||0;}
+      break;
+    }
+  }
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    if(r&&r[0]==='最初招攬到使用者的來源/媒介'){
+      let j=i+1;
+      while(j<rows.length&&rows[j]&&rows[j][0]&&!String(rows[j][0]).startsWith('#')){
+        const src=String(rows[j][0]).trim(),val=parseFloat(rows[j][1])||0;
+        if(src&&val>0)result.channels.push({s:src,v:val});
+        j++;
+      }
+      break;
+    }
+  }
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    if(r&&r[0]==='網頁標題與畫面類別'&&r[1]==='瀏覽'){
+      let j=i+1,cnt=0;
+      while(j<rows.length&&rows[j]&&rows[j][0]&&cnt<10){
+        const pg=String(rows[j][0]).trim(),views=parseFloat(rows[j][1])||0;
+        if(pg&&views>0){result.pages.push({name:pg,views,users:parseFloat(rows[j][2])||0,bounce:parseFloat(rows[j][4])||0});cnt++;}
+        j++;
+      }
+      break;
+    }
+  }
+  return result;
+}
+
+// ═══════════════════════════════════════════════
+// GA4 Month View
+// ═══════════════════════════════════════════════
+async function renderGaMonth(){
+  // Get from cache or Supabase
+  let d=GA4_CACHE[`${CY}-${CM}`];
+  if(!d){
+    const row=await dbGet('ga4_data',CY,CM);
+    if(row){d=row.data;GA4_CACHE[`${CY}-${CM}`]=d;}
+  }
+
+  // Get prev month for delta
+  let py=CY,pm=CM-1;if(pm<0){pm=11;py--;}
+  let prev=GA4_CACHE[`${py}-${pm}`];
+  if(!prev){const row=await dbGet('ga4_data',py,pm);if(row){prev=row.data;GA4_CACHE[`${py}-${pm}`]=prev;}}
+
+  const setK=(id,val,pval)=>{
+    document.getElementById('gk-'+id).textContent=fmtN(val)||'—';
+    const el=document.getElementById('gk-'+id+'-s');
+    if(pval&&val&&pval>0){const p=((val-pval)/pval*100).toFixed(1);const up=parseFloat(p)>=0;el.className='kc-s '+(up?'up':'dn');el.textContent=(up?'↑':'↓')+Math.abs(p)+'% vs 上月';}
+    else el.textContent='';
+  };
+
+  if(d){
+    setK('u',d.users,prev?.users);
+    setK('n',d.newUsers,prev?.newUsers);
+    setK('e',d.events,prev?.events);
+    const t=d.avgTime||0;
+    document.getElementById('gk-t').textContent=t>60?(Math.floor(t/60)+'分'+Math.round(t%60)+'秒'):Math.round(t)+'秒';
+    document.getElementById('gk-t-s').textContent='';
+    renderGaChannelCharts(d.channels);
+    renderGaPages(d.pages);
+  } else {
+    ['u','n','e','t'].forEach(id=>{document.getElementById('gk-'+id).textContent='—';document.getElementById('gk-'+id+'-s').textContent='';});
+    document.getElementById('ga-bar-wrap').innerHTML='<div class="empty"><div class="ico">📡</div>尚未上傳此月 GA4 資料</div>';
+    document.getElementById('ga-pie-wrap').innerHTML='<div class="empty"><div class="ico">🥧</div>尚未上傳</div>';
+    document.getElementById('ga-pages-wrap').innerHTML='<div class="empty" style="padding:1.5rem"><div class="ico">📄</div>尚未上傳此月 GA4 資料</div>';
+    killChart('ga-bar');killChart('ga-pie');
+  }
+}
+
+function renderGaChannelCharts(channels){
+  if(!channels||!channels.length)return;
+  const top=channels.slice(0,8);
+  const labels=top.map(c=>c.s),vals=top.map(c=>c.v),total=vals.reduce((a,b)=>a+b,0);
+
+  document.getElementById('ga-bar-wrap').innerHTML='<canvas id="ga-bar"></canvas>';
+  killChart('ga-bar');
+  CHARTS['ga-bar']=new Chart(document.getElementById('ga-bar'),{
+    type:'bar',data:{labels,datasets:[{data:vals,backgroundColor:CC.map(c=>c+'cc'),borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmtN(ctx.raw)+' 人'}}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>fmtN(v),font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+
+  document.getElementById('ga-pie-wrap').innerHTML='<canvas id="ga-pie"></canvas>';
+  killChart('ga-pie');
+  CHARTS['ga-pie']=new Chart(document.getElementById('ga-pie'),{
+    type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:CC,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10,padding:6}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${((ctx.raw/total)*100).toFixed(1)}%`}}}}
+  });
+}
+
+function renderGaPages(pages){
+  if(!pages||!pages.length){document.getElementById('ga-pages-wrap').innerHTML='<div class="empty" style="padding:1.5rem"><div class="ico">📄</div>無頁面資料</div>';return;}
+  const maxV=pages[0].views;
+  let html=`<table class="ptbl"><thead><tr><th>#</th><th>頁面標題</th><th>瀏覽</th><th>活躍使用者</th><th>跳出率</th></tr></thead><tbody>`;
+  pages.forEach((p,i)=>{
+    const bw=((p.views/maxV)*100).toFixed(1);
+    html+=`<tr><td style="color:var(--tx3);font-size:12px">${i+1}</td><td><div class="pname" title="${p.name}">${p.name}</div><div class="barmini" style="width:${bw}%"></div></td><td>${fmtN(p.views)}</td><td>${fmtN(p.users)}</td><td>${p.bounce?(p.bounce*100).toFixed(1)+'%':'—'}</td></tr>`;
+  });
+  document.getElementById('ga-pages-wrap').innerHTML=html+'</tbody></table>';
+}
+
+// ═══════════════════════════════════════════════
+// GA4 Trend View
+// ═══════════════════════════════════════════════
+async function renderGaTrend(){
+  const all=await dbGetAll('ga4_data',CY);
+  const qmap={q1:[0,1,2],q2:[3,4,5],q3:[6,7,8],q4:[9,10,11]};
+  const months=GA4_RANGE==='all'?all:all.filter(r=>qmap[GA4_RANGE]?.includes(r.month));
+  document.getElementById('range-info').textContent=`${CY} 年，${months.length} 個月資料`;
+
+  if(months.length<1){
+    ['t-users','t-new','t-events','t-channel'].forEach(id=>document.getElementById(id).innerHTML='<div class="empty"><div class="ico">📈</div>需要至少 1 個月資料</div>');
+    document.getElementById('ga-compare-tbl').innerHTML='<div class="empty" style="padding:1.5rem"><div class="ico">📊</div>需要至少 1 個月資料</div>';
+    return;
+  }
+
+  const labels=months.map(r=>MZ[r.month]);
+  const mkLine=(wrapId,label,data,color)=>{
+    document.getElementById(wrapId).innerHTML='<canvas id="c-'+wrapId+'"></canvas>';
+    killChart(wrapId);
+    CHARTS[wrapId]=new Chart(document.getElementById('c-'+wrapId),{
+      type:'line',
+      data:{labels,datasets:[{label,data,borderColor:color,backgroundColor:color+'22',fill:true,tension:.35,pointRadius:4,pointHoverRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>label+': '+fmtN(ctx.raw)}}},scales:{y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:v=>fmtN(v),font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:11}}}}}
+    });
+  };
+  mkLine('t-users','活躍使用者',months.map(r=>r.data.users),'#4f86f7');
+  mkLine('t-new','新使用者',months.map(r=>r.data.newUsers),'#58c49a');
+  mkLine('t-events','事件計數',months.map(r=>r.data.events),'#a78bfa');
+
+  // Channel trend
+  const srcMap={};
+  months.forEach(r=>(r.data.channels||[]).forEach(c=>{srcMap[c.s]=(srcMap[c.s]||0)+c.v;}));
+  const topSrcs=Object.entries(srcMap).sort((a,b)=>b[1]-a[1]).slice(0,5).map(x=>x[0]);
+  document.getElementById('t-channel').innerHTML='<canvas id="c-t-channel"></canvas>';
+  killChart('t-channel');
+  CHARTS['t-channel']=new Chart(document.getElementById('c-t-channel'),{
+    type:'line',
+    data:{labels,datasets:topSrcs.map((src,i)=>({label:src,data:months.map(r=>{const ch=(r.data.channels||[]).find(c=>c.s===src);return ch?ch.v:0;}),borderColor:CC[i],backgroundColor:'transparent',tension:.35,pointRadius:3}))},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:10,padding:6}}},scales:{y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:v=>fmtN(v),font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:11}}}}}
+  });
+
+  // Compare table
+  let tbl=`<table class="ptbl"><thead><tr><th>月份</th><th>活躍使用者</th><th>新使用者</th><th>事件計數</th><th>平均參與</th><th>主要來源</th></tr></thead><tbody>`;
+  months.forEach((r,i)=>{
+    const prev=months[i-1];
+    const delta=(v,pv)=>{if(!pv||!prev||!v)return '';const p=((v-pv)/pv*100).toFixed(1);const up=parseFloat(p)>=0;return `<span class="${up?'up':'dn'}" style="font-size:10px;margin-left:4px">${up?'↑':'↓'}${Math.abs(p)}%</span>`;};
+    const t=r.data.avgTime||0;
+    const topSrc=r.data.channels&&r.data.channels[0]?r.data.channels[0].s:'—';
+    tbl+=`<tr><td style="font-weight:600">${r.year}/${MZ[r.month]}</td><td>${fmtN(r.data.users)}${delta(r.data.users,prev?.data.users)}</td><td>${fmtN(r.data.newUsers)}${delta(r.data.newUsers,prev?.data.newUsers)}</td><td>${fmtN(r.data.events)}${delta(r.data.events,prev?.data.events)}</td><td>${t>60?(Math.floor(t/60)+'m'+Math.round(t%60)+'s'):Math.round(t)+'s'}</td><td style="font-size:11px;color:var(--tx2)">${topSrc}</td></tr>`;
+  });
+  document.getElementById('ga-compare-tbl').innerHTML=tbl+'</tbody></table>';
+}
+
+// ═══════════════════════════════════════════════
+// Month Manager Grid
+// ═══════════════════════════════════════════════
+async function renderMmGrid(){
+  document.getElementById('mm-title').textContent=`${CY} 年已上傳月份`;
+  const all=await dbGetAll('ga4_data',CY);
+  const hasMonths=new Set(all.map(r=>r.month));
+  let html='';
+  for(let m=0;m<12;m++){
+    const has=hasMonths.has(m);
+    html+=`<div class="mm-cell ${has?'has':''} ${CY===CY&&CM===m&&has?'sel':''}">
+      ${has?`<button class="mm-del" onclick="delGaMonth(${CY},${m})">✕</button>`:''}
+      <span class="mm-month">${MZ[m]}</span>
+      <span class="mm-st">${has?'✓ 已上傳':'—'}</span>
+    </div>`;
+  }
+  document.getElementById('mm-grid').innerHTML=html;
+}
+
+window.delGaMonth=async function(y,m){
+  if(!confirm(`確定刪除 ${y}/${MZ[m]} 的 GA4 資料？`))return;
+  setSyncStatus('syncing','刪除中…');
+  const ok=await dbDelete('ga4_data',y,m);
+  if(ok){
+    delete GA4_CACHE[`${y}-${m}`];
+    setSyncStatus('ok','雲端已連線 ☁️');
+    showStatus('已刪除');
+    renderMmGrid();
+  } else setSyncStatus('err','刪除失敗');
+};
+
+// ═══════════════════════════════════════════════
+// AD SECTION
+// ═══════════════════════════════════════════════
+window.handleAdUpload=async function(e){
   const f=e.target.files[0];if(!f)return;
   showStatus('讀取中…',5000);
+  setSyncStatus('syncing','上傳中…');
   const reader=new FileReader();
-  reader.onload=ev=>{
+  reader.onload=async ev=>{
     try{
       const wb=XLSX.read(ev.target.result,{type:'array'});
       let rows=[];
       if(AP==='meta')rows=parseMeta(wb);
       else if(AP==='criteo')rows=parseCriteo(wb);
       else rows=parseGoogle(wb);
-      LS('ad_'+AP+'_'+K(CY,CM),{rows,_fn:f.name,_at:new Date().toISOString()});
-      renderAd();showStatus(`✓ 載入成功：${rows.length} 筆廣告`);
-    }catch(err){showStatus('❌ 解析失敗：'+err.message,5000);console.error(err);}
+      const ok=await dbUpsert('ad_data',{year:CY,month:CM,platform:AP,data:{rows,_fn:f.name}});
+      if(ok){setSyncStatus('ok','雲端已連線 ☁️');showStatus(`✓ 載入成功：${rows.length} 筆廣告`);}
+      else{setSyncStatus('err','儲存失敗');showStatus('❌ 儲存失敗',4000);}
+      renderAd();
+    }catch(err){showStatus('❌ 解析失敗：'+err.message,5000);setSyncStatus('err','錯誤');console.error(err);}
   };
   reader.readAsArrayBuffer(f);e.target.value='';
 };
 
-document.getElementById('ad-uarea').onclick=function(){document.getElementById('ad-file').click();};
-
-function renderAd(){
-  const d=LG('ad_'+AP+'_'+K(CY,CM));
+async function renderAd(){
+  const row=await dbGet('ad_data',CY,CM,`&platform=eq.${AP}`);
+  const d=row?row.data:null;
   const ua=document.getElementById('ad-uarea'),ub=document.getElementById('ad-ubadge'),un=document.getElementById('ad-uname');
-  if(d){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';}
-  else{ua.classList.remove('loaded');ub.style.display='none';const L={meta:'支援 .xlsx',criteo:'支援 .xlsx（按 Ad set 匯總）',google:'支援 .csv / .xlsx'};un.textContent=L[AP];}
-  if(d&&d.rows&&d.rows.length){renderAdMetrics(d.rows);renderAdCharts(d.rows);renderAdTable(d.rows);}
-  else clearAd();
+  if(d&&d.rows&&d.rows.length){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';renderAdMetrics(d.rows);renderAdCharts(d.rows);renderAdTable(d.rows);}
+  else{ua.classList.remove('loaded');ub.style.display='none';const L={meta:'支援 .xlsx',criteo:'支援 .xlsx',google:'支援 .csv / .xlsx'};un.textContent=L[AP];clearAd();}
 }
 
 function clearAd(){
@@ -767,12 +751,11 @@ function renderAdMetrics(rows){
   let sp=0,cart=0,co=0,rv=[],cv=[],tv=[];
   rows.forEach(r=>{sp+=r.spend||0;cart+=r.cart||0;co+=r.checkout||0;if(r.roas>0)rv.push(r.roas);if(r.cpc>0)cv.push(r.cpc);if(r.ctr>0)tv.push(r.ctr);});
   const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
-  const ar=avg(rv),ac=avg(cv),at=avg(tv);
   document.getElementById('adMetrics').innerHTML=[
     {l:'花費 (TWD)',v:'$'+Math.round(sp).toLocaleString()},
-    {l:'平均 ROAS',v:ar>0?ar.toFixed(2)+'x':'—'},
-    {l:'平均 CPC',v:ac>0?'$'+ac.toFixed(2):'—'},
-    {l:'平均 CTR',v:at>0?at.toFixed(2)+'%':'—'},
+    {l:'平均 ROAS',v:avg(rv)>0?avg(rv).toFixed(2)+'x':'—'},
+    {l:'平均 CPC',v:avg(cv)>0?'$'+avg(cv).toFixed(2):'—'},
+    {l:'平均 CTR',v:avg(tv)>0?avg(tv).toFixed(2)+'%':'—'},
     {l:'加到購物車',v:cart>0?cart.toLocaleString():'—'},
     {l:'開始結帳',v:co>0?co.toLocaleString():'—'},
   ].map(m=>`<div class="mc"><div class="mc-l">${m.l}</div><div class="mc-v">${m.v}</div></div>`).join('');
@@ -782,22 +765,12 @@ function renderAdCharts(rows){
   const top=rows.filter(r=>r.spend>0).sort((a,b)=>b.spend-a.spend).slice(0,10);
   if(!top.length)return;
   const sn=n=>n.length>14?n.slice(0,14)+'…':n;
-  const lbls=top.map(r=>sn(r.name));
-
-  document.getElementById('cw1').innerHTML='<canvas id="c1"></canvas>';
-  killChart('c1');
-  CHARTS['c1']=new Chart(document.getElementById('c1'),{
-    type:'bar',data:{labels:lbls,datasets:[{label:'花費(TWD)',data:top.map(r=>r.spend),backgroundColor:CC.map(c=>c+'cc'),borderRadius:4,borderSkipped:false}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>'$'+Math.round(v).toLocaleString(),font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
-  });
-
+  document.getElementById('cw1').innerHTML='<canvas id="c1"></canvas>';killChart('c1');
+  CHARTS['c1']=new Chart(document.getElementById('c1'),{type:'bar',data:{labels:top.map(r=>sn(r.name)),datasets:[{label:'花費',data:top.map(r=>r.spend),backgroundColor:CC.map(c=>c+'cc'),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>'$'+Math.round(v).toLocaleString(),font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
   const rRows=top.filter(r=>r.roas>0);
   document.getElementById('cw2').innerHTML=rRows.length?'<canvas id="c2"></canvas>':'<div class="empty"><div class="ico">📈</div>無 ROAS 數據</div>';
   killChart('c2');
-  if(rRows.length)CHARTS['c2']=new Chart(document.getElementById('c2'),{
-    type:'bar',data:{labels:rRows.map(r=>sn(r.name)),datasets:[{label:'ROAS',data:rRows.map(r=>r.roas),backgroundColor:CC.map(c=>c+'cc'),borderRadius:4,borderSkipped:false}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'ROAS: '+ctx.raw.toFixed(2)+'x'}}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>v.toFixed(1)+'x',font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
-  });
+  if(rRows.length)CHARTS['c2']=new Chart(document.getElementById('c2'),{type:'bar',data:{labels:rRows.map(r=>sn(r.name)),datasets:[{label:'ROAS',data:rRows.map(r=>r.roas),backgroundColor:CC.map(c=>c+'cc'),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'ROAS: '+ctx.raw.toFixed(2)+'x'}}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>v.toFixed(1)+'x',font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 
 function renderAdTable(rows){
@@ -828,7 +801,7 @@ function parseMeta(wb){
   const rows=[];
   for(let i=hIdx+1;i<arr.length;i++){
     const r=arr[i];const name=String(r[iN]||'').trim();
-    if(!name||name.startsWith('META_')||name==='行銷活動名稱')continue;
+    if(!name||name.startsWith('META_'))continue;
     const spend=parseFloat(r[iSp])||0;if(!spend)continue;
     rows.push({name,spend,roas:parseFloat(r[iR])||0,cpc:parseFloat(r[iCpc])||0,ctr:parseFloat(r[iCtr])||0,cart:parseFloat(r[iCart])||0,checkout:parseFloat(r[iCo])||0});
   }
@@ -875,10 +848,9 @@ function parseGoogle(wb){
 // ═══════════════════════════════════════════════
 // Gantt
 // ═══════════════════════════════════════════════
-function gP(){return LG('proj_'+K(CY,CM))||[]}
-function sP(v){LS('proj_'+K(CY,CM),v)}
-function renderGantt(){
-  const ps=gP();
+async function renderGantt(){
+  const row=await dbGet('projects',CY,CM);
+  const ps=row?row.data:[];
   let h='<div class="gh"><div class="gncol">專案</div><div class="gwks"><div class="wl">W1</div><div class="wl">W2</div><div class="wl">W3</div><div class="wl">W4</div></div></div>';
   if(!ps.length)h+='<div class="gempty">尚無專案，請在下方新增</div>';
   else ps.forEach((p,i)=>{
@@ -887,50 +859,49 @@ function renderGantt(){
   });
   document.getElementById('ganttWrap').innerHTML=h;
 }
-window.rmP=function(i){const p=gP();p.splice(i,1);sP(p);renderGantt()};
-window.addProj=function(){
+
+window.rmP=async function(i){
+  const row=await dbGet('projects',CY,CM);
+  const ps=row?row.data:[];ps.splice(i,1);
+  await dbUpsert('projects',{year:CY,month:CM,data:ps});renderGantt();
+};
+window.addProj=async function(){
   const n=document.getElementById('pname').value.trim();if(!n)return;
-  const p=gP();
-  p.push({name:n,cat:document.getElementById('pcat').value,start:+document.getElementById('pstart').value,dur:+document.getElementById('pdur').value});
-  sP(p);document.getElementById('pname').value='';renderGantt();
+  const row=await dbGet('projects',CY,CM);
+  const ps=row?row.data:[];
+  ps.push({name:n,cat:document.getElementById('pcat').value,start:+document.getElementById('pstart').value,dur:+document.getElementById('pdur').value});
+  await dbUpsert('projects',{year:CY,month:CM,data:ps});
+  document.getElementById('pname').value='';renderGantt();
 };
 
 // ═══════════════════════════════════════════════
 // Notes
 // ═══════════════════════════════════════════════
-function renderNotes(){document.getElementById('nta').value=LG('notes_'+K(CY,CM))||''}
-window.saveNotes=function(){
-  LS('notes_'+K(CY,CM),document.getElementById('nta').value);
-  const b=document.getElementById('nsave');b.textContent='已儲存 ✓';showStatus('備注已儲存');
-  setTimeout(()=>b.textContent='儲存備注',1800);
+async function renderNotes(){
+  const row=await dbGet('notes',CY,CM);
+  document.getElementById('nta').value=row?row.content:'';
+}
+window.saveNotes=async function(){
+  const b=document.getElementById('nsave');
+  b.textContent='儲存中…';
+  setSyncStatus('syncing','儲存中…');
+  const ok=await dbUpsert('notes',{year:CY,month:CM,content:document.getElementById('nta').value});
+  if(ok){b.textContent='已儲存 ✓';setSyncStatus('ok','雲端已連線 ☁️');showStatus('備注已儲存至雲端');}
+  else{b.textContent='❌ 失敗';setSyncStatus('err','儲存失敗');}
+  setTimeout(()=>b.textContent='儲存備注',2000);
 };
 
 // ═══════════════════════════════════════════════
 // Render All
 // ═══════════════════════════════════════════════
-function renderAll(){
+async function renderAll(){
   document.getElementById('monthLabel').textContent=CY+' / '+MZ[CM];
+  document.getElementById('ga-m-sel').value=CM;
   renderGaMonth();
   renderAd();
   renderGantt();
   renderNotes();
-  if(GA4_VIEW==='trend')renderGaTrend();
-  if(GA4_VIEW==='manage')renderMmGrid();
 }
-
-// Pre-load April 2026 data if not exist
-(()=>{
-  const all=LD();
-  // March 2026 hardcoded from PDF
-  if(!all['2026-02']){
-    all['2026-02']={year:2026,month:2,fname:'PDF匯入',users:330000,newUsers:310000,events:1820000,avgTime:11,
-      channels:[{s:'google / cpc',v:280000},{s:'criteo / video',v:65000},{s:'criteo / display',v:40000},{s:'fb / paid',v:18000},{s:'ig / paid',v:3750},{s:'(direct)/(none)',v:4827}],
-      pages:[]};
-    SD(all);
-  }
-})();
-
-renderAll();
 </script>
 </body>
 </html>
