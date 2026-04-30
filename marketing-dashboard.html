@@ -873,8 +873,37 @@ function renderAdTable(rows){
     document.getElementById('adTbl').innerHTML=html2+'</tbody></table>';
     return;
   } else if(AP==='criteo'){
-    th='<th>Ad Set</th><th>Cost(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>曝光</th><th>點擊</th>';
-    tdFn=r=>`<td class="aname" title="${r.name}">${r.name}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.cpc>0?'$'+r.cpc.toFixed(3):'—'}</td><td>${r.ctr>0?(r.ctr*100).toFixed(2)+'%':'—'}</td><td>${r.displays?Math.round(r.displays).toLocaleString():'—'}</td><td>${r.clicks?Math.round(r.clicks).toLocaleString():'—'}</td>`;
+    // 第一層：Ad set，可展開看素材
+    let html2='<table class="gtbl"><thead><tr><th>Ad Set / 素材</th><th>Cost(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>曝光</th><th>點擊</th></tr></thead><tbody>';
+    sorted.forEach(r=>{
+      const hasAds=r.ads&&r.ads.length>0;
+      html2+=`<tr style="background:var(--sf2);${hasAds?'cursor:pointer':''}" ${hasAds?`onclick="const nb=this.nextSibling;if(nb){nb.style.display=nb.style.display==='none'?'':'none';this.cells[0].innerHTML=this.cells[0].innerHTML.replace(/[▾▸]/,nb.style.display==='none'?'▸':'▾');}"`:''}">
+        <td style="font-weight:600;font-size:12px">${hasAds?'▸ ':''}<span class="aname" title="${r.name}">${r.name}</span></td>
+        <td>$${Math.round(r.spend).toLocaleString()}</td>
+        <td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td>
+        <td>${r.cpc>0?'$'+r.cpc.toFixed(3):'—'}</td>
+        <td>${r.ctr>0?(r.ctr*100).toFixed(2)+'%':'—'}</td>
+        <td>${r.displays?r.displays.toLocaleString():'—'}</td>
+        <td>${r.clicks?r.clicks.toLocaleString():'—'}</td>
+      </tr>`;
+      if(hasAds){
+        html2+='<tr style="display:none"><td colspan="7" style="padding:0"><table style="width:100%;border-collapse:collapse">';
+        r.ads.forEach(ad=>{
+          html2+=`<tr style="background:var(--sf)">
+            <td style="padding:7px 12px 7px 28px;font-size:12px;color:var(--tx2);border-bottom:1px solid var(--bd)">${ad.name}</td>
+            <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">$${Math.round(ad.spend).toLocaleString()}</td>
+            <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">${ad.roas>0?`<span class="rpill ${ad.roas>=2?'rgood':''}">${ad.roas.toFixed(2)}x</span>`:'—'}</td>
+            <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">${ad.cpc>0?'$'+ad.cpc.toFixed(3):'—'}</td>
+            <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">${ad.ctr>0?(ad.ctr*100).toFixed(2)+'%':'—'}</td>
+            <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">${ad.displays?ad.displays.toLocaleString():'—'}</td>
+            <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">${ad.clicks?ad.clicks.toLocaleString():'—'}</td>
+          </tr>`;
+        });
+        html2+='</table></td></tr>';
+      }
+    });
+    document.getElementById('adTbl').innerHTML=html2+'</tbody></table>';
+    return;
   } else {
     th='<th>廣告活動</th><th>費用(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>加購物車</th><th>開始結帳</th><th>親臨門市</th><th>類型</th>';
     tdFn=r=>`<td class="aname" title="${r.name}">${r.name}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.cpc>0?'$'+r.cpc.toFixed(2):'—'}</td><td>${r.ctr>0?(r.ctr*100).toFixed(2)+'%':'—'}</td><td>${r.cart>0?Math.round(r.cart):'—'}</td><td>${r.checkout>0?Math.round(r.checkout):'—'}</td><td>${r.store>0?Math.round(r.store):'—'}</td><td style="font-size:11px;color:var(--tx3)">${r.type||'—'}</td>`;
@@ -979,66 +1008,71 @@ function parseMeta(wb){
 }
 
 function parseCriteo(wb){
-  // 優先用 Download 頁籤（原始明細，最完整）
-  // 如果沒有就 fallback 到第一個頁籤
-  const wsName=wb.SheetNames.find(n=>n==='Download')||wb.SheetNames[0];
-  const ws=wb.Sheets[wsName];
-  const arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-  if(!arr.length)return[];
+  // ── 第一層：Ad set 層級（從 Download 頁籤 group by Ad set）──
+  const dlName=wb.SheetNames.find(n=>n==='Download')||wb.SheetNames[0];
+  const dlWs=wb.Sheets[dlName];
+  const dlArr=XLSX.utils.sheet_to_json(dlWs,{header:1,defval:''});
+  const dlHdrs=(dlArr[0]||[]).map(v=>String(v).trim());
+  const iAdset=dlHdrs.findIndex(h=>h==='Ad set'||h==='Ad Set');
+  const iAd=dlHdrs.findIndex(h=>h==='Ad');
+  const iDisplays=dlHdrs.findIndex(h=>h.includes('Displays'));
+  const iClicks=dlHdrs.findIndex(h=>h.includes('Clicks'));
+  const iCost=dlHdrs.findIndex(h=>h==='Cost');
+  const iRevenue=dlHdrs.findIndex(h=>h.includes('Revenue'));
 
-  // 找 header row（第一行）
-  const hdrs=arr[0].map(v=>String(v).trim());
-  const iAdset=hdrs.findIndex(h=>h==='Ad set'||h==='Ad Set');
-  const iDisplays=hdrs.findIndex(h=>h.includes('Displays'));
-  const iClicks=hdrs.findIndex(h=>h.includes('Clicks'));
-  const iCost=hdrs.findIndex(h=>h==='Cost');
-  const iRevenue=hdrs.findIndex(h=>h.includes('Revenue'));
+  const adsetMap={};  // Ad set 加總
+  const adMap={};     // Ad set → Ad 明細
 
-  // 如果找不到 Ad set 欄（非 Download 格式），fallback 到舊邏輯
-  if(iAdset<0){
-    const data=XLSX.utils.sheet_to_json(ws,{defval:0});
-    const map={};
-    data.forEach(r=>{
-      const adset=String(r['Ad set']||r['Ad Set']||'').trim();
-      if(!adset)return;
-      if(!map[adset])map[adset]={name:adset,spend:0,displays:0,clicks:0,revenue:0};
-      const a=map[adset];
-      a.spend+=parseFloat(r['Cost'])||0;
-      a.displays+=parseFloat(r['Displays'])||0;
-      a.clicks+=parseFloat(r['Clicks'])||0;
-      a.revenue+=parseFloat(r['Revenue PC30D+PV1D'])||0;
-    });
-    return Object.values(map).map(a=>({
-      name:a.name,spend:a.spend,
-      roas:a.spend>0?a.revenue/a.spend:0,
-      cpc:a.clicks>0?a.spend/a.clicks:0,
-      ctr:a.displays>0?a.clicks/a.displays:0,
-      displays:a.displays,clicks:a.clicks
-    })).filter(r=>r.spend>0);
+  if(iAdset>=0){
+    for(let i=1;i<dlArr.length;i++){
+      const r=dlArr[i];
+      const adset=String(r[iAdset]||'').trim();
+      const ad=iAd>=0?String(r[iAd]||'').trim():'';
+      if(!adset)continue;
+      const cost=parseFloat(r[iCost])||0;
+      if(!cost)continue;
+
+      // Ad set 層加總
+      if(!adsetMap[adset])adsetMap[adset]={name:adset,spend:0,displays:0,clicks:0,revenue:0};
+      adsetMap[adset].spend+=cost;
+      adsetMap[adset].displays+=parseFloat(r[iDisplays])||0;
+      adsetMap[adset].clicks+=parseFloat(r[iClicks])||0;
+      adsetMap[adset].revenue+=parseFloat(r[iRevenue])||0;
+
+      // Ad 明細（按 adset+ad key 加總）
+      if(ad){
+        const key=adset+'|||'+ad;
+        if(!adMap[key])adMap[key]={adset,name:ad,spend:0,displays:0,clicks:0,revenue:0};
+        adMap[key].spend+=cost;
+        adMap[key].displays+=parseFloat(r[iDisplays])||0;
+        adMap[key].clicks+=parseFloat(r[iClicks])||0;
+        adMap[key].revenue+=parseFloat(r[iRevenue])||0;
+      }
+    }
   }
 
-  // 用 Ad set group 加總
-  const map={};
-  for(let i=1;i<arr.length;i++){
-    const r=arr[i];
-    const adset=String(r[iAdset]||'').trim();
-    if(!adset)continue;
-    const cost=parseFloat(r[iCost])||0;
-    if(!cost)continue;
-    if(!map[adset])map[adset]={name:adset,spend:0,displays:0,clicks:0,revenue:0};
-    const a=map[adset];
-    a.spend+=cost;
-    a.displays+=parseFloat(r[iDisplays])||0;
-    a.clicks+=parseFloat(r[iClicks])||0;
-    a.revenue+=parseFloat(r[iRevenue])||0;
-  }
-  return Object.values(map).map(a=>({
-    name:a.name,spend:a.spend,
-    roas:a.spend>0?a.revenue/a.spend:0,
+  // 組合 Ad set 層結果，並掛上底下的 ads 陣列
+  const adRows=Object.values(adMap).map(a=>({
+    adset:a.adset,name:a.name,spend:a.spend,
+    roas:a.spend>0&&a.revenue>0?a.revenue/a.spend:0,
     cpc:a.clicks>0?a.spend/a.clicks:0,
     ctr:a.displays>0?a.clicks/a.displays:0,
     displays:Math.round(a.displays),clicks:Math.round(a.clicks)
-  })).filter(r=>r.spend>0).sort((a,b)=>b.spend-a.spend);
+  }));
+
+  const rows=Object.values(adsetMap).map(a=>{
+    const ads=adRows.filter(r=>r.adset===a.name).sort((x,y)=>y.spend-x.spend);
+    return {
+      name:a.name,spend:a.spend,
+      roas:a.spend>0&&a.revenue>0?a.revenue/a.spend:0,
+      cpc:a.clicks>0?a.spend/a.clicks:0,
+      ctr:a.displays>0?a.clicks/a.displays:0,
+      displays:Math.round(a.displays),clicks:Math.round(a.clicks),
+      ads  // 素材明細
+    };
+  }).filter(r=>r.spend>0).sort((a,b)=>b.spend-a.spend);
+
+  return rows;
 }
 
 function parseGoogleCsv(text){
