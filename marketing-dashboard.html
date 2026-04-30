@@ -788,8 +788,8 @@ function renderAdTable(rows){
       const cRoas=tot.spend>0&&tot.rev>0?tot.rev/tot.spend:0;
       const cCpc=tot.clicks>0?tot.spend/tot.clicks:0;
       const cCtr=tot.imp>0?tot.clicks/tot.imp:0;
-      html2+=`<tr style="background:var(--sf2);cursor:pointer" onclick="this.nextSibling&&(this.nextSibling.style.display=this.nextSibling.style.display==='none'?'':'none')">
-        <td style="font-weight:600;font-size:12px">▾ ${camp}</td>
+      html2+=`<tr style="background:var(--sf2);cursor:pointer" onclick="const nb=this.nextSibling;if(nb){nb.style.display=nb.style.display==='none'?'':'none';this.cells[0].innerHTML=this.cells[0].innerHTML.replace(/[▾▸]/,nb.style.display===\'none\'?\'▸\':\'▾\');}">  
+        <td style="font-weight:600;font-size:12px">▸ ${camp}</td>
         <td>$${Math.round(tot.spend).toLocaleString()}</td>
         <td>${cRoas>0?`<span class="rpill ${cRoas>=2?'rgood':''}">${cRoas.toFixed(2)}x</span>`:'—'}</td>
         <td>${cCpc>0?'$'+cCpc.toFixed(2):'—'}</td>
@@ -798,7 +798,7 @@ function renderAdTable(rows){
         <td>${tot.checkout>0?Math.round(tot.checkout):'—'}</td>
         <td>${tot.store>0?Math.round(tot.store):'—'}</td>
       </tr>`;
-      html2+='<tr><td colspan="8" style="padding:0"><table style="width:100%;border-collapse:collapse">';
+      html2+='<tr style="display:none"><td colspan="8" style="padding:0"><table style="width:100%;border-collapse:collapse">';
       g.rows.forEach(r=>{html2+=`<tr style="background:var(--sf)">
         <td style="padding:7px 12px 7px 28px;font-size:12px;color:var(--tx2);width:100%;border-bottom:1px solid var(--bd)">${r.name}</td>
         <td style="padding:7px 12px;border-bottom:1px solid var(--bd);white-space:nowrap">$${Math.round(r.spend).toLocaleString()}</td>
@@ -865,15 +865,16 @@ function parseMeta(wb){
   const iSp=col('花費金額')>=0?col('花費金額'):col('花費');
   const iRoas=col('成果 ROAS')>=0?col('成果 ROAS'):col('ROAS');
   const iCpc=col('CPC');
-  const iClicks=col('連結點擊次數');
-  const iImp=col('曝光次數');
+  const iClicks=hdrs.findIndex(h=>h==='連結點擊次數');
+  const iImp=hdrs.findIndex(h=>h==='曝光次數');
   const iResult=col('成果'); // 成果欄 (加購物車/結帳等)
   const iResultType=col('成果類型');
   const iCart_old=col('購物車');
   const iCheckout_old=col('網站開始結帳次數')>=0?col('網站開始結帳次數'):col('結帳');
   const iStore=col('門市資訊');
+  const iLevel=col('投遞層級');
 
-  // Group by adset: merge rows with same campaign+adset
+  // Group by adset: only use adset-level rows to avoid double counting
   const map={};
   for(let i=hIdx+1;i<arr.length;i++){
     const r=arr[i];
@@ -881,6 +882,9 @@ function parseMeta(wb){
     const adset=String(r[iAdset]||'').trim();
     if(!campaign)continue;
     const spend=parseFloat(r[iSp])||0;if(!spend)continue;
+    // Skip campaign-level summary rows (they are subtotals)
+    const level=String(r[iLevel]||'').toLowerCase();
+    if(level==='campaign')continue;
 
     const key=campaign+'|||'+(adset||campaign);
     if(!map[key])map[key]={name:adset||campaign,campaignName:campaign,spend:0,roas:0,roasW:0,cpc:0,ctr:0,cart:0,checkout:0,store:0,clicks:0,impressions:0};
