@@ -317,7 +317,20 @@ async function dbGet(tbl,y,m,extra=''){
   try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?year=eq.${y}&month=eq.${m}${extra}&limit=1`,{headers:SBR});if(!r.ok)return null;const d=await r.json();return d&&d[0]?d[0]:null;}catch(e){return null;}
 }
 async function dbUpsert(tbl,payload){
-  try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}`,{method:'POST',headers:SBH,body:JSON.stringify(payload)});return r.ok||r.status===201||r.status===204||r.status===200;}catch(e){return false;}
+  try{
+    // Try POST first (insert)
+    const r=await fetch(`${SB_URL}/rest/v1/${tbl}`,{method:'POST',headers:SBH,body:JSON.stringify(payload)});
+    if(r.ok||r.status===201)return true;
+    // If 409 conflict, use PATCH (update)
+    if(r.status===409){
+      const patchH={...SBR,'Content-Type':'application/json'};
+      let url=`${SB_URL}/rest/v1/${tbl}?year=eq.${payload.year}&month=eq.${payload.month}`;
+      if(payload.platform)url+=`&platform=eq.${payload.platform}`;
+      const r2=await fetch(url,{method:'PATCH',headers:patchH,body:JSON.stringify(payload)});
+      return r2.ok||r2.status===204||r2.status===200;
+    }
+    return false;
+  }catch(e){return false;}
 }
 async function dbGetAll(tbl,y){
   try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?year=eq.${y}&order=month.asc`,{headers:SBR});if(!r.ok)return[];return await r.json();}catch(e){return[];}
