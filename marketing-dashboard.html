@@ -310,14 +310,14 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 // ── Supabase ──────────────────────────────────────────────────
 const SB_URL='https://yrroqndpcgaqvgxeydgn.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlycm9xbmRwY2dhcXZneGV5ZGduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1MTE0NjYsImV4cCI6MjA5MzA4NzQ2Nn0.4Zw2GWnuzbusCWrplOJSbV1_Nqp7KR_GWwQ-Ed0CDxE';
-const SBH={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'resolution=merge-duplicates'};
+const SBH={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'resolution=merge-duplicates,return=minimal'};
 const SBR={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
 
 async function dbGet(tbl,y,m,extra=''){
   try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?year=eq.${y}&month=eq.${m}${extra}&limit=1`,{headers:SBR});if(!r.ok)return null;const d=await r.json();return d&&d[0]?d[0]:null;}catch(e){return null;}
 }
 async function dbUpsert(tbl,payload){
-  try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}`,{method:'POST',headers:SBH,body:JSON.stringify(payload)});return r.ok||r.status===201||r.status===204;}catch(e){return false;}
+  try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}`,{method:'POST',headers:SBH,body:JSON.stringify(payload)});return r.ok||r.status===201||r.status===204||r.status===200;}catch(e){return false;}
 }
 async function dbGetAll(tbl,y){
   try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?year=eq.${y}&order=month.asc`,{headers:SBR});if(!r.ok)return[];return await r.json();}catch(e){return[];}
