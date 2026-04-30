@@ -193,6 +193,13 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
       <span class="sync-lbl" id="syncLbl">初始化中…</span>
     </div>
   </div>
+  <div id="token-setup" style="display:none;margin-top:6px">
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <input id="token-input" type="password" placeholder="貼上 GitHub Token (ghp_...)" style="padding:5px 10px;font-size:12px;border:1px solid var(--bdm);border-radius:8px;background:var(--sf2);color:var(--tx);font-family:inherit;outline:none;width:260px">
+      <button onclick="saveToken()" style="padding:5px 12px;border-radius:8px;border:1px solid var(--ac);background:var(--ac);color:#fff;font-size:12px;cursor:pointer;font-family:inherit">儲存</button>
+    </div>
+    <div style="font-size:10px;color:var(--tx3);margin-top:3px">到 GitHub → Settings → Developer settings → Tokens (classic) → 產生新 token，勾選 repo</div>
+  </div>
   <div class="mnav">
     <button class="nbtn" id="prevBtn">&#8592;</button>
     <span class="mlabel" id="monthLabel"></span>
@@ -349,7 +356,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 // ═══════════════════════════════════════════════
 // GitHub API Storage
 // ═══════════════════════════════════════════════
-const GH_TOKEN = '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';
+const GH_TOKEN = localStorage.getItem('gh_token')||'';
 const GH_OWNER = 'niagenie-rgb';
 const GH_REPO  = 'marketing';
 const GH_BRANCH= 'main';
@@ -446,7 +453,21 @@ function K(y,m){return y+'-'+String(m).padStart(2,'0')}
 // ═══════════════════════════════════════════════
 // Init
 // ═══════════════════════════════════════════════
+window.saveToken=function(){
+  const t=document.getElementById('token-input').value.trim();
+  if(!t)return;
+  localStorage.setItem('gh_token',t);
+  document.getElementById('token-setup').style.display='none';
+  location.reload();
+};
+
 (async()=>{
+  const token=localStorage.getItem('gh_token');
+  if(!token){
+    setSyncStatus('err','請設定 GitHub Token');
+    document.getElementById('token-setup').style.display='block';
+    return;
+  }
   setSyncStatus('syncing','連線中…');
   // Test GitHub connection
   try {
