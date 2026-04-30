@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>迪奧斯 月份行銷報告</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f1;--surface:#fff;--surface2:#f0efe9;--surface3:#e8e7e0;
+  --border:rgba(0,0,0,0.08);--border-md:rgba(0,0,0,0.16);
+  --text:#1a1a1a;--text2:#555;--text3:#999;
+  --accent:#1a1a1a;--meta:#1877f2;--criteo:#f15a22;--google:#34a853;
+  --up:#16a34a;--dn:#dc2626;--r:10px;--r-lg:14px;
+}
+body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.wrap{max-width:1100px;margin:0 auto;padding:2rem 1.5rem 5rem}
+
+/* Header */
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:1rem}
+.brand{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3)}
+.month-nav{display:flex;align-items:center;gap:10px}
+.nav-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border-md);background:var(--surface);cursor:pointer;font-size:15px;color:var(--text2);display:flex;align-items:center;justify-content:center}
+.nav-btn:hover{background:var(--surface2)}
+.month-display{font-size:21px;font-weight:700;min-width:130px;text-align:center;letter-spacing:-.02em}
+
+/* Section label */
+.sec{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin:2rem 0 .85rem;display:flex;align-items:center;gap:8px}
+.sec::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* Metric card */
+.mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:.5rem}
+.mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px}
+.mc-label{font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:500}
+.mc-val{font-size:23px;font-weight:700;letter-spacing:-.03em;line-height:1.1}
+.mc-sub{font-size:11px;margin-top:4px}
+.up{color:var(--up)}.dn{color:var(--dn)}
+
+/* Upload */
+.upload-row{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:.5rem}
+.uarea{border:1.5px dashed var(--border-md);border-radius:var(--r-lg);padding:1rem 1.25rem;background:var(--surface);display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;transition:border-color .2s,background .2s}
+.uarea:hover{border-color:#888;background:var(--surface2)}
+.uarea.loaded{border-color:var(--up);border-style:solid;background:#f0fdf4}
+.uicon{font-size:20px;flex-shrink:0}
+.utext strong{display:block;font-size:13px;font-weight:600}
+.utext span{font-size:11px;color:var(--text3)}
+.ubadge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#dcfce7;color:#15803d;display:none}
+.uinput{display:none}
+.btn-sm{padding:5px 14px;border-radius:var(--r);border:1px solid var(--border-md);background:var(--surface);font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit;white-space:nowrap}
+.btn-sm:hover{background:var(--surface2)}
+.btn-primary{padding:7px 18px;border-radius:var(--r);border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-primary:hover{opacity:.85}
+
+/* Platform tabs */
+.ptabs{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
+.ptab{padding:5px 16px;border-radius:20px;border:1px solid var(--border);background:transparent;font-size:13px;cursor:pointer;color:var(--text2);font-family:inherit;display:flex;align-items:center;gap:6px}
+.ptab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dm{background:var(--meta)}.dc{background:var(--criteo)}.dg{background:var(--google)}
+.ptab.active .dot{background:rgba(255,255,255,.7)}
+
+/* Charts */
+.cgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:1rem}
+.ccrd{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem 1.25rem}
+.ctitle{font-size:11px;font-weight:700;color:var(--text3);margin-bottom:.85rem;text-transform:uppercase;letter-spacing:.06em}
+.cwrap{position:relative;height:220px}
+.cwrap-tall{position:relative;height:260px}
+
+/* Table */
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow-x:auto;margin-bottom:.5rem}
+.atbl{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+.atbl th{padding:9px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
+.atbl td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.atbl tr:last-child td{border-bottom:none}
+.atbl tr:hover td{background:var(--surface2)}
+.aname{font-weight:500;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rpill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;background:#fef9c3;color:#854d0e}
+.rgood{background:#dcfce7;color:#15803d}
+
+/* GA4 */
+.ga-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:1rem}
+.gcrd{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px}
+.glabel{font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:500}
+.gval{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.gdelta{font-size:11px;margin-top:4px}
+
+/* Gantt */
+.gantt{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+.gh{display:flex;background:var(--surface2);border-bottom:1px solid var(--border)}
+.gncol{width:180px;flex-shrink:0;padding:9px 14px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);border-right:1px solid var(--border)}
+.gwks{flex:1;display:grid;grid-template-columns:repeat(4,1fr)}
+.wlbl{font-size:11px;color:var(--text3);text-align:center;padding:9px 0;border-right:1px solid var(--border)}
+.wlbl:last-child{border-right:none}
+.grow{display:flex;border-bottom:1px solid var(--border);align-items:center;min-height:44px}
+.grow:last-child{border-bottom:none}
+.grname{width:180px;flex-shrink:0;padding:8px 14px;font-size:13px;border-right:1px solid var(--border)}
+.grname .cat{font-size:10px;color:var(--text3);display:block;margin-top:1px}
+.gbars{flex:1;display:grid;grid-template-columns:repeat(4,1fr);position:relative;height:44px}
+.gcell{border-right:1px solid var(--border)}.gcell:last-child{border-right:none}
+.gbar{position:absolute;height:22px;top:11px;border-radius:4px;display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden}
+.bp{background:#e0e7ff;color:#4338ca}.bt{background:#ccfbee;color:#0f766e}
+.ba{background:#fef3c7;color:#92400e}.bc{background:#ffe4d6;color:#9a3412}
+.bb{background:#dbeafe;color:#1e40af}.bk{background:#fce7f3;color:#9d174d}
+.rmbtn{background:none;border:none;cursor:pointer;font-size:13px;padding:0 10px;color:var(--text3);flex-shrink:0}
+.rmbtn:hover{color:var(--dn)}
+.gempty{padding:2rem;text-align:center;font-size:13px;color:var(--text3)}
+.addrow{display:flex;gap:8px;margin-top:.85rem;flex-wrap:wrap;align-items:center}
+.addrow input,.addrow select{padding:7px 11px;font-size:13px;border:1px solid var(--border-md);border-radius:var(--r);background:var(--surface);color:var(--text);font-family:inherit;outline:none}
+.addrow input{flex:1;min-width:130px}
+
+/* Notes */
+.nta{width:100%;padding:12px 14px;font-size:13px;border:1px solid var(--border-md);border-radius:var(--r);background:var(--surface);color:var(--text);resize:vertical;min-height:80px;font-family:inherit;line-height:1.7;outline:none}
+.nsave{margin-top:7px;padding:6px 16px;border-radius:var(--r);border:1px solid var(--border-md);background:var(--surface);font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit}
+.nsave:hover{background:var(--surface2)}
+
+/* Modal */
+.moverlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:200;padding:1rem}
+.modal{background:var(--surface);border-radius:var(--r-lg);padding:1.75rem;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal h3{font-size:15px;font-weight:700;margin-bottom:1.25rem}
+.mcls{float:right;background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);margin-top:-2px}
+.mfield label{display:block;font-size:11px;color:var(--text3);margin:10px 0 3px}
+.mfield input,.mfield textarea{width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--border-md);border-radius:8px;background:var(--surface2);color:var(--text);font-family:inherit;outline:none}
+.mfield textarea{min-height:100px;resize:vertical}
+.mact{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
+.mbtn{padding:8px 20px;border-radius:var(--r);border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.mcancel{padding:8px 14px;border-radius:var(--r);border:1px solid var(--border-md);background:transparent;font-size:13px;cursor:pointer;color:var(--text2);font-family:inherit}
+
+/* Status */
+.statusbar{position:fixed;bottom:0;left:0;right:0;background:var(--accent);color:#fff;font-size:12px;padding:9px 20px;text-align:center;transform:translateY(100%);transition:transform .3s;z-index:300}
+.statusbar.show{transform:translateY(0)}
+
+/* Empty */
+.empty{text-align:center;padding:2rem;color:var(--text3);font-size:13px}
+.empty .ico{font-size:28px;margin-bottom:.5rem}
+
+@media(max-width:600px){
+  .mgrid,.ga-grid{grid-template-columns:repeat(2,1fr)}
+  .gncol,.grname{width:120px}
+  .cgrid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <span class="brand">迪奧斯 · 月份行銷報告</span>
+  <div class="month-nav">
+    <button class="nav-btn" id="prevBtn">&#8592;</button>
+    <span class="month-display" id="monthLabel"></span>
+    <button class="nav-btn" id="nextBtn">&#8594;</button>
+  </div>
+</div>
+
+<!-- ═══ GA4 ═══ -->
+<div class="sec">GA4 流量總覽</div>
+
+<div class="ga-grid">
+  <div class="gcrd"><div class="glabel">活躍使用者</div><div class="gval" id="g-users">—</div><div class="gdelta" id="g-users-d"></div></div>
+  <div class="gcrd"><div class="glabel">新使用者</div><div class="gval" id="g-new">—</div><div class="gdelta" id="g-new-d"></div></div>
+  <div class="gcrd"><div class="glabel">工作階段</div><div class="gval" id="g-sess">—</div><div class="gdelta" id="g-sess-d"></div></div>
+  <div class="gcrd"><div class="glabel">平均參與時間</div><div class="gval" id="g-time">—</div><div class="gdelta" id="g-time-d"></div></div>
+  <div class="gcrd"><div class="glabel">事件計數</div><div class="gval" id="g-evt">—</div><div class="gdelta" id="g-evt-d"></div></div>
+</div>
+
+<div style="display:flex;gap:8px;margin-bottom:.5rem">
+  <button class="btn-sm" onclick="openGaModal()">✏ 手動輸入 GA4</button>
+</div>
+
+<div class="cgrid">
+  <div class="ccrd"><div class="ctitle">工作階段 by 來源/媒介</div><div class="cwrap" id="ga-bar-wrap"><div class="empty"><div class="ico">📡</div>手動輸入後顯示</div></div></div>
+  <div class="ccrd"><div class="ctitle">流量來源佔比</div><div class="cwrap" id="ga-pie-wrap"><div class="empty"><div class="ico">🥧</div>手動輸入後顯示</div></div></div>
+</div>
+
+<!-- ═══ 廣告 ═══ -->
+<div class="sec">廣告成效</div>
+
+<div class="ptabs" id="ptabs">
+  <button class="ptab active" data-p="meta"><span class="dot dm"></span>Meta</button>
+  <button class="ptab" data-p="criteo"><span class="dot dc"></span>Criteo</button>
+  <button class="ptab" data-p="google"><span class="dot dg"></span>Google Ads</button>
+</div>
+
+<div class="uarea" id="uarea" onclick="document.getElementById('uinput').click()">
+  <span class="uicon">📁</span>
+  <div class="utext"><strong id="ulabel">上傳 Meta Excel 報表</strong><span id="uname">支援 .xlsx 格式</span></div>
+  <span class="ubadge" id="ubadge">✓ 已載入</span>
+  <input type="file" class="uinput" id="uinput" accept=".xlsx,.csv" onchange="handleAdUpload(event)">
+</div>
+
+<div class="mgrid" id="adMetrics" style="margin-top:10px">
+  <div class="mc"><div class="mc-label">花費 (TWD)</div><div class="mc-val">—</div></div>
+  <div class="mc"><div class="mc-label">平均 ROAS</div><div class="mc-val">—</div></div>
+  <div class="mc"><div class="mc-label">平均 CPC</div><div class="mc-val">—</div></div>
+  <div class="mc"><div class="mc-label">平均 CTR</div><div class="mc-val">—</div></div>
+  <div class="mc"><div class="mc-label">加到購物車</div><div class="mc-val">—</div></div>
+  <div class="mc"><div class="mc-label">開始結帳</div><div class="mc-val">—</div></div>
+</div>
+
+<div class="cgrid" style="margin-top:14px">
+  <div class="ccrd"><div class="ctitle" id="ct1">各廣告花費佔比</div><div class="cwrap-tall" id="cw1"><div class="empty"><div class="ico">📊</div>上傳報表後顯示</div></div></div>
+  <div class="ccrd"><div class="ctitle" id="ct2">各廣告 ROAS 比較</div><div class="cwrap-tall" id="cw2"><div class="empty"><div class="ico">📈</div>上傳報表後顯示</div></div></div>
+</div>
+
+<div class="tbl-wrap" id="tblWrap">
+  <div class="empty" style="padding:2rem"><div class="ico">📋</div>上傳廣告報表後顯示各廣告明細</div>
+</div>
+
+<!-- ═══ 時程 ═══ -->
+<div class="sec">專案時程</div>
+<div class="gantt" id="ganttWrap"></div>
+<div class="addrow">
+  <input id="pname" placeholder="專案名稱"/>
+  <select id="pcat"><option>KOL</option><option>合作</option><option>新品拍攝</option><option>新品上市</option><option>促銷活動</option><option>其他</option></select>
+  <select id="pstart"><option value="0">W1起</option><option value="1">W2起</option><option value="2">W3起</option><option value="3">W4起</option></select>
+  <select id="pdur"><option value="1">1週</option><option value="2">2週</option><option value="3">3週</option><option value="4">4週</option></select>
+  <button class="btn-primary" onclick="addProj()">＋ 新增</button>
+</div>
+
+<!-- ═══ 備注 ═══ -->
+<div class="sec">本月備注 / 洞察</div>
+<textarea class="nta" id="nta" placeholder="策略重點、異常觀察、下月計畫…"></textarea><br>
+<button class="nsave" id="nsave" onclick="saveNotes()">儲存備注</button>
+
+</div>
+
+<!-- Modal -->
+<div class="moverlay" id="moverlay" style="display:none"><div class="modal" id="mcontent"></div></div>
+<div class="statusbar" id="statusbar"></div>
+
+<script>
+// ─── Constants ───────────────────────────────────────────────
+const MZ=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const BC=['bp','bt','ba','bc','bb','bk'];
+const CC=['#4f86f7','#f4845f','#58c49a','#f7c94f','#a78bfa','#f472b6','#34d399','#fb923c','#60a5fa','#e879f9'];
+const CHARTS={};
+
+// ─── State ───────────────────────────────────────────────────
+let Y=new Date().getFullYear(), M=new Date().getMonth(), P='meta';
+
+// ─── Storage ─────────────────────────────────────────────────
+const K=(y,m)=>y+'-'+String(m).padStart(2,'0');
+const LS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const LG=(k)=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
+
+// ─── Helpers ─────────────────────────────────────────────────
+function fmtN(v){
+  const n=parseFloat(String(v).replace(/,/g,''));
+  if(isNaN(n)||v==null||v==='')return '—';
+  if(Math.abs(n)>=10000)return (n/10000).toFixed(1)+'萬';
+  return Math.round(n).toLocaleString('zh-TW');
+}
+function pNum(s){
+  if(!s&&s!==0)return 0;
+  s=String(s).replace(/,/g,'').replace(/"/g,'');
+  if(s.includes('萬'))return parseFloat(s)*10000;
+  return parseFloat(s)||0;
+}
+function showStatus(msg,dur=2200){
+  const b=document.getElementById('statusbar');
+  b.textContent=msg;b.classList.add('show');
+  setTimeout(()=>b.classList.remove('show'),dur);
+}
+function killChart(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id]}}
+
+// ─── Month Nav ───────────────────────────────────────────────
+document.getElementById('prevBtn').onclick=()=>{M--;if(M<0){M=11;Y--;}renderAll()};
+document.getElementById('nextBtn').onclick=()=>{M++;if(M>11){M=0;Y++;}renderAll()};
+
+// ─── Platform Tabs ───────────────────────────────────────────
+document.getElementById('ptabs').onclick=function(e){
+  const b=e.target.closest('.ptab');if(!b)return;
+  P=b.dataset.p;
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.toggle('active',t.dataset.p===P));
+  const L={meta:'上傳 Meta Excel 報表 (.xlsx)',criteo:'上傳 Criteo Excel 報表 (.xlsx)',google:'上傳 Google Ads CSV/XLSX 報表'};
+  document.getElementById('ulabel').textContent=L[P];
+  renderAd();
+};
+
+// ─── GA4 ─────────────────────────────────────────────────────
+// Hardcoded March 2026 data from uploaded PDF
+const GA4_MAR26={
+  users:'33萬',users_d:'+13.0',new:'31萬',new_d:'+14.8',
+  sess:'28萬',sess_d:'+5.7',time:'11秒',time_d:'-14.1',evt:'182萬',evt_d:'+11.0',
+  ch:[
+    {s:'google / cpc',v:280000,d:'+5.7%'},
+    {s:'criteo / video',v:65000,d:'+43.6%'},
+    {s:'criteo / display',v:40000,d:'+12.9%'},
+    {s:'fb / paid',v:18000,d:'+14.2%'},
+    {s:'ig / paid',v:3750,d:'+51.0%'},
+    {s:'(direct)/(none)',v:4827,d:'+57.9%'},
+  ]
+};
+
+function renderGa4(){
+  let d=LG('ga4_'+K(Y,M));
+  const isMar26=(Y===2026&&M===2);
+  if(!d&&isMar26)d=GA4_MAR26;
+
+  const ids=['users','new','sess','time','evt'];
+  if(!d){ids.forEach(id=>{document.getElementById('g-'+id).textContent='—';document.getElementById('g-'+id+'-d').textContent='';});return;}
+
+  const vals={users:d.users,new:d.new||d.newUsers,sess:d.sess||d.sessions,time:d.time||d.avgTime,evt:d.evt||d.events};
+  const deltas={users:d.users_d,new:d.new_d||d.newUsers_d,sess:d.sess_d||d.sessions_d,time:d.time_d||d.avgTime_d,evt:d.evt_d||d.events_d};
+  ids.forEach(id=>{
+    document.getElementById('g-'+id).textContent=vals[id]||'—';
+    const n=parseFloat(deltas[id]);
+    const el=document.getElementById('g-'+id+'-d');
+    if(!isNaN(n)){el.className='gdelta '+(n>=0?'up':'dn');el.textContent=(n>=0?'↑':'↓')+Math.abs(n).toFixed(1)+'% vs 上月';}
+    else el.textContent='';
+  });
+  if(d.ch)renderGa4Charts(d.ch);
+}
+
+function renderGa4Charts(ch){
+  const labels=ch.map(c=>c.s);
+  const vals=ch.map(c=>c.v||pNum(c.sessions));
+  const total=vals.reduce((a,b)=>a+b,0);
+
+  // Bar
+  const w1=document.getElementById('ga-bar-wrap');
+  w1.innerHTML='<canvas id="ga-bar"></canvas>';
+  killChart('ga-bar');
+  CHARTS['ga-bar']=new Chart(document.getElementById('ga-bar'),{
+    type:'bar',
+    data:{labels,datasets:[{data:vals,backgroundColor:CC.map(c=>c+'cc'),borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:v=>v>=10000?(v/10000).toFixed(0)+'萬':v.toLocaleString(),font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+
+  // Pie
+  const w2=document.getElementById('ga-pie-wrap');
+  w2.innerHTML='<canvas id="ga-pie"></canvas>';
+  killChart('ga-pie');
+  CHARTS['ga-pie']=new Chart(document.getElementById('ga-pie'),{
+    type:'doughnut',
+    data:{labels,datasets:[{data:vals,backgroundColor:CC,borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10,padding:6}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${((ctx.raw/total)*100).toFixed(1)}%`}}}}
+  });
+}
+
+function openGaModal(){
+  const d=LG('ga4_'+K(Y,M))||(Y===2026&&M===2?GA4_MAR26:{});
+  document.getElementById('mcontent').innerHTML=`
+    <h3>GA4 數據 — ${Y}/${MZ[M]}<button class="mcls" onclick="cM()">×</button></h3>
+    <div class="mfield"><label>活躍使用者</label><input id="mgu" value="${d.users||''}" placeholder="如：33萬"></div>
+    <div class="mfield"><label>活躍使用者 變化% (僅填數字, 如 +13.0 或 -5.2)</label><input id="mgud" value="${d.users_d||''}" placeholder="+13.0"></div>
+    <div class="mfield"><label>新使用者</label><input id="mgn" value="${d.new||d.newUsers||''}" placeholder="如：31萬"></div>
+    <div class="mfield"><label>新使用者 變化%</label><input id="mgnd" value="${d.new_d||d.newUsers_d||''}" placeholder="+14.8"></div>
+    <div class="mfield"><label>工作階段</label><input id="mgs" value="${d.sess||d.sessions||''}" placeholder="如：28萬"></div>
+    <div class="mfield"><label>工作階段 變化%</label><input id="mgsd" value="${d.sess_d||d.sessions_d||''}" placeholder="+5.7"></div>
+    <div class="mfield"><label>平均參與時間</label><input id="mgt" value="${d.time||d.avgTime||''}" placeholder="如：11秒"></div>
+    <div class="mfield"><label>參與時間 變化%</label><input id="mgtd" value="${d.time_d||d.avgTime_d||''}" placeholder="-14.1"></div>
+    <div class="mfield"><label>事件計數</label><input id="mge" value="${d.evt||d.events||''}" placeholder="如：182萬"></div>
+    <div class="mfield"><label>事件計數 變化%</label><input id="mged" value="${d.evt_d||d.events_d||''}" placeholder="+11.0"></div>
+    <div class="mfield"><label>流量來源 (每行：來源名稱, 數字, 變化%)</label>
+    <textarea id="mgch" placeholder="google / cpc, 280000, +5.7%\ncriteo / video, 65000, +43.6%\nfb / paid, 18000, +14.2%">${d.ch?d.ch.map(c=>c.s+', '+(c.v||pNum(c.sessions))+', '+c.d).join('\n'):''}</textarea></div>
+    <div class="mact"><button class="mcancel" onclick="cM()">取消</button><button class="mbtn" onclick="sGa()">儲存</button></div>`;
+  document.getElementById('moverlay').style.display='flex';
+}
+window.sGa=function(){
+  const raw=document.getElementById('mgch').value.trim();
+  const ch=raw?raw.split('\n').filter(l=>l.trim()).map(l=>{const p=l.split(',').map(s=>s.trim());return{s:p[0]||'',v:pNum(p[1]),d:p[2]||''};}):(Y===2026&&M===2?GA4_MAR26.ch:[]);
+  const nd={users:document.getElementById('mgu').value,users_d:document.getElementById('mgud').value,new:document.getElementById('mgn').value,new_d:document.getElementById('mgnd').value,sess:document.getElementById('mgs').value,sess_d:document.getElementById('mgsd').value,time:document.getElementById('mgt').value,time_d:document.getElementById('mgtd').value,evt:document.getElementById('mge').value,evt_d:document.getElementById('mged').value,ch};
+  LS('ga4_'+K(Y,M),nd);cM();renderGa4();showStatus('GA4 數據已儲存');
+};
+
+// ─── AD SECTION ──────────────────────────────────────────────
+function renderAd(){
+  const d=LG('ad_'+P+'_'+K(Y,M));
+  const ua=document.getElementById('uarea'),ub=document.getElementById('ubadge'),un=document.getElementById('uname');
+  if(d){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入數據';}
+  else{ua.classList.remove('loaded');ub.style.display='none';const L={meta:'支援 .xlsx 格式',criteo:'支援 .xlsx 格式 (按 Ad set 匯總)',google:'支援 .csv / .xlsx 格式'};un.textContent=L[P];}
+  if(d&&d.rows&&d.rows.length){
+    renderAdMetrics(d.rows);
+    renderAdCharts(d.rows);
+    renderAdTable(d.rows);
+  } else {
+    clearAd();
+  }
+}
+
+function clearAd(){
+  const labels=['花費 (TWD)','平均 ROAS','平均 CPC','平均 CTR','加到購物車','開始結帳'];
+  document.getElementById('adMetrics').innerHTML=labels.map(l=>`<div class="mc"><div class="mc-label">${l}</div><div class="mc-val">—</div></div>`).join('');
+  document.getElementById('tblWrap').innerHTML='<div class="empty" style="padding:2rem"><div class="ico">📋</div>上傳廣告報表後顯示各廣告明細</div>';
+  document.getElementById('cw1').innerHTML='<div class="empty"><div class="ico">📊</div>上傳報表後顯示</div>';
+  document.getElementById('cw2').innerHTML='<div class="empty"><div class="ico">📈</div>上傳報表後顯示</div>';
+  killChart('c1');killChart('c2');
+}
+
+function renderAdMetrics(rows){
+  let sp=0,cart=0,co=0,rv=[],cv=[],tv=[];
+  rows.forEach(r=>{
+    sp+=r.spend||0;cart+=r.cart||0;co+=r.checkout||0;
+    if(r.roas>0)rv.push(r.roas);
+    if(r.cpc>0)cv.push(r.cpc);
+    if(r.ctr>0)tv.push(r.ctr);
+  });
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+  const ar=avg(rv),ac=avg(cv),at=avg(tv);
+  const mets=[
+    {l:'花費 (TWD)',v:'$'+Math.round(sp).toLocaleString()},
+    {l:'平均 ROAS',v:ar>0?ar.toFixed(2)+'x':'—'},
+    {l:'平均 CPC',v:ac>0?'$'+ac.toFixed(2):'—'},
+    {l:'平均 CTR',v:at>0?at.toFixed(2)+'%':'—'},
+    {l:'加到購物車',v:cart>0?cart.toLocaleString():'—'},
+    {l:'開始結帳',v:co>0?co.toLocaleString():'—'},
+  ];
+  document.getElementById('adMetrics').innerHTML=mets.map(m=>`<div class="mc"><div class="mc-label">${m.l}</div><div class="mc-val">${m.v}</div></div>`).join('');
+}
+
+function renderAdCharts(rows){
+  const top=rows.filter(r=>r.spend>0).sort((a,b)=>b.spend-a.spend).slice(0,10);
+  if(!top.length)return;
+  const shortName=n=>n.length>14?n.slice(0,14)+'…':n;
+  const lbls=top.map(r=>shortName(r.name));
+
+  // Chart 1: Spend (horizontal bar)
+  document.getElementById('cw1').innerHTML='<canvas id="c1"></canvas>';
+  killChart('c1');
+  CHARTS['c1']=new Chart(document.getElementById('c1'),{
+    type:'bar',
+    data:{labels:lbls,datasets:[{label:'花費(TWD)',data:top.map(r=>r.spend),backgroundColor:CC.map(c=>c+'cc'),borderRadius:4,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>'$'+Math.round(v).toLocaleString(),font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+
+  // Chart 2: ROAS bar
+  const rRows=top.filter(r=>r.roas>0);
+  document.getElementById('cw2').innerHTML='<canvas id="c2"></canvas>';
+  killChart('c2');
+  if(rRows.length){
+    CHARTS['c2']=new Chart(document.getElementById('c2'),{
+      type:'bar',
+      data:{labels:rRows.map(r=>shortName(r.name)),datasets:[{label:'ROAS',data:rRows.map(r=>r.roas),backgroundColor:CC.map(c=>c+'cc'),borderRadius:4,borderSkipped:false}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'ROAS: '+ctx.raw.toFixed(2)+'x'}}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>v.toFixed(1)+'x',font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+    });
+  } else {
+    document.getElementById('cw2').innerHTML='<div class="empty"><div class="ico">📈</div>無 ROAS 數據</div>';
+  }
+}
+
+function renderAdTable(rows){
+  if(!rows.length){document.getElementById('tblWrap').innerHTML='<div class="empty" style="padding:2rem"><div class="ico">📋</div>無資料</div>';return;}
+  const sorted=rows.slice().sort((a,b)=>b.spend-a.spend);
+
+  let th,tdFn;
+  if(P==='meta'){
+    th='<th>廣告活動名稱</th><th>花費(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>加購物車</th><th>開始結帳</th>';
+    tdFn=r=>`<td class="aname" title="${r.name}">${r.name}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.cpc>0?'$'+r.cpc.toFixed(2):'—'}</td><td>${r.ctr>0?r.ctr.toFixed(2)+'%':'—'}</td><td>${r.cart>0?r.cart:'—'}</td><td>${r.checkout>0?r.checkout:'—'}</td>`;
+  } else if(P==='criteo'){
+    th='<th>Ad Set</th><th>Cost(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>曝光次數</th><th>點擊</th>';
+    tdFn=r=>`<td class="aname" title="${r.name}">${r.name}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.cpc>0?'$'+r.cpc.toFixed(3):'—'}</td><td>${r.ctr>0?(r.ctr*100).toFixed(2)+'%':'—'}</td><td>${r.displays?Math.round(r.displays).toLocaleString():'—'}</td><td>${r.clicks?Math.round(r.clicks).toLocaleString():'—'}</td>`;
+  } else {
+    th='<th>廣告活動</th><th>費用(TWD)</th><th>ROAS</th><th>曝光</th><th>點擊</th><th>轉換</th><th>類型</th>';
+    tdFn=r=>`<td class="aname" title="${r.name}">${r.name}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.impressions?Math.round(r.impressions).toLocaleString():'—'}</td><td>${r.clicks?Math.round(r.clicks).toLocaleString():'—'}</td><td>${r.conversions?r.conversions.toFixed(1):'—'}</td><td style="font-size:11px;color:var(--text3)">${r.type||'—'}</td>`;
+  }
+  document.getElementById('tblWrap').innerHTML=`<table class="atbl"><thead><tr>${th}</tr></thead><tbody>${sorted.map(r=>`<tr>${tdFn(r)}</tr>`).join('')}</tbody></table>`;
+}
+
+// ─── FILE PARSING ─────────────────────────────────────────────
+function handleAdUpload(e){
+  const f=e.target.files[0];if(!f)return;
+  showStatus('讀取中…',5000);
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array'});
+      let rows=[];
+      if(P==='meta')rows=parseMeta(wb);
+      else if(P==='criteo')rows=parseCriteo(wb);
+      else rows=parseGoogle(wb);
+      LS('ad_'+P+'_'+K(Y,M),{rows,_fn:f.name,_at:new Date().toISOString()});
+      renderAd();
+      showStatus(`✓ 載入成功：${rows.length} 筆廣告`);
+    }catch(err){showStatus('❌ 解析失敗：'+err.message,4000);console.error(err);}
+  };
+  reader.readAsArrayBuffer(f);
+  e.target.value='';
+}
+
+function parseMeta(wb){
+  const ws=wb.Sheets['Raw Data Report']||wb.Sheets[wb.SheetNames[0]];
+  const arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  // Find header row
+  let hIdx=0;
+  for(let i=0;i<Math.min(arr.length,6);i++){
+    if(arr[i].some(v=>String(v).includes('行銷活動名稱'))){hIdx=i;break;}
+  }
+  const headers=arr[hIdx].map(v=>String(v));
+  const col=t=>headers.findIndex(h=>h.includes(t));
+  const iName=col('行銷活動名稱'),iSpend=col('花費'),iRoas=col('ROAS'),iCpc=col('CPC'),iCtr=col('CTR'),iCart=col('購物車'),iCo=col('結帳');
+  const rows=[];
+  for(let i=hIdx+1;i<arr.length;i++){
+    const r=arr[i];
+    const name=String(r[iName]||'').trim();
+    if(!name||name.startsWith('META_')||name==='行銷活動名稱')continue;
+    const spend=parseFloat(r[iSpend])||0;
+    if(!spend)continue;
+    rows.push({name,spend,roas:parseFloat(r[iRoas])||0,cpc:parseFloat(r[iCpc])||0,ctr:parseFloat(r[iCtr])||0,cart:parseFloat(r[iCart])||0,checkout:parseFloat(r[iCo])||0});
+  }
+  return rows;
+}
+
+function parseCriteo(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const data=XLSX.utils.sheet_to_json(ws,{defval:0});
+  const map={};
+  data.forEach(r=>{
+    const adset=String(r['Ad set']||r['Ad Set']||'').trim();
+    if(!adset)return;
+    if(!map[adset])map[adset]={name:adset,spend:0,displays:0,clicks:0,revenue:0};
+    const a=map[adset];
+    a.spend+=parseFloat(r['Cost'])||0;
+    a.displays+=parseFloat(r['Displays'])||0;
+    a.clicks+=parseFloat(r['Clicks'])||0;
+    a.revenue+=parseFloat(r['Revenue PC30D+PV1D'])||0;
+  });
+  return Object.values(map).map(a=>({
+    name:a.name,spend:a.spend,
+    roas:a.spend>0?a.revenue/a.spend:0,
+    cpc:a.clicks>0?a.spend/a.clicks:0,
+    ctr:a.displays>0?a.clicks/a.displays:0,
+    displays:a.displays,clicks:a.clicks,
+  })).filter(r=>r.spend>0);
+}
+
+function parseGoogle(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  let hIdx=0;
+  for(let i=0;i<Math.min(arr.length,8);i++){
+    if(arr[i].some(v=>String(v).includes('廣告活動')&&String(v).includes('費用'))){hIdx=i;break;}
+    if(arr[i].some(v=>String(v).includes('費用')&&arr[i].some(v2=>String(v2).includes('廣告活動')))){hIdx=i;break;}
+    if(arr[i].some(v=>String(v)==='廣告活動狀態')){hIdx=i;break;}
+  }
+  const hdrs=arr[hIdx].map(v=>String(v));
+  const col=t=>hdrs.findIndex(h=>h===t||h.includes(t));
+  const iName=hdrs.findIndex(h=>h.includes('廣告活動')&&!h.includes('狀態')&&!h.includes('類型'));
+  const iSpend=hdrs.findIndex(h=>h==='費用');
+  const iImp=hdrs.findIndex(h=>h==='曝光');
+  const iClk=hdrs.findIndex(h=>h==='點擊');
+  const iConv=hdrs.findIndex(h=>h==='轉換'&&!h.includes('價值')&&!h.includes('率')&&!h.includes('費')&&!h.includes('平台'));
+  const iRoas=hdrs.findIndex(h=>h==='轉換價值/費用');
+  const iType=col('廣告活動類型');
+  const rows=[];
+  for(let i=hIdx+1;i<arr.length;i++){
+    const r=arr[i];
+    const name=String(r[iName]||'').trim();
+    if(!name||name==='廣告活動')continue;
+    const spend=pNum(r[iSpend]);
+    if(!spend)continue;
+    rows.push({name,spend,roas:pNum(r[iRoas]),impressions:pNum(r[iImp]),clicks:pNum(r[iClk]),conversions:pNum(r[iConv]),type:String(r[iType]||'')});
+  }
+  return rows;
+}
+
+// ─── GANTT ────────────────────────────────────────────────────
+function gP(){return LG('proj_'+K(Y,M))||[]}
+function sP(v){LS('proj_'+K(Y,M),v)}
+function renderGantt(){
+  const ps=gP();
+  let h='<div class="gh"><div class="gncol">專案</div><div class="gwks"><div class="wlbl">W1</div><div class="wlbl">W2</div><div class="wlbl">W3</div><div class="wlbl">W4</div></div></div>';
+  if(!ps.length)h+='<div class="gempty">尚無專案，請在下方新增</div>';
+  else ps.forEach((p,i)=>{
+    const l=(p.start*25).toFixed(1),w=(p.dur*25).toFixed(1),c=BC[i%BC.length];
+    h+=`<div class="grow"><div class="grname">${p.name}<span class="cat">${p.cat}</span></div><div class="gbars"><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div><div class="gcell"></div><div class="gbar ${c}" style="left:${l}%;width:${w}%">${p.name}</div></div><button class="rmbtn" onclick="rmP(${i})">✕</button></div>`;
+  });
+  document.getElementById('ganttWrap').innerHTML=h;
+}
+window.rmP=function(i){const p=gP();p.splice(i,1);sP(p);renderGantt()};
+window.addProj=function(){
+  const n=document.getElementById('pname').value.trim();if(!n)return;
+  const p=gP();
+  p.push({name:n,cat:document.getElementById('pcat').value,start:+document.getElementById('pstart').value,dur:+document.getElementById('pdur').value});
+  sP(p);document.getElementById('pname').value='';renderGantt();
+};
+
+// ─── NOTES ────────────────────────────────────────────────────
+function renderNotes(){document.getElementById('nta').value=LG('notes_'+K(Y,M))||''}
+window.saveNotes=function(){
+  LS('notes_'+K(Y,M),document.getElementById('nta').value);
+  const b=document.getElementById('nsave');b.textContent='已儲存 ✓';showStatus('備注已儲存');
+  setTimeout(()=>b.textContent='儲存備注',1800);
+};
+
+// ─── MODAL ────────────────────────────────────────────────────
+window.cM=function(){document.getElementById('moverlay').style.display='none'};
+window.openGaModal=openGaModal;
+document.getElementById('moverlay').onclick=function(e){if(e.target===this)window.cM()};
+
+// ─── RENDER ALL ───────────────────────────────────────────────
+function renderAll(){
+  document.getElementById('monthLabel').textContent=Y+' / '+MZ[M];
+  renderGa4();renderAd();renderGantt();renderNotes();
+}
+renderAll();
+</script>
+</body>
+</html>
