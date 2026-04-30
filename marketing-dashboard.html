@@ -395,7 +395,7 @@ async function dbGet(tbl,y,m,extra=''){
   try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?year=eq.${y}&month=eq.${m}${extra}&limit=1`,{headers:SBR});const d=await r.json();return d&&d[0]?d[0]:null;}catch(e){return null;}
 }
 async function dbUpsert(tbl,payload){
-  try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}`,{method:'POST',headers:SBH,body:JSON.stringify(payload)});return r.ok;}catch(e){return false;}
+  try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}`,{method:'POST',headers:SBH,body:JSON.stringify(payload)});return r.ok||r.status===201||r.status===204||r.status===200;}catch(e){return false;}
 }
 async function dbGetAll(tbl,y){
   try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?year=eq.${y}&order=month.asc`,{headers:SBR});return await r.json();}catch(e){return[];}
