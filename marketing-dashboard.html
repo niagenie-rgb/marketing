@@ -884,7 +884,10 @@ function parseMeta(wb){
     const spend=parseFloat(r[iSp])||0;if(!spend)continue;
     // Skip campaign-level summary rows (they are subtotals)
     const level=String(r[iLevel]||'').toLowerCase();
-    if(level==='campaign')continue;
+if(level==='campaign')continue;
+// 額外保護：Meta 小計列的廣告組合名稱通常是 "All"
+const adsetName=String(r[iAdset]||'').trim();
+if(adsetName==='All'||adsetName==='全部')continue;
 
     const key=campaign+'|||'+(adset||campaign);
     if(!map[key])map[key]={name:adset||campaign,campaignName:campaign,spend:0,roas:0,roasW:0,cpc:0,ctr:0,cart:0,checkout:0,store:0,clicks:0,impressions:0};
