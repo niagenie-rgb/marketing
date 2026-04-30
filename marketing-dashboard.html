@@ -381,9 +381,12 @@ function K(y,m){return y+'-'+String(m).padStart(2,'0')}
 (async()=>{
   setSyncStatus('syncing','連線中…');
   try{
-    const r=await fetch(`${SB_URL}/rest/v1/ga4_data?limit=1`,{headers:SBR});
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),5000);
+    const r=await fetch(`${SB_URL}/rest/v1/ga4_data?limit=1`,{headers:SBR,signal:ctrl.signal});
+    clearTimeout(timer);
     setSyncStatus(r.ok?'ok':'err',r.ok?'雲端已連線 ☁️':'連線失敗');
-  }catch(e){setSyncStatus('err','無法連線');}
+  }catch(e){setSyncStatus(e.name==='AbortError'?'err':'err',e.name==='AbortError'?'連線逾時':'無法連線');}
   const sel=document.getElementById('ga-y-sel');
   const y=new Date().getFullYear();
   for(let i=y-1;i<=y+1;i++){const o=document.createElement('option');o.value=i;o.textContent=i;if(i===y)o.selected=true;sel.appendChild(o);}
@@ -494,7 +497,8 @@ function parseGaReport(rows){
 
 function parseGaAcq(text){
   const r={channels:[],sessions_channels:[],gads:[],keywords:[],manual_sources:[]};
-  const lines=text.split('\n');
+  const lines=text.split('
+');
   for(let i=0;i<lines.length;i++){
     const l=lines[i].trim();
     if(l.startsWith('最初招攬到使用者的主要管道群組')){
