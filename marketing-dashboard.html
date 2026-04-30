@@ -339,10 +339,8 @@ async function dbGet(tbl,y,m,extra=''){
 }
 async function dbUpsert(tbl,payload){
   try{
-    // Try POST first (insert)
     const r=await fetch(`${SB_URL}/rest/v1/${tbl}`,{method:'POST',headers:SBH,body:JSON.stringify(payload)});
     if(r.ok||r.status===201)return true;
-    // If 409 conflict, use PATCH (update)
     if(r.status===409){
       const patchH={...SBR,'Content-Type':'application/json'};
       let url=`${SB_URL}/rest/v1/${tbl}?year=eq.${payload.year}&month=eq.${payload.month}`;
@@ -431,7 +429,6 @@ window.handleGaFile=async function(e,type){
   const uy=parseInt(document.getElementById('ga-y-sel').value);
   const um=parseInt(document.getElementById('ga-m-sel').value);
   setSyncStatus('syncing','上傳中…');showStatus('解析中…',8000);
-
   const reader=new FileReader();
   reader.onload=async ev=>{
     try{
@@ -448,11 +445,9 @@ window.handleGaFile=async function(e,type){
         else{const wb=XLSX.read(ev.target.result,{type:'array'});text=XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);}
         parsed=parseGaAcq(text);
       }
-
       const existing=await dbGet('ga4_data',uy,um);
       const merged=Object.assign({},existing?existing.data:{},{...parsed,year:uy,month:um});
       merged[type==='report'?'fname_report':'fname_acq']=f.name;
-
       const ok=await dbUpsert('ga4_data',{year:uy,month:um,data:merged});
       if(ok){
         CACHE[`ga4_${K(uy,um)}`]=merged;
@@ -541,13 +536,11 @@ async function renderGaMonth(){
   let py=CY,pm=CM-1;if(pm<0){pm=11;py--;}
   let prev=CACHE[`ga4_${K(py,pm)}`];
   if(!prev){const row=await dbGet('ga4_data',py,pm);if(row){prev=row.data;CACHE[`ga4_${K(py,pm)}`]=prev;}}
-
   const uc1=document.getElementById('uc-report'),uc2=document.getElementById('uc-acq');
   if(d?.fname_report){uc1.classList.add('loaded');document.getElementById('uc-report-name').textContent=d.fname_report;}
   else{uc1.classList.remove('loaded');document.getElementById('uc-report-name').textContent='KPI、熱門頁面、流量來源';}
   if(d?.fname_acq){uc2.classList.add('loaded');document.getElementById('uc-acq-name').textContent=d.fname_acq;}
   else{uc2.classList.remove('loaded');document.getElementById('uc-acq-name').textContent='管道群組、Google Ads、搜尋關鍵字';}
-
   const setK=(id,val,pval)=>{
     document.getElementById('gk-'+id).textContent=fmtN(val)||'—';
     const el=document.getElementById('gk-'+id+'-s');
@@ -584,7 +577,6 @@ function renderGaChannels(ch){
   if(!ch||!ch.length){document.getElementById('ga-ch-wrap').innerHTML='<div class="empty"><div class="ico">📡</div>上傳獲客總覽後顯示</div>';return;}
   mkBar('ga-ch-wrap','ga-ch',ch.map(c=>c.s),ch.map(c=>c.v),' 工作階段');
 }
-
 function renderGaPages(pages){
   if(!pages||!pages.length){document.getElementById('ga-pages-wrap').innerHTML='<div class="empty" style="padding:1.5rem"><div class="ico">📄</div>上傳報表數據匯報後顯示</div>';return;}
   const maxV=pages[0].views;
@@ -615,7 +607,7 @@ async function renderGaTrend(){
   document.getElementById('range-info').textContent=`${CY} 年，${months.length} 個月資料`;
   if(!months.length){['t-users','t-new','t-events','t-channel'].forEach(id=>document.getElementById(id).innerHTML='<div class="empty"><div class="ico">📈</div>需要至少 1 個月資料</div>');document.getElementById('ga-compare-tbl').innerHTML='<div class="empty" style="padding:1.5rem"><div class="ico">📊</div>需要至少 1 個月資料</div>';return;}
   const labels=months.map(r=>MZ[r.month]);
-  const mkLine=(id,label,data,color)=>{document.getElementById(id).innerHTML=`<canvas id="c-${id}"></canvas>`;killChart(id);CHARTS[id]=new Chart(document.getElementById('c-'+id),{type:'line',data:{labels,datasets:[{label,data,borderColor:color,backgroundColor:color+'22',fill:true,tension:.35,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>label+': '+fmtN(ctx.raw)}}},limits:{},scales:{y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:v=>fmtN(v),font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:11}}}}}});};
+  const mkLine=(id,label,data,color)=>{document.getElementById(id).innerHTML=`<canvas id="c-${id}"></canvas>`;killChart(id);CHARTS[id]=new Chart(document.getElementById('c-'+id),{type:'line',data:{labels,datasets:[{label,data,borderColor:color,backgroundColor:color+'22',fill:true,tension:.35,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>label+': '+fmtN(ctx.raw)}}},scales:{y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{callback:v=>fmtN(v),font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:11}}}}}});};
   mkLine('t-users','活躍使用者',months.map(r=>r.data.users),'#4f86f7');
   mkLine('t-new','新使用者',months.map(r=>r.data.newUsers),'#58c49a');
   mkLine('t-events','事件計數',months.map(r=>r.data.events),'#a78bfa');
@@ -626,9 +618,6 @@ async function renderGaTrend(){
   let tbl='<table class="gtbl"><thead><tr><th>月份</th><th>活躍使用者</th><th>新使用者</th><th>事件計數</th><th>主要來源</th></tr></thead><tbody>';
   months.forEach((r,i)=>{const prev=months[i-1];const delta=(v,pv)=>{if(!pv||!prev||!v)return '';const p=((v-pv)/pv*100).toFixed(1);const up=parseFloat(p)>=0;return `<span class="${up?'up':'dn'}" style="font-size:10px;margin-left:4px">${up?'↑':'↓'}${Math.abs(p)}%</span>`;};const topSrc=r.data.sources&&r.data.sources[0]?r.data.sources[0].s:'—';tbl+=`<tr><td style="font-weight:600">${CY}/${MZ[r.month]}</td><td>${fmtN(r.data.users)}${delta(r.data.users,prev?.data.users)}</td><td>${fmtN(r.data.newUsers)}${delta(r.data.newUsers,prev?.data.newUsers)}</td><td>${fmtN(r.data.events)}${delta(r.data.events,prev?.data.events)}</td><td style="font-size:11px;color:var(--tx2)">${topSrc}</td></tr>`;});
   document.getElementById('ga-compare-tbl').innerHTML=tbl+'</tbody></table>';
-
-  // Cumulative rankings
-  // Google Ads
   const gadsMap={};
   months.forEach(r=>(r.data.gads||[]).forEach(g=>{gadsMap[g.name]=(gadsMap[g.name]||0)+g.sessions;}));
   const gadsRanked=Object.entries(gadsMap).sort((a,b)=>b[1]-a[1]);
@@ -638,8 +627,6 @@ async function renderGaTrend(){
     gadsRanked.forEach(([name,v],i)=>{const bw=((v/maxG)*100).toFixed(1);h+=`<tr><td style="color:var(--tx3);font-size:12px">${i+1}</td><td><div class="tname">${name}</div><div class="barmini barmini-g" style="width:${bw}%"></div></td><td>${fmtN(v)}</td></tr>`;});
     document.getElementById('trend-gads').innerHTML=h+'</tbody></table>';
   }
-
-  // Pages
   const pagesMap={};
   months.forEach(r=>(r.data.pages||[]).forEach(p=>{pagesMap[p.name]=(pagesMap[p.name]||0)+p.views;}));
   const pagesRanked=Object.entries(pagesMap).sort((a,b)=>b[1]-a[1]);
@@ -649,8 +636,6 @@ async function renderGaTrend(){
     pagesRanked.forEach(([name,v],i)=>{const bw=((v/maxP)*100).toFixed(1);h+=`<tr><td style="color:var(--tx3);font-size:12px">${i+1}</td><td><div class="tname">${name}</div><div class="barmini" style="width:${bw}%"></div></td><td>${fmtN(v)}</td></tr>`;});
     document.getElementById('trend-pages').innerHTML=h+'</tbody></table>';
   }
-
-  // Keywords
   const kwMap={};
   months.forEach(r=>(r.data.keywords||[]).forEach(k=>{kwMap[k.kw]=(kwMap[k.kw]||0)+k.clicks;}));
   const kwRanked=Object.entries(kwMap).sort((a,b)=>b[1]-a[1]);
@@ -700,7 +685,6 @@ window.handleAdUpload=async function(e){
       } else if(AP==='criteo'){
         const wb=XLSX.read(ev.target.result,{type:'array'});rows=parseCriteo(wb);
       } else {
-        // Google Ads: try UTF-16 first, then UTF-8
         if(isCsv){
           let text='';
           try{text=new TextDecoder('utf-16').decode(ev.target.result);}
@@ -734,23 +718,22 @@ function clearAd(){
   killChart('c1');killChart('c2');
 }
 function renderAdMetrics(rows){
-  let sp=0,cart=0,co=0,store=0,totalRevenue=0,totalClicks=0,totalImp=0,cv=[],tv=[];
+  let sp=0,cart=0,co=0,store=0,totalRevenue=0,totalClicks=0,totalImp=0;
   rows.forEach(r=>{
     sp+=r.spend||0;cart+=r.cart||0;co+=r.checkout||0;store+=r.store||0;
-    // Calculate revenue from ROAS * spend for each row
     if(r.roas>0&&r.spend>0)totalRevenue+=r.roas*r.spend;
     totalClicks+=r.clicks||0;
     totalImp+=r.impressions||0;
-    if(r.cpc>0)cv.push(r.cpc);
-    if(r.ctr>0)tv.push(r.ctr);
   });
-  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
-  // ROAS = total revenue / total spend (correct method)
   const roas=sp>0&&totalRevenue>0?totalRevenue/sp:0;
-  // CPC = total spend / total clicks (correct method)
   const cpc=totalClicks>0?sp/totalClicks:0;
-  // CTR = total clicks / total impressions (correct method)
-  const ctr=totalImp>0?totalClicks/totalImp:0;
+  // CTR: prefer impressions-based; fallback to weighted average of stored ctr per row
+  let ctr=totalImp>0?totalClicks/totalImp:0;
+  if(!ctr){
+    let ctrSum=0,ctrW=0;
+    rows.forEach(r=>{if(r.ctr>0&&r.spend>0){ctrSum+=r.ctr*r.spend;ctrW+=r.spend;}});
+    if(ctrW>0)ctr=ctrSum/ctrW;
+  }
   document.getElementById('adMetrics').innerHTML=[
     {l:'花費 (TWD)',v:'$'+Math.round(sp).toLocaleString()},
     {l:'ROAS',v:roas>0?roas.toFixed(2)+'x':'—'},
@@ -760,7 +743,6 @@ function renderAdMetrics(rows){
     {l:'開始結帳',v:co>0?Math.round(co).toLocaleString():'—'},
     {l:'門市資訊',v:store>0?Math.round(store).toLocaleString():'—'},
   ].map(m=>`<div class="mc"><div class="mc-l">${m.l}</div><div class="mc-v">${m.v}</div></div>`).join('');
-  // hide store card if not meta
   if(AP!=='meta'){const els=document.getElementById('adMetrics').querySelectorAll('.mc');if(els.length>=7)els[6].style.display='none';}
 }
 function renderAdCharts(rows){
@@ -778,17 +760,22 @@ function renderAdTable(rows){
   const sorted=rows.slice().sort((a,b)=>b.spend-a.spend);
   let th,tdFn;
   if(AP==='meta'){
-    // Group by campaign for collapsible rows
     const campMap={};
-    sorted.forEach(r=>{const c=r.campaignName||r.name;if(!campMap[c])campMap[c]={rows:[],collapsed:false};campMap[c].rows.push(r);});
+    sorted.forEach(r=>{const c=r.campaignName||r.name;if(!campMap[c])campMap[c]={rows:[]};campMap[c].rows.push(r);});
     let html2='<table class="gtbl"><thead><tr><th>行銷活動 / 廣告組合</th><th>花費(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>加購物車</th><th>開始結帳</th><th>門市資訊</th></tr></thead><tbody>';
-    Object.entries(campMap).forEach(([camp,g],ci)=>{
-      const tot={spend:0,rev:0,clicks:0,imp:0,cart:0,checkout:0,store:0};
-      g.rows.forEach(r=>{tot.spend+=r.spend;tot.rev+=r.roas*r.spend;tot.clicks+=r.clicks||0;tot.imp+=r.impressions||0;tot.cart+=r.cart||0;tot.checkout+=r.checkout||0;tot.store+=r.store||0;});
+    Object.entries(campMap).forEach(([camp,g])=>{
+      const tot={spend:0,rev:0,clicks:0,imp:0,cart:0,checkout:0,store:0,ctrSum:0,ctrW:0};
+      g.rows.forEach(r=>{
+        tot.spend+=r.spend;tot.rev+=(r.roas||0)*r.spend;
+        tot.clicks+=r.clicks||0;tot.imp+=r.impressions||0;
+        tot.cart+=r.cart||0;tot.checkout+=r.checkout||0;tot.store+=r.store||0;
+        if(r.ctr>0&&r.spend>0){tot.ctrSum+=r.ctr*r.spend;tot.ctrW+=r.spend;}
+      });
       const cRoas=tot.spend>0&&tot.rev>0?tot.rev/tot.spend:0;
       const cCpc=tot.clicks>0?tot.spend/tot.clicks:0;
-      const cCtr=tot.imp>0?tot.clicks/tot.imp:0;
-      html2+=`<tr style="background:var(--sf2);cursor:pointer" onclick="const nb=this.nextSibling;if(nb){nb.style.display=nb.style.display==='none'?'':'none';this.cells[0].innerHTML=this.cells[0].innerHTML.replace(/[▾▸]/,nb.style.display===\'none\'?\'▸\':\'▾\');}">  
+      let cCtr=tot.imp>0?tot.clicks/tot.imp:0;
+      if(!cCtr&&tot.ctrW>0)cCtr=tot.ctrSum/tot.ctrW;
+      html2+=`<tr style="background:var(--sf2);cursor:pointer" onclick="const nb=this.nextSibling;if(nb){nb.style.display=nb.style.display==='none'?'':'none';this.cells[0].innerHTML=this.cells[0].innerHTML.replace(/[▾▸]/,nb.style.display===\'none\'?\'▸\':\'▾\');}">
         <td style="font-weight:600;font-size:12px">▸ ${camp}</td>
         <td>$${Math.round(tot.spend).toLocaleString()}</td>
         <td>${cRoas>0?`<span class="rpill ${cRoas>=2?'rgood':''}">${cRoas.toFixed(2)}x</span>`:'—'}</td>
@@ -811,10 +798,8 @@ function renderAdTable(rows){
       </tr>`;});
       html2+='</table></td></tr>';
     });
-    html2+='</tbody></table>';
-    document.getElementById('adTbl').innerHTML=html2;
+    document.getElementById('adTbl').innerHTML=html2+'</tbody></table>';
     return;
-    th='<th>廣告組合名稱</th>';tdFn=r=>`<td>${r.name}</td>`;
   } else if(AP==='criteo'){
     th='<th>Ad Set</th><th>Cost(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>曝光</th><th>點擊</th>';
     tdFn=r=>`<td class="aname" title="${r.name}">${r.name}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.cpc>0?'$'+r.cpc.toFixed(3):'—'}</td><td>${r.ctr>0?(r.ctr*100).toFixed(2)+'%':'—'}</td><td>${r.displays?Math.round(r.displays).toLocaleString():'—'}</td><td>${r.clicks?Math.round(r.clicks).toLocaleString():'—'}</td>`;
@@ -824,21 +809,139 @@ function renderAdTable(rows){
   }
   document.getElementById('adTbl').innerHTML=`<table class="gtbl"><thead><tr>${th}</tr></thead><tbody>${sorted.map(r=>`<tr>${tdFn(r)}</tr>`).join('')}</tbody></table>`;
 }
+
+// ── parseMeta (修正版：過濾 All 小計列 + 支援 CTR 欄位直讀) ──
+function parseMeta(wb){
+  const ws=wb.Sheets['Raw Data Report']||wb.Sheets[wb.SheetNames[0]];
+  const arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  let hIdx=0;
+  for(let i=0;i<Math.min(arr.length,6);i++){
+    if(arr[i].some(v=>String(v).includes('行銷活動名稱'))){hIdx=i;break;}
+  }
+  const hdrs=arr[hIdx].map(v=>String(v));
+  const col=t=>hdrs.findIndex(h=>h.includes(t));
+
+  const iCampaign=col('行銷活動名稱');
+  const iAdset=col('廣告組合名稱');
+  const iSp=col('花費金額')>=0?col('花費金額'):col('花費');
+  const iRoas=col('成果 ROAS')>=0?col('成果 ROAS'):col('ROAS');
+  const iClicks=hdrs.findIndex(h=>h==='連結點擊次數');
+  const iImp=hdrs.findIndex(h=>h==='曝光次數');
+  // 直接讀取 CTR 欄位（Meta 報表勾選「CTR(全部)」時會有此欄）
+  const iCtrDirect=hdrs.findIndex(h=>h.includes('CTR'));
+  const iResult=col('成果');
+  const iResultType=col('成果類型');
+  const iCart_old=col('購物車');
+  const iCheckout_old=col('網站開始結帳次數')>=0?col('網站開始結帳次數'):col('結帳');
+  const iStore=col('門市資訊');
+  const iLevel=col('投遞層級');
+
+  const map={};
+  for(let i=hIdx+1;i<arr.length;i++){
+    const r=arr[i];
+    const campaign=String(r[iCampaign]||'').trim();
+    const adset=String(r[iAdset]||'').trim();
+    if(!campaign)continue;
+    const spend=parseFloat(r[iSp])||0;
+    if(!spend)continue;
+
+    // 過濾 campaign-level 小計列（兩種方式：level欄 或 adset名稱為 All）
+    const level=String(r[iLevel]||'').toLowerCase();
+    if(level==='campaign')continue;
+    if(adset==='All'||adset==='全部')continue;
+
+    const key=campaign+'|||'+(adset||campaign);
+    if(!map[key])map[key]={
+      name:adset||campaign,campaignName:campaign,
+      spend:0,roasW:0,
+      clicks:0,impressions:0,
+      ctrSum:0,ctrCount:0,
+      cart:0,checkout:0,store:0
+    };
+    const a=map[key];
+    const clicks=parseFloat(r[iClicks])||0;
+    const imp=parseFloat(r[iImp])||0;
+    const roas=parseFloat(r[iRoas])||0;
+
+    a.spend+=spend;
+    a.clicks+=clicks;
+    a.impressions+=imp;
+    a.store+=iStore>=0?parseFloat(r[iStore])||0:0;
+
+    // 直接讀取 CTR 欄位（格式可能是 "3.65%" 或 0.0365）
+    if(iCtrDirect>=0){
+      const rawCtr=String(r[iCtrDirect]||'').replace('%','').trim();
+      const ctrVal=parseFloat(rawCtr)||0;
+      if(ctrVal>0){
+        // 如果值 > 1，代表是百分比格式（如 3.65），需除以 100
+        a.ctrSum+=(ctrVal>1?ctrVal/100:ctrVal)*spend;
+        a.ctrCount+=spend;
+      }
+    }
+
+    if(iCheckout_old>=0)a.checkout+=parseFloat(r[iCheckout_old])||0;
+    if(iResult>=0&&iResultType>=0){
+      const rt=String(r[iResultType]||'');
+      const rv=parseFloat(r[iResult])||0;
+      if(rt.includes('購物車'))a.cart+=rv;
+      else if(rt.includes('結帳')&&iCheckout_old<0)a.checkout+=rv;
+    }
+    if(iCart_old>=0)a.cart+=parseFloat(r[iCart_old])||0;
+    if(roas>0&&spend>0)a.roasW+=roas*spend;
+  }
+
+  return Object.values(map).map(a=>({
+    name:a.name,
+    campaignName:a.campaignName,
+    spend:a.spend,
+    roas:a.spend>0&&a.roasW>0?a.roasW/a.spend:0,
+    cpc:a.clicks>0?a.spend/a.clicks:0,
+    // CTR 優先用直讀欄位加權平均；沒有則用 clicks/impressions
+    ctr:a.ctrCount>0?a.ctrSum/a.ctrCount:(a.impressions>0?a.clicks/a.impressions:0),
+    cart:Math.round(a.cart),
+    checkout:Math.round(a.checkout),
+    store:Math.round(a.store),
+    clicks:a.clicks,
+    impressions:a.impressions
+  })).filter(r=>r.spend>0);
+}
+
+function parseCriteo(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const data=XLSX.utils.sheet_to_json(ws,{defval:0});
+  const map={};
+  data.forEach(r=>{
+    const adset=String(r['Ad set']||r['Ad Set']||'').trim();
+    if(!adset)return;
+    if(!map[adset])map[adset]={name:adset,spend:0,displays:0,clicks:0,revenue:0};
+    const a=map[adset];
+    a.spend+=parseFloat(r['Cost'])||0;
+    a.displays+=parseFloat(r['Displays'])||0;
+    a.clicks+=parseFloat(r['Clicks'])||0;
+    a.revenue+=parseFloat(r['Revenue PC30D+PV1D'])||0;
+  });
+  return Object.values(map).map(a=>({
+    name:a.name,spend:a.spend,
+    roas:a.spend>0?a.revenue/a.spend:0,
+    cpc:a.clicks>0?a.spend/a.clicks:0,
+    ctr:a.displays>0?a.clicks/a.displays:0,
+    displays:a.displays,clicks:a.clicks
+  })).filter(r=>r.spend>0);
+}
+
 function parseGoogleCsv(text){
   const lines=text.split('\n');
-  // Find header row
   let hIdx=0;
   for(let i=0;i<Math.min(lines.length,8);i++){
     if(lines[i].includes('廣告活動狀態')&&lines[i].includes('費用')){hIdx=i;break;}
     if(lines[i].includes('廣告活動')&&lines[i].includes('費用')){hIdx=i;break;}
   }
-  const sep=lines[hIdx].includes('	')?'	':',';
+  const sep=lines[hIdx].includes('\t')?'\t':',';
   const hdrs=lines[hIdx].split(sep).map(v=>v.trim().replace(/"/g,''));
   const iN=hdrs.findIndex(h=>h.includes('廣告活動')&&!h.includes('狀態')&&!h.includes('類型'));
   const iSp=hdrs.findIndex(h=>h==='費用'||h==='費用 (TWD)');
   const iIm=hdrs.findIndex(h=>h==='曝光');
   const iCl=hdrs.findIndex(h=>h==='點擊');
-  const iCo=hdrs.findIndex(h=>h==='轉換'&&!h.includes('價值')&&!h.includes('率')&&!h.includes('費')&&!h.includes('平台'));
   const iR=hdrs.findIndex(h=>h==='轉換價值/費用');
   const iT=hdrs.findIndex(h=>h.includes('廣告活動類型'));
   const rows=[];
@@ -847,96 +950,18 @@ function parseGoogleCsv(text){
     const name=(cols[iN]||'').trim();
     if(!name||name==='廣告活動'||name.startsWith('總計'))continue;
     const spend=parseFloat(cols[iSp])||0;if(!spend)continue;
-    rows.push({name,spend,roas:parseFloat(cols[iR])||0,impressions:parseFloat(cols[iIm])||0,clicks:parseFloat(cols[iCl])||0,conversions:parseFloat(cols[iCo])||0,type:(cols[iT]||'').trim()});
+    rows.push({name,spend,roas:parseFloat(cols[iR])||0,impressions:parseFloat(cols[iIm])||0,clicks:parseFloat(cols[iCl])||0,type:(cols[iT]||'').trim()});
   }
   return rows;
 }
 
-function parseMeta(wb){
-  const ws=wb.Sheets['Raw Data Report']||wb.Sheets[wb.SheetNames[0]];
-  const arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-  let hIdx=0;for(let i=0;i<Math.min(arr.length,6);i++){if(arr[i].some(v=>String(v).includes('行銷活動名稱'))){hIdx=i;break;}}
-  const hdrs=arr[hIdx].map(v=>String(v));
-  const col=t=>hdrs.findIndex(h=>h.includes(t));
-
-  // Support both old format (campaign level) and new format (adset level)
-  const iCampaign=col('行銷活動名稱');
-  const iAdset=col('廣告組合名稱');
-  const iSp=col('花費金額')>=0?col('花費金額'):col('花費');
-  const iRoas=col('成果 ROAS')>=0?col('成果 ROAS'):col('ROAS');
-  const iCpc=col('CPC');
-  const iClicks=hdrs.findIndex(h=>h==='連結點擊次數');
-  const iImp=hdrs.findIndex(h=>h==='曝光次數');
-  const iResult=col('成果'); // 成果欄 (加購物車/結帳等)
-  const iResultType=col('成果類型');
-  const iCart_old=col('購物車');
-  const iCheckout_old=col('網站開始結帳次數')>=0?col('網站開始結帳次數'):col('結帳');
-  const iStore=col('門市資訊');
-  const iLevel=col('投遞層級');
-
-  // Group by adset: only use adset-level rows to avoid double counting
-  const map={};
-  for(let i=hIdx+1;i<arr.length;i++){
-    const r=arr[i];
-    const campaign=String(r[iCampaign]||'').trim();
-    const adset=String(r[iAdset]||'').trim();
-    if(!campaign)continue;
-    const spend=parseFloat(r[iSp])||0;if(!spend)continue;
-    // Skip campaign-level summary rows (they are subtotals)
-    const level=String(r[iLevel]||'').toLowerCase();
-if(level==='campaign')continue;
-// 額外保護：Meta 小計列的廣告組合名稱通常是 "All"
-const adsetName=String(r[iAdset]||'').trim();
-if(adsetName==='All'||adsetName==='全部')continue;
-
-    const key=campaign+'|||'+(adset||campaign);
-    if(!map[key])map[key]={name:adset||campaign,campaignName:campaign,spend:0,roas:0,roasW:0,cpc:0,ctr:0,cart:0,checkout:0,store:0,clicks:0,impressions:0};
-    const a=map[key];
-
-    const clicks=parseFloat(r[iClicks])||0;
-    const imp=parseFloat(r[iImp])||0;
-    const sp=spend;
-    const roas=parseFloat(r[iRoas])||0;
-
-    a.spend+=sp;
-    a.clicks+=clicks;
-    a.impressions+=imp;
-    a.store+=iStore>=0?parseFloat(r[iStore])||0:0;
-    // Checkout from dedicated column
-    if(iCheckout_old>=0)a.checkout+=parseFloat(r[iCheckout_old])||0;
-    // Cart from 成果 column based on type
-    if(iResult>=0&&iResultType>=0){
-      const rt=String(r[iResultType]||'');
-      const rv=parseFloat(r[iResult])||0;
-      if(rt.includes('購物車'))a.cart+=rv;
-      else if(rt.includes('結帳')&&iCheckout_old<0)a.checkout+=rv;
-    }
-    if(iCart_old>=0)a.cart+=parseFloat(r[iCart_old])||0;
-    // Weighted ROAS
-    if(roas>0&&sp>0){a.roasW+=roas*sp;}
-  }
-
-  return Object.values(map).map(a=>({
-    name:a.name,campaignName:a.campaignName,
-    spend:a.spend,
-    roas:a.spend>0&&a.roasW>0?a.roasW/a.spend:0,
-    cpc:a.clicks>0?a.spend/a.clicks:0,
-    ctr:a.impressions>0?a.clicks/a.impressions:0,
-    cart:Math.round(a.cart),checkout:Math.round(a.checkout),
-    store:Math.round(a.store),clicks:a.clicks,impressions:a.impressions
-  })).filter(r=>r.spend>0);
-}
-function parseCriteo(wb){
-  const ws=wb.Sheets[wb.SheetNames[0]];
-  const data=XLSX.utils.sheet_to_json(ws,{defval:0});
-  const map={};
-  data.forEach(r=>{const adset=String(r['Ad set']||r['Ad Set']||'').trim();if(!adset)return;if(!map[adset])map[adset]={name:adset,spend:0,displays:0,clicks:0,revenue:0};const a=map[adset];a.spend+=parseFloat(r['Cost'])||0;a.displays+=parseFloat(r['Displays'])||0;a.clicks+=parseFloat(r['Clicks'])||0;a.revenue+=parseFloat(r['Revenue PC30D+PV1D'])||0;});
-  return Object.values(map).map(a=>({name:a.name,spend:a.spend,roas:a.spend>0?a.revenue/a.spend:0,cpc:a.clicks>0?a.spend/a.clicks:0,ctr:a.displays>0?a.clicks/a.displays:0,displays:a.displays,clicks:a.clicks})).filter(r=>r.spend>0);
-}
 function parseGoogle(wb){
   const ws=wb.Sheets[wb.SheetNames[0]];
   const arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-  let hIdx=0;for(let i=0;i<Math.min(arr.length,8);i++){if(arr[i].some(v=>String(v)==='廣告活動狀態')){hIdx=i;break;}}
+  let hIdx=0;
+  for(let i=0;i<Math.min(arr.length,8);i++){
+    if(arr[i].some(v=>String(v)==='廣告活動狀態')){hIdx=i;break;}
+  }
   const hdrs=arr[hIdx].map(v=>String(v));
   const iN=hdrs.findIndex(h=>h.includes('廣告活動')&&!h.includes('狀態')&&!h.includes('類型'));
   const iSp=hdrs.findIndex(h=>h==='費用');
@@ -951,7 +976,9 @@ function parseGoogle(wb){
   const iT=hdrs.findIndex(h=>h.includes('廣告活動類型'));
   const rows=[];
   for(let i=hIdx+1;i<arr.length;i++){
-    const r=arr[i];const name=String(r[iN]||'').trim();if(!name||name==='廣告活動')continue;
+    const r=arr[i];
+    const name=String(r[iN]||'').trim();
+    if(!name||name==='廣告活動')continue;
     const spend=pNum(r[iSp]);if(!spend)continue;
     const clicks=pNum(r[iCl]),impressions=pNum(r[iIm]);
     const cpc=iCpc>=0?pNum(r[iCpc]):(clicks>0?spend/clicks:0);
