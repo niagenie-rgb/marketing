@@ -217,15 +217,23 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
       <div class="ccrd"><div class="ctitle">主要管道群組（工作階段）</div><div class="cw-tall" id="ga-ch-wrap"><div class="empty"><div class="ico">📡</div>上傳獲客總覽後顯示</div></div></div>
     </div>
     <div class="cgrid">
-      <div class="ccrd"><div class="ctitle">手動來源（工作階段）</div><div class="cw" id="ga-manual-wrap"><div class="empty"><div class="ico">🔗</div>上傳獲客總覽後顯示</div></div></div>
       <div class="ccrd"><div class="ctitle">來源佔比</div><div class="cw" id="ga-pie-wrap"><div class="empty"><div class="ico">🥧</div>上傳報表數據匯報後顯示</div></div></div>
     </div>
-    <div class="sec">Google Ads 活動</div>
-    <div class="tbl-wrap" id="ga-gads-wrap"><div class="empty" style="padding:1.5rem"><div class="ico">📋</div>上傳獲客總覽後顯示</div></div>
-    <div class="sec">熱門頁面 Top 10</div>
-    <div class="tbl-wrap" id="ga-pages-wrap"><div class="empty" style="padding:1.5rem"><div class="ico">📄</div>上傳報表數據匯報後顯示</div></div>
-    <div class="sec">自然搜尋關鍵字</div>
-    <div class="tbl-wrap" id="ga-kw-wrap"><div class="empty" style="padding:1.5rem"><div class="ico">🔍</div>上傳獲客總覽後顯示</div></div>
+    <div class="sec">詳細數據</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:1rem">
+      <div class="tbl-wrap" style="margin-bottom:0">
+        <div style="padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);background:var(--sf2);border-bottom:1px solid var(--bd)">Google Ads 活動</div>
+        <div id="ga-gads-wrap"><div class="empty" style="padding:1.5rem"><div class="ico">📋</div>上傳獲客總覽後顯示</div></div>
+      </div>
+      <div class="tbl-wrap" style="margin-bottom:0">
+        <div style="padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);background:var(--sf2);border-bottom:1px solid var(--bd)">熱門頁面 Top 10</div>
+        <div id="ga-pages-wrap"><div class="empty" style="padding:1.5rem"><div class="ico">📄</div>上傳報表數據匯報後顯示</div></div>
+      </div>
+      <div class="tbl-wrap" style="margin-bottom:0">
+        <div style="padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);background:var(--sf2);border-bottom:1px solid var(--bd)">自然搜尋關鍵字</div>
+        <div id="ga-kw-wrap"><div class="empty" style="padding:1.5rem"><div class="ico">🔍</div>上傳獲客總覽後顯示</div></div>
+      </div>
+    </div>
   </div>
 
   <div id="gv-trend" style="display:none">
@@ -538,7 +546,7 @@ async function renderGaMonth(){
     ['u','n','e','t'].forEach(id=>{document.getElementById('gk-'+id).textContent='—';document.getElementById('gk-'+id+'-s').textContent='';});
   }
   renderGaSources(d?.sources);renderGaPie(d?.sources);
-  renderGaChannels(d?.sessions_channels);renderGaManualSources(d?.manual_sources);
+  renderGaChannels(d?.sessions_channels);
   renderGaPages(d?.pages);renderGaAds(d?.gads);renderGaKeywords(d?.keywords);
 }
 
@@ -560,10 +568,7 @@ function renderGaChannels(ch){
   if(!ch||!ch.length){document.getElementById('ga-ch-wrap').innerHTML='<div class="empty"><div class="ico">📡</div>上傳獲客總覽後顯示</div>';return;}
   mkBar('ga-ch-wrap','ga-ch',ch.map(c=>c.s),ch.map(c=>c.v),' 工作階段');
 }
-function renderGaManualSources(ms){
-  if(!ms||!ms.length){document.getElementById('ga-manual-wrap').innerHTML='<div class="empty"><div class="ico">🔗</div>上傳獲客總覽後顯示</div>';return;}
-  mkBar('ga-manual-wrap','ga-manual',ms.slice(0,8).map(c=>c.s),ms.slice(0,8).map(c=>c.v),' 工作階段');
-}
+
 function renderGaPages(pages){
   if(!pages||!pages.length){document.getElementById('ga-pages-wrap').innerHTML='<div class="empty" style="padding:1.5rem"><div class="ico">📄</div>上傳報表數據匯報後顯示</div>';return;}
   const maxV=pages[0].views;
