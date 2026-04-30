@@ -734,16 +734,30 @@ function clearAd(){
   killChart('c1');killChart('c2');
 }
 function renderAdMetrics(rows){
-  let sp=0,cart=0,co=0,rv=[],cv=[],tv=[];
-  rows.forEach(r=>{sp+=r.spend||0;cart+=r.cart||0;co+=r.checkout||0;if(r.roas>0)rv.push(r.roas);if(r.cpc>0)cv.push(r.cpc);if(r.ctr>0)tv.push(r.ctr);});
+  let sp=0,cart=0,co=0,totalRevenue=0,totalClicks=0,totalImp=0,cv=[],tv=[];
+  rows.forEach(r=>{
+    sp+=r.spend||0;cart+=r.cart||0;co+=r.checkout||0;
+    // Calculate revenue from ROAS * spend for each row
+    if(r.roas>0&&r.spend>0)totalRevenue+=r.roas*r.spend;
+    totalClicks+=r.clicks||0;
+    totalImp+=r.impressions||0;
+    if(r.cpc>0)cv.push(r.cpc);
+    if(r.ctr>0)tv.push(r.ctr);
+  });
   const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+  // ROAS = total revenue / total spend (correct method)
+  const roas=sp>0&&totalRevenue>0?totalRevenue/sp:0;
+  // CPC = total spend / total clicks (correct method)
+  const cpc=totalClicks>0?sp/totalClicks:0;
+  // CTR = total clicks / total impressions (correct method)
+  const ctr=totalImp>0?totalClicks/totalImp:0;
   document.getElementById('adMetrics').innerHTML=[
     {l:'花費 (TWD)',v:'$'+Math.round(sp).toLocaleString()},
-    {l:'平均 ROAS',v:avg(rv)>0?avg(rv).toFixed(2)+'x':'—'},
-    {l:'平均 CPC',v:avg(cv)>0?'$'+avg(cv).toFixed(2):'—'},
-    {l:'平均 CTR',v:avg(tv)>0?avg(tv).toFixed(2)+'%':'—'},
-    {l:'加到購物車',v:cart>0?cart.toLocaleString():'—'},
-    {l:'開始結帳',v:co>0?co.toLocaleString():'—'},
+    {l:'ROAS',v:roas>0?roas.toFixed(2)+'x':'—'},
+    {l:'CPC',v:cpc>0?'$'+cpc.toFixed(2):'—'},
+    {l:'CTR',v:ctr>0?(ctr*100).toFixed(2)+'%':'—'},
+    {l:'加到購物車',v:cart>0?Math.round(cart).toLocaleString():'—'},
+    {l:'開始結帳',v:co>0?Math.round(co).toLocaleString():'—'},
   ].map(m=>`<div class="mc"><div class="mc-l">${m.l}</div><div class="mc-v">${m.v}</div></div>`).join('');
 }
 function renderAdCharts(rows){
@@ -761,8 +775,8 @@ function renderAdTable(rows){
   const sorted=rows.slice().sort((a,b)=>b.spend-a.spend);
   let th,tdFn;
   if(AP==='meta'){
-    th='<th>廣告活動名稱</th><th>花費(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>加購物車</th><th>開始結帳</th>';
-    tdFn=r=>`<td class="aname" title="${r.name}">${r.name}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.cpc>0?'$'+r.cpc.toFixed(2):'—'}</td><td>${r.ctr>0?r.ctr.toFixed(2)+'%':'—'}</td><td>${r.cart>0?r.cart:'—'}</td><td>${r.checkout>0?r.checkout:'—'}</td>`;
+    th='<th>廣告組合名稱</th><th>花費(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>加購物車</th><th>開始結帳</th><th>門市資訊</th>';
+    tdFn=r=>`<td class="aname" title="${r.name}">${r.name}${r.campaignName?`<div style="font-size:10px;color:var(--tx3)">${r.campaignName}</div>`:''}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.cpc>0?'$'+r.cpc.toFixed(2):'—'}</td><td>${r.ctr>0?(r.ctr*100).toFixed(2)+'%':'—'}</td><td>${r.cart>0?Math.round(r.cart):'—'}</td><td>${r.checkout>0?Math.round(r.checkout):'—'}</td><td>${r.store>0?Math.round(r.store):'—'}</td>`;
   } else if(AP==='criteo'){
     th='<th>Ad Set</th><th>Cost(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>曝光</th><th>點擊</th>';
     tdFn=r=>`<td class="aname" title="${r.name}">${r.name}</td><td>$${Math.round(r.spend).toLocaleString()}</td><td>${r.roas>0?`<span class="rpill ${r.roas>=2?'rgood':''}">${r.roas.toFixed(2)}x</span>`:'—'}</td><td>${r.cpc>0?'$'+r.cpc.toFixed(3):'—'}</td><td>${r.ctr>0?(r.ctr*100).toFixed(2)+'%':'—'}</td><td>${r.displays?Math.round(r.displays).toLocaleString():'—'}</td><td>${r.clicks?Math.round(r.clicks).toLocaleString():'—'}</td>`;
@@ -806,13 +820,53 @@ function parseMeta(wb){
   let hIdx=0;for(let i=0;i<Math.min(arr.length,6);i++){if(arr[i].some(v=>String(v).includes('行銷活動名稱'))){hIdx=i;break;}}
   const hdrs=arr[hIdx].map(v=>String(v));
   const col=t=>hdrs.findIndex(h=>h.includes(t));
-  const iN=col('行銷活動名稱'),iSp=col('花費'),iR=col('ROAS'),iCpc=col('CPC'),iCtr=col('CTR'),iCart=col('購物車'),iCo=col('結帳');
+
+  // Support both old format (campaign level) and new format (adset level)
+  const iCampaign=col('行銷活動名稱');
+  const iAdset=col('廣告組合名稱');
+  const iSp=col('花費金額')>=0?col('花費金額'):col('花費');
+  const iRoas=col('成果 ROAS')>=0?col('成果 ROAS'):col('ROAS');
+  const iCpc=col('CPC');
+  const iClicks=col('連結點擊次數');
+  const iImp=col('曝光次數');
+  const iResult=col('成果'); // 成果欄 (加購物車/結帳等)
+  const iResultType=col('成果類型');
+  const iCart_old=col('購物車');
+  const iCheckout_old=col('網站開始結帳次數')>=0?col('網站開始結帳次數'):col('結帳');
+  const iStore=col('門市資訊');
+
+  // Determine name column: adset level if adset col exists
+  const isAdset=iAdset>=0&&arr[hIdx+1]&&arr[hIdx+1][iAdset];
+  const iName=isAdset?iAdset:iCampaign;
+
   const rows=[];
   for(let i=hIdx+1;i<arr.length;i++){
-    const r=arr[i];const name=String(r[iN]||'').trim();
-    if(!name||name.startsWith('META_'))continue;
+    const r=arr[i];
+    const name=String(r[iName]||'').trim();
+    if(!name||name.startsWith('META_')||name.startsWith('FB'))continue;
     const spend=parseFloat(r[iSp])||0;if(!spend)continue;
-    rows.push({name,spend,roas:parseFloat(r[iR])||0,cpc:parseFloat(r[iCpc])||0,ctr:parseFloat(r[iCtr])||0,cart:parseFloat(r[iCart])||0,checkout:parseFloat(r[iCo])||0});
+
+    // Cart: use old col or parse from 成果 based on 成果類型
+    let cart=0,checkout=0;
+    if(iCart_old>=0) cart=parseFloat(r[iCart_old])||0;
+    if(iCheckout_old>=0) checkout=parseFloat(r[iCheckout_old])||0;
+    if(iResult>=0&&iResultType>=0){
+      const resultType=String(r[iResultType]||'');
+      const resultVal=parseFloat(r[iResult])||0;
+      if(resultType.includes('購物車'))cart=resultVal;
+      if(resultType.includes('結帳'))checkout=resultVal;
+    }
+
+    const clicks=parseFloat(r[iClicks])||0;
+    const imp=parseFloat(r[iImp])||0;
+    const cpc=iCpc>=0?(parseFloat(r[iCpc])||0):(clicks>0?spend/clicks:0);
+    const ctr=imp>0?clicks/imp:0;
+    const store=iStore>=0?parseFloat(r[iStore])||0:0;
+    const campaignName=String(r[iCampaign]||'').trim();
+
+    rows.push({name,campaignName:isAdset?campaignName:'',spend,
+      roas:parseFloat(r[iRoas])||0,cpc,ctr,cart,checkout,store,
+      clicks,impressions:imp});
   }
   return rows;
 }
