@@ -199,30 +199,24 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
   <!-- 平台指標卡 -->
   <div id="ov-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:1.25rem"></div>
 
-  <!-- 圓餅 + ROAS 長條 -->
+  <!-- 圓餅 + 趨勢折線 -->
   <div class="cgrid" style="margin-bottom:1rem">
     <div class="ccrd">
       <div class="ctitle">各平台花費佔比</div>
       <div style="height:220px;position:relative" id="ov-pie"><div class="empty"><div class="ico">🥧</div>載入中…</div></div>
     </div>
     <div class="ccrd">
-      <div class="ctitle">各平台 ROAS 比較</div>
-      <div style="height:220px;position:relative" id="ov-roas-bar"><div class="empty"><div class="ico">📊</div>載入中…</div></div>
-    </div>
-  </div>
-
-  <!-- 趨勢折線圖 -->
-  <div class="ccrd">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;flex-wrap:wrap;gap:6px">
-      <span class="ctitle" style="margin-bottom:0">各平台趨勢</span>
-      <div style="display:flex;gap:4px;flex-wrap:wrap" id="ov-trend-btns">
-        <button class="cmb active" data-ovt="spend">花費</button>
-        <button class="cmb" data-ovt="roas">ROAS</button>
-        <button class="cmb" data-ovt="cpc">CPC</button>
-        <button class="cmb" data-ovt="ctr">CTR</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;flex-wrap:wrap;gap:6px">
+        <span class="ctitle" style="margin-bottom:0">各平台趨勢</span>
+        <div style="display:flex;gap:4px;flex-wrap:wrap" id="ov-trend-btns">
+          <button class="cmb active" data-ovt="spend">花費</button>
+          <button class="cmb" data-ovt="roas">ROAS</button>
+          <button class="cmb" data-ovt="cpc">CPC</button>
+          <button class="cmb" data-ovt="ctr">CTR</button>
+        </div>
       </div>
+      <div style="height:220px;position:relative" id="ov-trend"><div class="empty"><div class="ico">📈</div>載入中…</div></div>
     </div>
-    <div style="height:260px;position:relative" id="ov-trend"><div class="empty"><div class="ico">📈</div>載入中…</div></div>
   </div>
 
   <!-- GA4 趨勢 -->
@@ -1379,23 +1373,6 @@ async function renderOverview(){
     });
   } else {
     document.getElementById('ov-pie').innerHTML='<div class="empty"><div class="ico">🥧</div>無廣告資料</div>';
-  }
-
-  // ── ROAS 長條圖 ──
-  const roasData=OV_PLAT_CFG.filter(p=>platTotal[p.key].roas>0);
-  killChart('ov-roas');
-  if(roasData.length){
-    document.getElementById('ov-roas-bar').innerHTML='<canvas id="c-ov-roas"></canvas>';
-    CHARTS['ov-roas']=new Chart(document.getElementById('c-ov-roas'),{
-      type:'bar',
-      data:{
-        labels:roasData.map(p=>p.label),
-        datasets:[{data:roasData.map(p=>platTotal[p.key].roas),backgroundColor:roasData.map(p=>p.color+'cc'),borderRadius:6,borderSkipped:false}]
-      },
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'ROAS: '+ctx.raw.toFixed(2)+'x'}}},scales:{x:{grid:{display:false},ticks:{font:{size:12}}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>v.toFixed(1)+'x',font:{size:10}}}}}
-    });
-  } else {
-    document.getElementById('ov-roas-bar').innerHTML='<div class="empty"><div class="ico">📊</div>無 ROAS 資料</div>';
   }
 
   // ── 趨勢折線圖 ──
