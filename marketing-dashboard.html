@@ -1410,36 +1410,63 @@ function ovRenderTrendChart(monthly,metric){
   };
   const c=CFG[metric]||CFG.spend;
   const labels=monthly.map(mo=>mo.label);
+  const isSingle=monthly.length===1;
   killChart('ov-trend');
   document.getElementById('ov-trend').innerHTML='<canvas id="c-ov-trend"></canvas>';
-  CHARTS['ov-trend']=new Chart(document.getElementById('c-ov-trend'),{
-    type:'line',
-    data:{
-      labels,
-      datasets:OV_PLAT_CFG.map(p=>({
-        label:p.label,
-        data:monthly.map(mo=>c.get(mo[p.key])||0),
-        borderColor:p.color,
-        backgroundColor:p.color+'18',
-        tension:.35,
-        pointRadius:monthly.length===1?6:4,
-        pointHoverRadius:7,
-        fill:false,
-      }))
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      interaction:{mode:'index',intersect:false},
-      plugins:{
-        legend:{labels:{font:{size:11},boxWidth:12,padding:10}},
-        tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+c.fmt(ctx.raw)}}
+
+  if(isSingle){
+    // 單月：各平台長條圖
+    const platData=OV_PLAT_CFG.filter(p=>c.get(monthly[0][p.key])>0);
+    CHARTS['ov-trend']=new Chart(document.getElementById('c-ov-trend'),{
+      type:'bar',
+      data:{
+        labels:platData.map(p=>p.label),
+        datasets:[{
+          data:platData.map(p=>c.get(monthly[0][p.key])),
+          backgroundColor:platData.map(p=>p.color+'cc'),
+          borderRadius:6,borderSkipped:false
+        }]
       },
-      scales:{
-        x:{grid:{display:false},ticks:{font:{size:11}}},
-        y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>c.tickFmt(v),font:{size:10}}}
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>c.fmt(ctx.raw)}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:13}}},
+          y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>c.tickFmt(v),font:{size:10}}}
+        }
       }
-    }
-  });
+    });
+  } else {
+    // 多月：各平台折線圖
+    CHARTS['ov-trend']=new Chart(document.getElementById('c-ov-trend'),{
+      type:'line',
+      data:{
+        labels,
+        datasets:OV_PLAT_CFG.map(p=>({
+          label:p.label,
+          data:monthly.map(mo=>c.get(mo[p.key])||0),
+          borderColor:p.color,
+          backgroundColor:p.color+'18',
+          tension:.35,
+          pointRadius:4,
+          pointHoverRadius:7,
+          fill:false,
+        }))
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{labels:{font:{size:11},boxWidth:12,padding:10}},
+          tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+c.fmt(ctx.raw)}}
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:11}}},
+          y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>c.tickFmt(v),font:{size:10}}}
+        }
+      }
+    });
+  }
 }
 
 function initOverview(){
