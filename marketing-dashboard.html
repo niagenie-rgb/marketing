@@ -497,8 +497,7 @@ function parseGaReport(rows){
 
 function parseGaAcq(text){
   const r={channels:[],sessions_channels:[],gads:[],keywords:[],manual_sources:[]};
-  const lines=text.split('
-');
+  const lines=text.split('\n');
   for(let i=0;i<lines.length;i++){
     const l=lines[i].trim();
     if(l.startsWith('最初招攬到使用者的主要管道群組')){
@@ -774,8 +773,7 @@ function renderAdTable(rows){
   document.getElementById('adTbl').innerHTML=`<table class="gtbl"><thead><tr>${th}</tr></thead><tbody>${sorted.map(r=>`<tr>${tdFn(r)}</tr>`).join('')}</tbody></table>`;
 }
 function parseGoogleCsv(text){
-  const lines=text.split('
-');
+  const lines=text.split('\n');
   // Find header row
   let hIdx=0;
   for(let i=0;i<Math.min(lines.length,8);i++){
