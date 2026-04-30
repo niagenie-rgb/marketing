@@ -319,6 +319,10 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     </div>
   </div>
   <div class="tbl-wrap" id="adTbl"><div class="empty" style="padding:2rem"><div class="ico">📋</div>上傳廣告報表後顯示各廣告明細</div></div>
+  <div id="criteo-findings" style="display:none;background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:1.1rem 1.25rem;margin-bottom:1rem">
+    <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);margin-bottom:.6rem">Findings & Suggestions</div>
+    <div class="findings-body" style="font-size:13px;color:var(--tx2);line-height:1.8;white-space:pre-wrap"></div>
+  </div>
 </div>
 
 <!-- 時程 -->
@@ -698,7 +702,14 @@ window.handleAdUpload=async function(e){
       if(AP==='meta'){
         const wb=XLSX.read(ev.target.result,{type:'array'});rows=parseMeta(wb);
       } else if(AP==='criteo'){
-        const wb=XLSX.read(ev.target.result,{type:'array'});rows=parseCriteo(wb);
+        const wb=XLSX.read(ev.target.result,{type:'array'});
+        const result=parseCriteo(wb);
+        rows=result.rows;
+        const ok=await dbUpsert('ad_data',{year:CY,month:CM,platform:AP,data:{rows,findings:result.findings,_fn:f.name}});
+        if(ok){setSyncStatus('ok','雲端已連線 ☁️');showStatus(`✓ 載入成功：${rows.length} 筆廣告`);}
+        else{setSyncStatus('err','儲存失敗');showStatus('❌ 儲存失敗',4000);}
+        renderAd();
+        return;
       } else {
         if(isCsv){
           let text='';
@@ -722,13 +733,14 @@ async function renderAd(){
   const row=await dbGet('ad_data',CY,CM,`&platform=eq.${AP}`);
   const d=row?row.data:null;
   const ua=document.getElementById('ad-uarea'),ub=document.getElementById('ad-ubadge'),un=document.getElementById('ad-uname');
-  if(d&&d.rows&&d.rows.length){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';renderAdMetrics(d.rows);renderAdCharts(d.rows);renderAdTable(d.rows);}
+  if(d&&d.rows&&d.rows.length){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';renderAdMetrics(d.rows);renderAdCharts(d.rows);renderAdTable(d.rows,d);}
   else{ua.classList.remove('loaded');ub.style.display='none';const L={meta:'支援 .xlsx',criteo:'支援 .xlsx',google:'支援 .csv/.xlsx'};un.textContent=L[AP];clearAd();}
 }
 function clearAd(){
   AD_CHART_ROWS=[];AD_CHART_METRIC='roas';
   const btnsEl=document.getElementById('chartMetaBtns');
   if(btnsEl){btnsEl.querySelectorAll('.cmb').forEach((b,i)=>{b.classList.toggle('active',i===0);});btnsEl.dataset.bound='';}
+  const fd=document.getElementById('criteo-findings');if(fd)fd.style.display='none';
   document.getElementById('adMetrics').innerHTML=['花費 (TWD)','平均 ROAS','平均 CPC','平均 CTR','加到購物車','開始結帳'].map(l=>`<div class="mc"><div class="mc-l">${l}</div><div class="mc-v">—</div></div>`).join('');
   document.getElementById('adTbl').innerHTML='<div class="empty" style="padding:2rem"><div class="ico">📋</div>上傳廣告報表後顯示</div>';
   document.getElementById('cw1').innerHTML='<div class="empty"><div class="ico">📊</div>上傳報表後顯示</div>';
@@ -827,7 +839,7 @@ function renderMetricChart(rows,metric){
     }
   });
 }
-function renderAdTable(rows){
+function renderAdTable(rows,d){
   if(!rows.length){document.getElementById('adTbl').innerHTML='<div class="empty" style="padding:2rem"><div class="ico">📋</div>無資料</div>';return;}
   const sorted=rows.slice().sort((a,b)=>b.spend-a.spend);
   let th,tdFn;
@@ -903,6 +915,13 @@ function renderAdTable(rows){
       }
     });
     document.getElementById('adTbl').innerHTML=html2+'</tbody></table>';
+    // Findings & Suggestions
+    const fd=document.getElementById('criteo-findings');
+    if(fd){
+      const txt=rows[0]&&rows._findings?rows._findings:(d&&d.findings?d.findings:'');
+      fd.style.display=txt?'block':'none';
+      if(txt)fd.querySelector('.findings-body').textContent=txt;
+    }
     return;
   } else {
     th='<th>廣告活動</th><th>費用(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>加購物車</th><th>開始結帳</th><th>親臨門市</th><th>類型</th>';
@@ -1072,7 +1091,24 @@ function parseCriteo(wb){
     };
   }).filter(r=>r.spend>0).sort((a,b)=>b.spend-a.spend);
 
-  return rows;
+  // ── 讀取 Summary 頁籤的 Findings & Suggestions ──
+  let findings='';
+  const sumName=wb.SheetNames.find(n=>n==='Summary');
+  if(sumName){
+    const sumArr=XLSX.utils.sheet_to_json(wb.Sheets[sumName],{header:1,defval:''});
+    for(let i=0;i<sumArr.length;i++){
+      const cell=String(sumArr[i][0]||'').trim();
+      if(cell==='Findings & Suggestions'){
+        for(let j=i+1;j<sumArr.length;j++){
+          const txt=String(sumArr[j][0]||'').trim();
+          if(txt){findings=txt;break;}
+        }
+        break;
+      }
+    }
+  }
+
+  return {rows,findings};
 }
 
 function parseGoogleCsv(text){
