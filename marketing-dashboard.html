@@ -135,7 +135,9 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 .nta{width:100%;padding:12px 14px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf);color:var(--tx);resize:vertical;min-height:80px;font-family:inherit;line-height:1.7;outline:none}
 .nsave{margin-top:7px;padding:6px 16px;border-radius:var(--r);border:1px solid var(--bd);background:var(--sf);font-size:12px;cursor:pointer;color:var(--tx2);font-family:inherit}
 .nsave:hover{background:var(--sf2)}
-.statusbar{position:fixed;bottom:0;left:0;right:0;background:var(--ac);color:#fff;font-size:12px;padding:9px 20px;text-align:center;transform:translateY(100%);transition:transform .3s;z-index:300}
+.cmb{padding:3px 10px;border-radius:20px;border:1px solid var(--bd);background:transparent;font-size:11px;font-weight:600;cursor:pointer;color:var(--tx2);font-family:inherit;transition:all .15s}
+.cmb.active{background:var(--ac);color:#fff;border-color:var(--ac)}
+.cmb:hover:not(.active){background:var(--sf2)}bottom:0;left:0;right:0;background:var(--ac);color:#fff;font-size:12px;padding:9px 20px;text-align:center;transform:translateY(100%);transition:transform .3s;z-index:300}
 .statusbar.show{transform:translateY(0)}
 .empty{text-align:center;padding:2rem;color:var(--tx3);font-size:13px}
 .empty .ico{font-size:28px;margin-bottom:.5rem}
@@ -299,9 +301,22 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     <div class="mc"><div class="mc-l">加到購物車</div><div class="mc-v">—</div></div>
     <div class="mc"><div class="mc-l">開始結帳</div><div class="mc-v">—</div></div>
   </div>
-  <div class="cgrid" style="margin-top:14px">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px">
     <div class="ccrd"><div class="ctitle">各廣告花費</div><div class="cw-tall" id="cw1"><div class="empty"><div class="ico">📊</div>上傳報表後顯示</div></div></div>
-    <div class="ccrd"><div class="ctitle">各廣告 ROAS</div><div class="cw-tall" id="cw2"><div class="empty"><div class="ico">📈</div>上傳報表後顯示</div></div></div>
+    <div class="ccrd">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;flex-wrap:wrap;gap:6px">
+        <span class="ctitle" style="margin-bottom:0">各廣告比較</span>
+        <div style="display:flex;gap:4px;flex-wrap:wrap" id="chartMetaBtns">
+          <button class="cmb active" data-m="roas">ROAS</button>
+          <button class="cmb" data-m="cpc">CPC</button>
+          <button class="cmb" data-m="ctr">CTR</button>
+          <button class="cmb" data-m="cart">購物車</button>
+          <button class="cmb" data-m="checkout">結帳</button>
+          <button class="cmb" data-m="store">門市</button>
+        </div>
+      </div>
+      <div class="cw-tall" id="cw2"><div class="empty"><div class="ico">📈</div>上傳報表後顯示</div></div>
+    </div>
   </div>
   <div class="tbl-wrap" id="adTbl"><div class="empty" style="padding:2rem"><div class="ico">📋</div>上傳廣告報表後顯示各廣告明細</div></div>
 </div>
@@ -711,6 +726,9 @@ async function renderAd(){
   else{ua.classList.remove('loaded');ub.style.display='none';const L={meta:'支援 .xlsx',criteo:'支援 .xlsx',google:'支援 .csv/.xlsx'};un.textContent=L[AP];clearAd();}
 }
 function clearAd(){
+  AD_CHART_ROWS=[];AD_CHART_METRIC='roas';
+  const btnsEl=document.getElementById('chartMetaBtns');
+  if(btnsEl){btnsEl.querySelectorAll('.cmb').forEach((b,i)=>{b.classList.toggle('active',i===0);});btnsEl.dataset.bound='';}
   document.getElementById('adMetrics').innerHTML=['花費 (TWD)','平均 ROAS','平均 CPC','平均 CTR','加到購物車','開始結帳'].map(l=>`<div class="mc"><div class="mc-l">${l}</div><div class="mc-v">—</div></div>`).join('');
   document.getElementById('adTbl').innerHTML='<div class="empty" style="padding:2rem"><div class="ico">📋</div>上傳廣告報表後顯示</div>';
   document.getElementById('cw1').innerHTML='<div class="empty"><div class="ico">📊</div>上傳報表後顯示</div>';
@@ -745,15 +763,69 @@ function renderAdMetrics(rows){
   ].map(m=>`<div class="mc"><div class="mc-l">${m.l}</div><div class="mc-v">${m.v}</div></div>`).join('');
   if(AP!=='meta'){const els=document.getElementById('adMetrics').querySelectorAll('.mc');if(els.length>=7)els[6].style.display='none';}
 }
+let AD_CHART_ROWS=[];
+let AD_CHART_METRIC='roas';
+
 function renderAdCharts(rows){
+  AD_CHART_ROWS=rows;
   const top=rows.filter(r=>r.spend>0).sort((a,b)=>b.spend-a.spend).slice(0,10);
   if(!top.length)return;
   const sn=n=>n.length>14?n.slice(0,14)+'…':n;
   document.getElementById('cw1').innerHTML='<canvas id="c1"></canvas>';killChart('c1');
   CHARTS['c1']=new Chart(document.getElementById('c1'),{type:'bar',data:{labels:top.map(r=>sn(r.name)),datasets:[{label:'花費',data:top.map(r=>r.spend),backgroundColor:CC.map(c=>c+'cc'),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>'$'+Math.round(v).toLocaleString(),font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
-  const rRows=top.filter(r=>r.roas>0);
-  document.getElementById('cw2').innerHTML=rRows.length?'<canvas id="c2"></canvas>':'<div class="empty"><div class="ico">📈</div>無 ROAS 數據</div>';killChart('c2');
-  if(rRows.length)CHARTS['c2']=new Chart(document.getElementById('c2'),{type:'bar',data:{labels:rRows.map(r=>sn(r.name)),datasets:[{label:'ROAS',data:rRows.map(r=>r.roas),backgroundColor:CC.map(c=>c+'cc'),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'ROAS: '+ctx.raw.toFixed(2)+'x'}}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>v.toFixed(1)+'x',font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+  // 初始化右側切換按鈕事件
+  const btnsEl=document.getElementById('chartMetaBtns');
+  if(btnsEl&&!btnsEl.dataset.bound){
+    btnsEl.dataset.bound='1';
+    btnsEl.addEventListener('click',e=>{
+      const b=e.target.closest('.cmb');if(!b)return;
+      btnsEl.querySelectorAll('.cmb').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      AD_CHART_METRIC=b.dataset.m;
+      renderMetricChart(AD_CHART_ROWS,AD_CHART_METRIC);
+    });
+  }
+  renderMetricChart(rows,AD_CHART_METRIC);
+}
+
+function renderMetricChart(rows,metric){
+  const CFG={
+    roas:{key:'roas',label:'ROAS',fmt:v=>v.toFixed(2)+'x',filter:r=>r.roas>0,tickFmt:v=>v.toFixed(1)+'x'},
+    cpc: {key:'cpc', label:'CPC(TWD)',fmt:v=>'$'+v.toFixed(2),filter:r=>r.cpc>0,tickFmt:v=>'$'+v.toFixed(0)},
+    ctr: {key:'ctr', label:'CTR',fmt:v=>(v*100).toFixed(2)+'%',filter:r=>r.ctr>0,tickFmt:v=>(v*100).toFixed(1)+'%'},
+    cart:{key:'cart',label:'加購物車',fmt:v=>Math.round(v)+'',filter:r=>r.cart>0,tickFmt:v=>Math.round(v)+''},
+    checkout:{key:'checkout',label:'開始結帳',fmt:v=>Math.round(v)+'',filter:r=>r.checkout>0,tickFmt:v=>Math.round(v)+''},
+    store:{key:'store',label:'門市資訊',fmt:v=>Math.round(v)+'',filter:r=>r.store>0,tickFmt:v=>Math.round(v)+''},
+  };
+  const c=CFG[metric]||CFG.roas;
+  const sn=n=>n.length>14?n.slice(0,14)+'…':n;
+  const filtered=rows.filter(r=>r.spend>0&&c.filter(r)).sort((a,b)=>b[c.key]-a[c.key]).slice(0,10);
+  killChart('c2');
+  if(!filtered.length){
+    document.getElementById('cw2').innerHTML=`<div class="empty"><div class="ico">📊</div>無 ${c.label} 數據</div>`;
+    return;
+  }
+  document.getElementById('cw2').innerHTML='<canvas id="c2"></canvas>';
+  CHARTS['c2']=new Chart(document.getElementById('c2'),{
+    type:'bar',
+    data:{
+      labels:filtered.map(r=>sn(r.name)),
+      datasets:[{
+        label:c.label,
+        data:filtered.map(r=>r[c.key]),
+        backgroundColor:CC.map(x=>x+'cc'),
+        borderRadius:4,borderSkipped:false
+      }]
+    },
+    options:{
+      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>c.label+': '+c.fmt(ctx.raw)}}},
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>c.tickFmt(v),font:{size:10}}},
+        y:{grid:{display:false},ticks:{font:{size:10}}}
+      }
+    }
+  });
 }
 function renderAdTable(rows){
   if(!rows.length){document.getElementById('adTbl').innerHTML='<div class="empty" style="padding:2rem"><div class="ico">📋</div>無資料</div>';return;}
