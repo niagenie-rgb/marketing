@@ -618,11 +618,21 @@ function fmtN(v){const n=parseFloat(String(v||'').replace(/,/g,''));if(isNaN(n)|
 function pNum(s){if(s==null||s==='')return 0;s=String(s).replace(/,/g,'').replace(/"/g,'');if(s.includes('萬'))return parseFloat(s)*10000;return parseFloat(s)||0;}
 function copyReadonlyLink(){
   const url=location.href.split('?')[0]+'?mode=readonly';
-  navigator.clipboard.writeText(url).then(()=>{
-    showStatus('✓ 唯讀連結已複製到剪貼簿');
-  }).catch(()=>{
-    prompt('複製此連結給主管：',url);
-  });
+  // 嘗試現代 clipboard API
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(url).then(()=>showStatus('✓ 唯讀連結已複製！')).catch(()=>fallbackCopy(url));
+  } else {
+    fallbackCopy(url);
+  }
+}
+function fallbackCopy(url){
+  // 建立暫時 textarea 複製
+  const ta=document.createElement('textarea');
+  ta.value=url;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');showStatus('✓ 唯讀連結已複製！');}
+  catch(e){prompt('請手動複製此連結：',url);}
+  document.body.removeChild(ta);
 }
 function showStatus(msg,dur=2400){const b=document.getElementById('statusbar');b.textContent=msg;b.classList.add('show');setTimeout(()=>b.classList.remove('show'),dur);}
 function killChart(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id]}}
