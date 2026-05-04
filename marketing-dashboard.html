@@ -188,9 +188,9 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
   <!-- 日期範圍 -->
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap">
     <div style="display:flex;gap:4px" id="ov-range-btns">
-      <button class="rbtn active" data-ovr="month">本月</button>
+      <button class="rbtn" data-ovr="month">本月</button>
       <button class="rbtn" data-ovr="q">本季</button>
-      <button class="rbtn" data-ovr="year">本年</button>
+      <button class="rbtn active" data-ovr="year">本年</button>
       <button class="rbtn" data-ovr="custom">自訂</button>
     </div>
     <div id="ov-custom" style="display:none;gap:6px;align-items:center;flex-wrap:wrap">
@@ -221,8 +221,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
           <button class="cmb" data-ovt="roas">ROAS</button>
           <button class="cmb" data-ovt="cpc">CPC</button>
           <button class="cmb" data-ovt="ctr">CTR</button>
-        </div>
-      </div>
+        </div>      </div>
       <div style="height:220px;position:relative" id="ov-trend"><div class="empty"><div class="ico">📈</div>載入中…</div></div>
     </div>
   </div>
@@ -1811,8 +1810,9 @@ async function renderNotes(){
 }
 
 // ── Overview ──────────────────────────────────────────────────
-let OV_RANGE='month';
+let OV_RANGE='year';
 let OV_TREND_METRIC='spend';
+let OV_TREND_METRICS=new Set(['spend']);
 let OV_CUSTOM_Y1,OV_CUSTOM_M1,OV_CUSTOM_Y2,OV_CUSTOM_M2;
 
 const OV_PLAT_CFG=[
@@ -1931,7 +1931,7 @@ async function renderOverview(){
   }
 
   // ── 趨勢折線圖 ──
-  ovRenderTrendChart(monthly,OV_TREND_METRIC);
+  ovRenderTrendChart(monthly);
 
   // ── GA4 趨勢 ──
   const ga4M=monthly.filter(mo=>mo.ga4);
@@ -1956,68 +1956,74 @@ async function renderOverview(){
   }
 }
 
-function ovRenderTrendChart(monthly,metric){
+function ovRenderTrendChart(monthly){
   const CFG={
-    spend:{label:'花費(TWD)',get:d=>d.spend,fmt:v=>'$'+Math.round(v).toLocaleString(),tickFmt:v=>'$'+fmtN(v)},
-    roas: {label:'ROAS',     get:d=>d.roas,  fmt:v=>v.toFixed(2)+'x',              tickFmt:v=>v.toFixed(1)+'x'},
-    cpc:  {label:'CPC',      get:d=>d.cpc,   fmt:v=>'$'+v.toFixed(2),              tickFmt:v=>'$'+v.toFixed(0)},
-    ctr:  {label:'CTR',      get:d=>d.ctr*100,fmt:v=>v.toFixed(2)+'%',             tickFmt:v=>v.toFixed(1)+'%'},
+    spend:{label:'花費(TWD)',get:d=>d.spend,fmt:v=>'$'+Math.round(v).toLocaleString(),tickFmt:v=>'$'+fmtN(v),yid:'y'},
+    roas: {label:'ROAS',    get:d=>d.roas,  fmt:v=>v.toFixed(2)+'x',              tickFmt:v=>v.toFixed(1)+'x', yid:'y2'},
+    cpc:  {label:'CPC',    get:d=>d.cpc,   fmt:v=>'$'+v.toFixed(2),              tickFmt:v=>'$'+v.toFixed(0), yid:'y2'},
+    ctr:  {label:'CTR',    get:d=>d.ctr*100,fmt:v=>v.toFixed(2)+'%',             tickFmt:v=>v.toFixed(1)+'%', yid:'y2'},
   };
-  const c=CFG[metric]||CFG.spend;
+  const selectedMetrics=[...OV_TREND_METRICS].filter(k=>CFG[k]);
   const labels=monthly.map(mo=>mo.label);
   const isSingle=monthly.length===1;
   killChart('ov-trend');
   document.getElementById('ov-trend').innerHTML='<canvas id="c-ov-trend"></canvas>';
 
   if(isSingle){
-    // 單月：各平台長條圖
-    const platData=OV_PLAT_CFG.filter(p=>c.get(monthly[0][p.key])>0);
+    // 單月長條圖：每個平台×每個指標
+    const datasets=[];
+    selectedMetrics.forEach((metricKey,mi)=>{
+      const c=CFG[metricKey];
+      datasets.push({
+        label:c.label,
+        data:OV_PLAT_CFG.map(p=>c.get(monthly[0][p.key])||0),
+        backgroundColor:OV_PLAT_CFG.map(p=>p.color+(mi===0?'cc':'55')),
+        borderColor:OV_PLAT_CFG.map(p=>p.color),
+        borderWidth:mi===0?0:2,
+        borderRadius:4,borderSkipped:false,
+      });
+    });
     CHARTS['ov-trend']=new Chart(document.getElementById('c-ov-trend'),{
       type:'bar',
-      data:{
-        labels:platData.map(p=>p.label),
-        datasets:[{
-          data:platData.map(p=>c.get(monthly[0][p.key])),
-          backgroundColor:platData.map(p=>p.color+'cc'),
-          borderRadius:6,borderSkipped:false
-        }]
-      },
-      options:{
-        responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>c.fmt(ctx.raw)}}},
-        scales:{
-          x:{grid:{display:false},ticks:{font:{size:13}}},
-          y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>c.tickFmt(v),font:{size:10}}}
-        }
-      }
+      data:{labels:OV_PLAT_CFG.map(p=>p.label),datasets},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:10}}},scales:{x:{grid:{display:false},ticks:{font:{size:13}}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:10}}}}}
     });
   } else {
-    // 多月：各平台折線圖
-    CHARTS['ov-trend']=new Chart(document.getElementById('c-ov-trend'),{
-      type:'line',
-      data:{
-        labels,
-        datasets:OV_PLAT_CFG.map(p=>({
-          label:p.label,
+    // 多月折線圖：每個平台×每個指標
+    const datasets=[];
+    OV_PLAT_CFG.forEach(p=>{
+      selectedMetrics.forEach((metricKey,mi)=>{
+        const c=CFG[metricKey];
+        datasets.push({
+          label:`${p.label} · ${c.label}`,
           data:monthly.map(mo=>c.get(mo[p.key])||0),
           borderColor:p.color,
-          backgroundColor:p.color+'18',
-          tension:.35,
-          pointRadius:4,
-          pointHoverRadius:7,
-          fill:false,
-        }))
-      },
+          backgroundColor:'transparent',
+          borderDash:mi===0?[]:[5,3],
+          tension:.35,pointRadius:4,pointHoverRadius:6,fill:false,
+          yAxisID:c.yid,
+          _fmt:c.fmt,
+        });
+      });
+    });
+    const hasY2=selectedMetrics.some(k=>CFG[k].yid==='y2');
+    const hasY1=selectedMetrics.some(k=>CFG[k].yid==='y');
+    const y1k=selectedMetrics.find(k=>CFG[k].yid==='y');
+    const y2k=selectedMetrics.find(k=>CFG[k].yid==='y2');
+    CHARTS['ov-trend']=new Chart(document.getElementById('c-ov-trend'),{
+      type:'line',
+      data:{labels,datasets},
       options:{
         responsive:true,maintainAspectRatio:false,
         interaction:{mode:'index',intersect:false},
         plugins:{
-          legend:{labels:{font:{size:11},boxWidth:12,padding:10}},
-          tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+c.fmt(ctx.raw)}}
+          legend:{labels:{font:{size:10},boxWidth:12,padding:8}},
+          tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.dataset._fmt?ctx.dataset._fmt(ctx.raw):ctx.raw)}}
         },
         scales:{
           x:{grid:{display:false},ticks:{font:{size:11}}},
-          y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>c.tickFmt(v),font:{size:10}}}
+          y:{display:hasY1,position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>y1k?CFG[y1k].tickFmt(v):fmtN(v),font:{size:10}}},
+          y2:{display:hasY2,position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>y2k?CFG[y2k].tickFmt(v):fmtN(v),font:{size:10}}}
         }
       }
     });
@@ -2056,9 +2062,16 @@ function initOverview(){
 
   document.getElementById('ov-trend-btns').addEventListener('click',e=>{
     const b=e.target.closest('.cmb');if(!b||!b.dataset.ovt)return;
-    document.querySelectorAll('#ov-trend-btns .cmb').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');OV_TREND_METRIC=b.dataset.ovt;
-    // 只重畫趨勢圖，不重撈資料
+    const k=b.dataset.ovt;
+    if(OV_TREND_METRICS.has(k)){
+      if(OV_TREND_METRICS.size<=1)return;
+      OV_TREND_METRICS.delete(k);b.classList.remove('active');
+    } else {
+      if(OV_TREND_METRICS.size>=2){showStatus('最多選 2 個指標');return;}
+      OV_TREND_METRICS.add(k);b.classList.add('active');
+    }
+    OV_TREND_METRIC=[...OV_TREND_METRICS][0];
+    // 只重畫趨勢圖
     const months=ovGetMonths();
     const fetches=months.map(({y,m})=>Promise.all([
       dbGet('ad_data',y,m,'&platform=eq.meta'),
@@ -2070,7 +2083,7 @@ function initOverview(){
         const [mr,cr,gr]=allData[i];
         return{label:months.length===1?`${months[i].y}/${MZ[m]}`:MZ[m],meta:ovSumRows(mr?.data?.rows),criteo:ovSumRows(cr?.data?.rows),google:ovSumRows(gr?.data?.rows)};
       });
-      ovRenderTrendChart(monthly,OV_TREND_METRIC);
+      ovRenderTrendChart(monthly);
     });
   });
 }
