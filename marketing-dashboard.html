@@ -379,7 +379,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
         <div class="empty"><div class="ico">📈</div>請選擇廣告組合</div>
       </div>
       <div style="margin-top:.85rem;font-size:11px;color:var(--tx3);margin-bottom:.4rem">選擇廣告組合（最多 6 條）：</div>
-      <div id="ad-trend-selector" style="display:block"></div>
+      <div id="ad-trend-selector" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"></div>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px">
@@ -1625,72 +1625,52 @@ async function renderAdTrendSection(){
     campMap[camp].add(r.name);
   }));
 
-  // 重置選取（換平台時清空）
+  // 重置選取
   if(AD_TREND_SELECTED.size===0){
     const cur=months.find(r=>r.month===CM)||months[months.length-1];
     cur.data.rows.slice().sort((a,b)=>b.spend-a.spend).slice(0,5).forEach(r=>AD_TREND_SELECTED.add(r.name));
   }
 
-  // 渲染選擇器：依行銷活動分組
+  // 渲染選擇器：並排，同行銷活動用分隔線區隔
   const sel=document.getElementById('ad-trend-selector');
   sel.innerHTML='';
+  sel.style.display='flex';
+  sel.style.flexWrap='wrap';
+  sel.style.gap='5px';
+  sel.style.alignItems='center';
 
-  const hasCampaigns=AP==='meta'&&Object.keys(campMap).length>0;
+  const hasCampaigns=AP==='meta'&&Object.keys(campMap).length>1;
+  const makeBtn=(name)=>{
+    const btn=document.createElement('button');
+    btn.className='cmb'+(AD_TREND_SELECTED.has(name)?' active':'');
+    btn.textContent=name.length>20?name.slice(0,20)+'…':name;
+    btn.title=name;
+    btn.onclick=()=>{
+      if(AD_TREND_SELECTED.has(name)){AD_TREND_SELECTED.delete(name);btn.classList.remove('active');}
+      else{
+        if(AD_TREND_SELECTED.size>=6){showStatus('最多選 6 條廣告');return;}
+        AD_TREND_SELECTED.add(name);btn.classList.add('active');
+      }
+      drawAdTrendChart(months);
+    };
+    return btn;
+  };
+
   if(hasCampaigns){
-    Object.entries(campMap).sort(([a],[b])=>a.localeCompare(b)).forEach(([camp,names])=>{
-      // 行銷活動標題列
-      const grp=document.createElement('div');
-      grp.style.cssText='width:100%;display:flex;align-items:center;gap:8px;margin-top:.6rem;margin-bottom:2px';
-      const lbl=document.createElement('span');
-      lbl.style.cssText='font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap';
-      lbl.textContent=camp.length>30?camp.slice(0,30)+'…':camp;
-      lbl.title=camp;
-      const line=document.createElement('span');
-      line.style.cssText='flex:1;height:1px;background:var(--bd)';
-      grp.appendChild(lbl);grp.appendChild(line);
-      sel.appendChild(grp);
-      // 廣告組合按鈕
-      const row=document.createElement('div');
-      row.style.cssText='display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px';
-      [...names].sort().forEach(name=>{
-        const btn=document.createElement('button');
-        btn.className='cmb'+(AD_TREND_SELECTED.has(name)?' active':'');
-        btn.textContent=name.length>20?name.slice(0,20)+'…':name;
-        btn.title=name;
-        btn.onclick=()=>{
-          if(AD_TREND_SELECTED.has(name)){AD_TREND_SELECTED.delete(name);btn.classList.remove('active');}
-          else{
-            if(AD_TREND_SELECTED.size>=6){showStatus('最多選 6 條廣告');return;}
-            AD_TREND_SELECTED.add(name);btn.classList.add('active');
-          }
-          drawAdTrendChart(months);
-        };
-        row.appendChild(btn);
-      });
-      sel.appendChild(row);
+    const entries=Object.entries(campMap).sort(([a],[b])=>a.localeCompare(b));
+    entries.forEach(([camp,names],idx)=>{
+      // 分隔符（第一組不加）
+      if(idx>0){
+        const sep=document.createElement('span');
+        sep.style.cssText='width:1px;height:20px;background:var(--bdm);flex-shrink:0;margin:0 3px';
+        sel.appendChild(sep);
+      }
+      [...names].sort().forEach(name=>sel.appendChild(makeBtn(name)));
     });
   } else {
-    // Criteo / Google：無分組，直接列出
     const allNames=new Set();
     months.forEach(mo=>mo.data.rows.forEach(r=>allNames.add(r.name)));
-    const row=document.createElement('div');
-    row.style.cssText='display:flex;flex-wrap:wrap;gap:5px';
-    [...allNames].sort().forEach(name=>{
-      const btn=document.createElement('button');
-      btn.className='cmb'+(AD_TREND_SELECTED.has(name)?' active':'');
-      btn.textContent=name.length>22?name.slice(0,22)+'…':name;
-      btn.title=name;
-      btn.onclick=()=>{
-        if(AD_TREND_SELECTED.has(name)){AD_TREND_SELECTED.delete(name);btn.classList.remove('active');}
-        else{
-          if(AD_TREND_SELECTED.size>=6){showStatus('最多選 6 條廣告');return;}
-          AD_TREND_SELECTED.add(name);btn.classList.add('active');
-        }
-        drawAdTrendChart(months);
-      };
-      row.appendChild(btn);
-    });
-    sel.appendChild(row);
+    [...allNames].sort().forEach(name=>sel.appendChild(makeBtn(name)));
   }
 
   drawAdTrendChart(months);
