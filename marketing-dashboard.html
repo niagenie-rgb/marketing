@@ -584,7 +584,8 @@ const MZ=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月'
 const BC=['bp','bt','ba','bc','bb','bk'];
 const CC=['#4f86f7','#f4845f','#58c49a','#f7c94f','#a78bfa','#f472b6','#34d399','#fb923c','#60a5fa','#e879f9'];
 const CHARTS={};
-let CY=new Date().getFullYear(),CM=new Date().getMonth(),AP='meta';
+let CY=new Date().getFullYear(),CM=new Date().getMonth()-1,AP='meta';
+if(CM<0){CM=11;CY--;}
 let GA4_VIEW='month',GA4_RANGE='all';
 const CACHE={};
 
@@ -608,7 +609,7 @@ function K(y,m){return y+'-'+String(m).padStart(2,'0')}
   }catch(e){setSyncStatus(e.name==='AbortError'?'err':'err',e.name==='AbortError'?'連線逾時':'無法連線');}
   const sel=document.getElementById('ga-y-sel');
   const y=new Date().getFullYear();
-  for(let i=y-1;i<=y+1;i++){const o=document.createElement('option');o.value=i;o.textContent=i;if(i===y)o.selected=true;sel.appendChild(o);}
+  for(let i=y-1;i<=y+1;i++){const o=document.createElement('option');o.value=i;o.textContent=i;if(i===CY)o.selected=true;sel.appendChild(o);}
   document.getElementById('ga-m-sel').value=CM;
   initOverview();
   renderAll();
@@ -1062,15 +1063,17 @@ function renderAdTable(rows,d){
     sorted.forEach(r=>{const c=r.campaignName||r.name;if(!campMap[c])campMap[c]={rows:[]};campMap[c].rows.push(r);});
     let html2='<table class="gtbl"><thead><tr><th>行銷活動 / 廣告組合</th><th>花費(TWD)</th><th>ROAS</th><th>CPC</th><th>CTR</th><th>加購物車</th><th>開始結帳</th><th>門市資訊</th></tr></thead><tbody>';
     Object.entries(campMap).forEach(([camp,g])=>{
-      const tot={spend:0,rev:0,clicks:0,imp:0,cart:0,checkout:0,store:0,ctrSum:0,ctrW:0};
+      const tot={spend:0,rev:0,clicks:0,imp:0,cart:0,checkout:0,store:0,ctrSum:0,ctrW:0,cpcSum:0,cpcW:0};
       g.rows.forEach(r=>{
         tot.spend+=r.spend;tot.rev+=(r.roas||0)*r.spend;
         tot.clicks+=r.clicks||0;tot.imp+=r.impressions||0;
         tot.cart+=r.cart||0;tot.checkout+=r.checkout||0;tot.store+=r.store||0;
         if(r.ctr>0&&r.spend>0){tot.ctrSum+=r.ctr*r.spend;tot.ctrW+=r.spend;}
+        if(r.cpc>0&&r.spend>0){tot.cpcSum+=r.cpc*r.spend;tot.cpcW+=r.spend;}
       });
       const cRoas=tot.spend>0&&tot.rev>0?tot.rev/tot.spend:0;
-      const cCpc=tot.clicks>0?tot.spend/tot.clicks:0;
+      // CPC：優先用 clicks 計算，沒有 clicks 則用各 row 的 cpc 加權平均
+      const cCpc=tot.clicks>0?tot.spend/tot.clicks:(tot.cpcW>0?tot.cpcSum/tot.cpcW:0);
       let cCtr=tot.imp>0?tot.clicks/tot.imp:0;
       if(!cCtr&&tot.ctrW>0)cCtr=tot.ctrSum/tot.ctrW;
       html2+=`<tr style="background:var(--sf2);cursor:pointer" onclick="const nb=this.nextSibling;if(nb){nb.style.display=nb.style.display==='none'?'':'none';this.cells[0].innerHTML=this.cells[0].innerHTML.replace(/[▾▸]/,nb.style.display===\'none\'?\'▸\':\'▾\');}">
