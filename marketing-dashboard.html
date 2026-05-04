@@ -364,7 +364,23 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
   <div id="ad-trend-section" style="display:none;margin-top:14px">
     <div class="ccrd">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;flex-wrap:wrap;gap:6px">
-        <span class="ctitle" style="margin-bottom:0">廣告跨月趨勢</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="ctitle" style="margin-bottom:0">廣告跨月趨勢</span>
+          <!-- 月份範圍選擇 -->
+          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap" id="adTrendRangeBtns">
+            <button class="rbtn active" data-atr="year" style="font-size:11px;padding:3px 10px">全年</button>
+            <button class="rbtn" data-atr="q1" style="font-size:11px;padding:3px 10px">Q1</button>
+            <button class="rbtn" data-atr="q2" style="font-size:11px;padding:3px 10px">Q2</button>
+            <button class="rbtn" data-atr="q3" style="font-size:11px;padding:3px 10px">Q3</button>
+            <button class="rbtn" data-atr="q4" style="font-size:11px;padding:3px 10px">Q4</button>
+            <button class="rbtn" data-atr="custom" style="font-size:11px;padding:3px 10px">自訂</button>
+          </div>
+          <div id="adTrendCustomRange" style="display:none;align-items:center;gap:4px">
+            <select id="atr-m1" style="padding:3px 6px;font-size:11px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);font-family:inherit;outline:none"></select>
+            <span style="font-size:11px;color:var(--tx3)">至</span>
+            <select id="atr-m2" style="padding:3px 6px;font-size:11px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);font-family:inherit;outline:none"></select>
+          </div>
+        </div>
         <div style="display:flex;gap:4px;flex-wrap:wrap" id="adTrendMetricBtns">
           <button class="cmb active" data-atm="spend">花費</button>
           <button class="cmb" data-atm="roas">ROAS</button>
@@ -521,6 +537,7 @@ document.getElementById('ptabs').onclick=function(e){
   AP=b.dataset.p;
   AD_TREND_SELECTED=new Set();
   AD_TREND_METRICS=new Set(['spend']);
+  AD_TREND_RANGE='year';AD_TREND_M1=0;AD_TREND_M2=11;
   document.querySelectorAll('.ptab').forEach(t=>t.classList.toggle('active',t.dataset.p===AP));
   const L={meta:'上傳 Meta Excel (.xlsx)',criteo:'上傳 Criteo Excel (.xlsx)',google:'上傳 Google Ads CSV/XLSX'};
   document.getElementById('ad-ulabel').textContent=L[AP];
@@ -1568,9 +1585,11 @@ function initOverview(){
 }
 
 // ── Ad Trend Chart (Meta 跨月) ────────────────────────────────
-let AD_TREND_METRIC='spend'; // 保留向下相容
+let AD_TREND_METRIC='spend';
 let AD_TREND_METRICS=new Set(['spend']);
-let AD_TREND_SELECTED=new Set(); // 選中的廣告名稱
+let AD_TREND_SELECTED=new Set();
+let AD_TREND_RANGE='year'; // year|q1|q2|q3|q4|custom
+let AD_TREND_M1=0,AD_TREND_M2=11;
 
 async function renderAdTrendSection(){
   const section=document.getElementById('ad-trend-section');
@@ -1672,6 +1691,28 @@ async function renderAdTrendSection(){
     [...allNames].sort().forEach(name=>sel.appendChild(makeBtn(name)));
   }
 
+  // 月份範圍選擇器初始化
+  const rangeBtnsEl=document.getElementById('adTrendRangeBtns');
+  const customRangeEl=document.getElementById('adTrendCustomRange');
+  ['atr-m1','atr-m2'].forEach((id,idx)=>{
+    const sel2=document.getElementById(id);
+    if(!sel2.options.length){MZ.forEach((lbl,mi)=>{const o=document.createElement('option');o.value=mi;o.textContent=lbl;sel2.appendChild(o);});}
+    sel2.value=idx===0?AD_TREND_M1:AD_TREND_M2;
+    sel2.onchange=()=>{AD_TREND_M1=+document.getElementById('atr-m1').value;AD_TREND_M2=+document.getElementById('atr-m2').value;drawAdTrendChart(months);};
+  });
+  rangeBtnsEl.onclick=e=>{
+    const b=e.target.closest('.rbtn');if(!b||!b.dataset.atr)return;
+    rangeBtnsEl.querySelectorAll('.rbtn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');AD_TREND_RANGE=b.dataset.atr;
+    const qmap={q1:[0,2],q2:[3,5],q3:[6,8],q4:[9,11],year:[0,11]};
+    if(qmap[AD_TREND_RANGE]){[AD_TREND_M1,AD_TREND_M2]=qmap[AD_TREND_RANGE];}
+    customRangeEl.style.display=AD_TREND_RANGE==='custom'?'flex':'none';
+    drawAdTrendChart(months);
+  };
+  customRangeEl.style.display=AD_TREND_RANGE==='custom'?'flex':'none';
+  // 同步按鈕 active 狀態
+  rangeBtnsEl.querySelectorAll('.rbtn').forEach(b=>b.classList.toggle('active',b.dataset.atr===AD_TREND_RANGE));
+
   drawAdTrendChart(months);
 }
 
@@ -1691,7 +1732,8 @@ function drawAdTrendChart(months){
 
   const selectedMetrics=[...AD_TREND_METRICS].filter(k=>CFG[k]);
   const selectedAds=[...AD_TREND_SELECTED];
-  const allMonths=Array.from({length:12},(_,i)=>i); // 0-11
+  // 依月份範圍過濾
+  const allMonths=Array.from({length:12},(_,i)=>i).filter(m=>m>=AD_TREND_M1&&m<=AD_TREND_M2);
   const labels=allMonths.map(m=>MZ[m]);
 
   killChart('ad-trend');
@@ -1725,6 +1767,7 @@ function drawAdTrendChart(months){
         spanGaps:false,
         yAxisID:c.yid,
         _metricFmt:c.fmt,
+        _isFirstMetric:isFirstMetric,
         // 計算這個廣告有幾個月有資料
         _dataCount:allMonths.filter(m=>{
           const mo=months.find(r=>r.month===m);
@@ -1737,6 +1780,7 @@ function drawAdTrendChart(months){
   });
 
   // 資料點少於 3 個月的 dataset 改用長條圖
+  // 第一個指標：實心長條；第二個以後：空心長條（只有描邊）
   datasets.forEach(ds=>{
     if(ds._dataCount<3){
       ds.type='bar';
@@ -1746,10 +1790,15 @@ function drawAdTrendChart(months){
       ds.pointHoverRadius=undefined;
       ds.pointStyle=undefined;
       ds.spanGaps=undefined;
-      ds.backgroundColor=ds.borderColor+'99';
-      ds.borderWidth=0;
+      ds.borderWidth=2;
       ds.borderRadius=4;
       ds.barPercentage=0.5;
+      if(ds._isFirstMetric){
+        ds.backgroundColor=ds.borderColor+'99'; // 實心半透明
+      } else {
+        ds.backgroundColor='transparent'; // 空心
+        ds.borderColor=ds.borderColor;
+      }
     }
   });
 
