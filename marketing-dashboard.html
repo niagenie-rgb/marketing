@@ -1003,14 +1003,21 @@ function parseMeta(wb){
   const iCampaign=col('行銷活動名稱');
   const iAdset=col('廣告組合名稱');
   const iSp=col('花費金額')>=0?col('花費金額'):col('花費');
-  const iRoas=hdrs.findIndex(h=>h.includes('ROAS'));
+  const iRoas=hdrs.findIndex(h=>h.includes('購買 ROAS')||h.includes('成果 ROAS'));
   const iClicks=hdrs.findIndex(h=>h==='連結點擊次數');
   const iImp=hdrs.findIndex(h=>h==='曝光次數');
-  // CPC：優先「CPC（單次點擊成本）」，其次任何含 CPC 的欄位
-  const iCpcDirect=hdrs.findIndex(h=>h.includes('CPC（單次點擊成本）'))>=0
-    ?hdrs.findIndex(h=>h.includes('CPC（單次點擊成本）'))
-    :hdrs.findIndex(h=>h.includes('CPC'));
-  const iCtrDirect=hdrs.findIndex(h=>h.includes('CTR'));
+  // CPC：優先「單次點擊成本」，其次「CPC（全部）」
+  const iCpcDirect=(()=>{
+    const i1=hdrs.findIndex(h=>h.includes('單次點擊成本'));
+    if(i1>=0)return i1;
+    return hdrs.findIndex(h=>h.includes('CPC'));
+  })();
+  // CTR：優先「連結點閱率」，其次「CTR（全部）」
+  const iCtrDirect=(()=>{
+    const i1=hdrs.findIndex(h=>h.includes('連結點閱率'));
+    if(i1>=0)return i1;
+    return hdrs.findIndex(h=>h.includes('CTR'));
+  })();
   const iResult=col('成果');
   const iResultType=col('成果類型');
   const iCart_old=hdrs.findIndex(h=>h.includes('加到購物車'));
@@ -1043,8 +1050,6 @@ function parseMeta(wb){
     const a=map[key];
     const clicks=parseFloat(r[iClicks])||0;
     const imp=parseFloat(r[iImp])||0;
-    const roas=parseFloat(r[iRoas])||0;
-
     a.spend+=spend;
     a.clicks+=clicks;
     a.impressions+=imp;
@@ -1075,7 +1080,9 @@ function parseMeta(wb){
       else if(rt.includes('結帳')&&iCheckout_old<0)a.checkout+=rv;
     }
     if(iCart_old>=0)a.cart+=parseFloat(r[iCart_old])||0;
-    if(roas>0&&spend>0)a.roasW+=roas*spend;
+    // Weighted ROAS — 只在有值時累加
+    const roasVal=iRoas>=0?parseFloat(r[iRoas])||0:0;
+    if(roasVal>0&&spend>0)a.roasW+=roasVal*spend;
   }
 
   return Object.values(map).map(a=>({
