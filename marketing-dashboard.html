@@ -157,10 +157,34 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
   .gncol,.grn{width:120px}
   .main-tabs{overflow-x:auto}
 }
+.login-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:2.5rem 2rem;width:min(380px,90vw);text-align:center}
+.login-logo{font-size:13px;font-weight:700;letter-spacing:.14em;color:var(--tx3);margin-bottom:1.5rem}
+.login-title{font-size:22px;font-weight:700;margin-bottom:.5rem}
+.login-sub{font-size:13px;color:var(--tx3);margin-bottom:1.75rem}
+.login-input{width:100%;padding:10px 14px;font-size:14px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit;outline:none;margin-bottom:10px}
+.login-input:focus{border-color:var(--ac)}
+.login-btn{width:100%;padding:11px;border-radius:var(--r);border:none;background:var(--ac);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px}
+.login-err{font-size:12px;color:var(--dn);margin-top:8px;min-height:18px}
 </style>
 </head>
 <body>
-<div class="wrap">
+
+<!-- 登入畫面 -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">迪奧斯 · 月份行銷報告</div>
+    <div class="login-title">登入</div>
+    <div class="login-sub">請輸入品牌代碼與密碼</div>
+    <input class="login-input" id="login-brand" placeholder="品牌代碼（例如 dios）" autocomplete="username">
+    <input class="login-input" id="login-pwd" type="password" placeholder="密碼" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">登入</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<div class="wrap" id="main-wrap" style="display:none">
 
 <div class="topbar">
   <div>
@@ -175,6 +199,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     <span class="mlabel" id="monthLabel"></span>
     <button class="nbtn" id="nextBtn">&#8594;</button>
     <button onclick="copyReadonlyLink()" title="複製唯讀閱覽連結" style="padding:5px 12px;border-radius:20px;border:1px solid var(--bdm);background:var(--sf);font-size:12px;cursor:pointer;color:var(--tx2);font-family:inherit;margin-left:4px">👁 分享閱覽</button>
+    <button onclick="doLogout()" style="padding:5px 12px;border-radius:20px;border:1px solid var(--bdm);background:var(--sf);font-size:12px;cursor:pointer;color:var(--tx3);font-family:inherit" title="登出">登出</button>
   </div>
 </div>
 
@@ -549,10 +574,45 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
   <div style="font-size:11px;color:var(--tx3);margin-top:6px" id="notes-save-hint"></div>
 </div>
 
-</div>
+</div><!-- /main-wrap -->
 <div class="statusbar" id="statusbar"></div>
 
 <script>
+// ── Brand & Login ─────────────────────────────────────────────
+let BRAND=sessionStorage.getItem('brand')||'';
+let BRAND_NAME=sessionStorage.getItem('brand_name')||'';
+
+async function doLogin(){
+  const brandId=document.getElementById('login-brand').value.trim().toLowerCase();
+  const pwd=document.getElementById('login-pwd').value;
+  const errEl=document.getElementById('login-err');
+  if(!brandId||!pwd){errEl.textContent='請填寫品牌代碼和密碼';return;}
+  errEl.textContent='驗證中…';
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/brands?id=eq.${brandId}&password=eq.${encodeURIComponent(pwd)}&select=id,name`,{headers:SBR});
+    const data=await r.json();
+    if(data&&data.length){
+      BRAND=data[0].id;
+      BRAND_NAME=data[0].name;
+      sessionStorage.setItem('brand',BRAND);
+      sessionStorage.setItem('brand_name',BRAND_NAME);
+      startApp();
+    } else {
+      errEl.textContent='品牌代碼或密碼錯誤';
+    }
+  }catch(e){errEl.textContent='連線失敗，請稍後再試';}
+}
+
+function startApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-wrap').style.display='block';
+  // 更新 brand 顯示
+  const brandEl=document.querySelector('.brand');
+  if(brandEl)brandEl.textContent=`${BRAND_NAME} · 月份行銷報告`;
+  // 初始化 app
+  initApp();
+}
+
 // ── Supabase ──────────────────────────────────────────────────
 const SB_URL='https://yrroqndpcgaqvgxeydgn.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlycm9xbmRwY2dhcXZneGV5ZGduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1MTE0NjYsImV4cCI6MjA5MzA4NzQ2Nn0.4Zw2GWnuzbusCWrplOJSbV1_Nqp7KR_GWwQ-Ed0CDxE';
@@ -560,27 +620,28 @@ const SBH={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Be
 const SBR={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
 
 async function dbGet(tbl,y,m,extra=''){
-  try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?year=eq.${y}&month=eq.${m}${extra}&limit=1`,{headers:SBR});if(!r.ok)return null;const d=await r.json();return d&&d[0]?d[0]:null;}catch(e){return null;}
+  try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?brand=eq.${BRAND}&year=eq.${y}&month=eq.${m}${extra}&limit=1`,{headers:SBR});if(!r.ok)return null;const d=await r.json();return d&&d[0]?d[0]:null;}catch(e){return null;}
 }
 async function dbUpsert(tbl,payload){
   try{
-    const r=await fetch(`${SB_URL}/rest/v1/${tbl}`,{method:'POST',headers:SBH,body:JSON.stringify(payload)});
+    const p={...payload,brand:BRAND};
+    const r=await fetch(`${SB_URL}/rest/v1/${tbl}`,{method:'POST',headers:SBH,body:JSON.stringify(p)});
     if(r.ok||r.status===201)return true;
     if(r.status===409){
       const patchH={...SBR,'Content-Type':'application/json'};
-      let url=`${SB_URL}/rest/v1/${tbl}?year=eq.${payload.year}&month=eq.${payload.month}`;
-      if(payload.platform)url+=`&platform=eq.${payload.platform}`;
-      const r2=await fetch(url,{method:'PATCH',headers:patchH,body:JSON.stringify(payload)});
+      let url=`${SB_URL}/rest/v1/${tbl}?brand=eq.${BRAND}&year=eq.${p.year}&month=eq.${p.month}`;
+      if(p.platform)url+=`&platform=eq.${p.platform}`;
+      const r2=await fetch(url,{method:'PATCH',headers:patchH,body:JSON.stringify(p)});
       return r2.ok||r2.status===204||r2.status===200;
     }
     return false;
   }catch(e){return false;}
 }
 async function dbGetAll(tbl,y){
-  try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?year=eq.${y}&order=month.asc`,{headers:SBR});if(!r.ok)return[];return await r.json();}catch(e){return[];}
+  try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?brand=eq.${BRAND}&year=eq.${y}&order=month.asc`,{headers:SBR});if(!r.ok)return[];return await r.json();}catch(e){return[];}
 }
 async function dbDelete(tbl,y,m){
-  try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?year=eq.${y}&month=eq.${m}`,{method:'DELETE',headers:SBH});return r.ok;}catch(e){return false;}
+  try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?brand=eq.${BRAND}&year=eq.${y}&month=eq.${m}`,{method:'DELETE',headers:SBH});return r.ok;}catch(e){return false;}
 }
 
 // ── Readonly Mode ─────────────────────────────────────────────
@@ -635,7 +696,11 @@ function copyReadonlyLink(){
     fallbackCopy(url);
   }
 }
-function fallbackCopy(url){
+function doLogout(){
+  sessionStorage.removeItem('brand');
+  sessionStorage.removeItem('brand_name');
+  location.reload();
+}
   // 建立暫時 textarea 複製
   const ta=document.createElement('textarea');
   ta.value=url;ta.style.position='fixed';ta.style.opacity='0';
@@ -650,12 +715,12 @@ function setSyncStatus(state,label){document.getElementById('syncDot').className
 function K(y,m){return y+'-'+String(m).padStart(2,'0')}
 
 // ── Init ──────────────────────────────────────────────────────
-(async()=>{
+async function initApp(){
   setSyncStatus('syncing','連線中…');
   try{
     const ctrl=new AbortController();
     const timer=setTimeout(()=>ctrl.abort(),5000);
-    const r=await fetch(`${SB_URL}/rest/v1/ga4_data?limit=1`,{headers:SBR,signal:ctrl.signal});
+    const r=await fetch(`${SB_URL}/rest/v1/ga4_data?brand=eq.${BRAND}&limit=1`,{headers:SBR,signal:ctrl.signal});
     clearTimeout(timer);
     setSyncStatus(r.ok?'ok':'err',r.ok?'雲端已連線 ☁️':'連線失敗');
   }catch(e){setSyncStatus(e.name==='AbortError'?'err':'err',e.name==='AbortError'?'連線逾時':'無法連線');}
@@ -665,7 +730,18 @@ function K(y,m){return y+'-'+String(m).padStart(2,'0')}
   document.getElementById('ga-m-sel').value=CM;
   initOverview();
   renderAll();
-})();
+}
+
+// 頁面載入：已有 session 直接進入，否則顯示登入
+if(BRAND){
+  startApp();
+} else {
+  // 唯讀模式不需要登入
+  if(IS_READONLY){
+    BRAND='dios';BRAND_NAME='迪奧斯';
+    startApp();
+  }
+}
 
 // ── Navigation ────────────────────────────────────────────────
 document.querySelectorAll('.mtab').forEach(t=>t.addEventListener('click',()=>{
