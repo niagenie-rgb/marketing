@@ -1852,14 +1852,18 @@ function ovRangeLabel(){
 
 function ovSumRows(rows){
   if(!rows||!rows.length)return{spend:0,roas:0,cpc:0,ctr:0,clicks:0,impressions:0};
-  let sp=0,rev=0,cl=0,im=0;
+  let sp=0,rev=0,cl=0,im=0,cpcSum=0,cpcW=0,ctrSum=0,ctrW=0;
   rows.forEach(r=>{
     sp+=r.spend||0;
     rev+=(r.roas||0)*(r.spend||0);
     cl+=r.clicks||0;
     im+=r.impressions||0;
+    if(r.cpc>0&&r.spend>0){cpcSum+=r.cpc*r.spend;cpcW+=r.spend;}
+    if(r.ctr>0&&r.spend>0){ctrSum+=r.ctr*r.spend;ctrW+=r.spend;}
   });
-  return{spend:sp,roas:sp>0&&rev>0?rev/sp:0,cpc:cl>0?sp/cl:0,ctr:im>0?cl/im:0};
+  const cpc=cl>0?sp/cl:(cpcW>0?cpcSum/cpcW:0);
+  const ctr=im>0?cl/im:(ctrW>0?ctrSum/ctrW:0);
+  return{spend:sp,roas:sp>0&&rev>0?rev/sp:0,cpc,ctr};
 }
 
 async function renderOverview(){
