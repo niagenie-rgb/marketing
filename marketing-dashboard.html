@@ -1722,11 +1722,35 @@ function drawAdTrendChart(months){
         pointRadius:4,
         pointHoverRadius:6,
         pointStyle:isFirstMetric?'circle':'rect',
-        spanGaps:true,
+        spanGaps:false,
         yAxisID:c.yid,
         _metricFmt:c.fmt,
+        // 計算這個廣告有幾個月有資料
+        _dataCount:allMonths.filter(m=>{
+          const mo=months.find(r=>r.month===m);
+          if(!mo)return false;
+          const row=mo.data.rows.find(r=>r.name===name);
+          return row&&(row[c.key]||0)>0;
+        }).length,
       });
     });
+  });
+
+  // 資料點少於 3 個月的 dataset 改用長條圖
+  datasets.forEach(ds=>{
+    if(ds._dataCount<3){
+      ds.type='bar';
+      ds.borderDash=undefined;
+      ds.tension=undefined;
+      ds.pointRadius=undefined;
+      ds.pointHoverRadius=undefined;
+      ds.pointStyle=undefined;
+      ds.spanGaps=undefined;
+      ds.backgroundColor=ds.borderColor+'99';
+      ds.borderWidth=0;
+      ds.borderRadius=4;
+      ds.barPercentage=0.5;
+    }
   });
 
   // 判斷是否需要右軸
@@ -1746,7 +1770,7 @@ function drawAdTrendChart(months){
         tooltip:{callbacks:{label:ctx=>{
           const ds=ctx.dataset;
           const val=ctx.raw;
-          if(val==null)return null;
+          if(val==null||val===0&&ds._dataCount<3&&!ctx.parsed.y)return null;
           return ds.label+': '+(ds._metricFmt?ds._metricFmt(val):val);
         }}}
       },
