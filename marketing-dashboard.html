@@ -359,6 +359,29 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     <div class="mc"><div class="mc-l">加到購物車</div><div class="mc-v">—</div></div>
     <div class="mc"><div class="mc-l">開始結帳</div><div class="mc-v">—</div></div>
   </div>
+
+  <!-- 跨月廣告趨勢圖（Meta 限定） -->
+  <div id="ad-trend-section" style="display:none;margin-top:14px">
+    <div class="ccrd">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem;flex-wrap:wrap;gap:6px">
+        <span class="ctitle" style="margin-bottom:0">廣告跨月趨勢</span>
+        <div style="display:flex;gap:4px;flex-wrap:wrap" id="adTrendMetricBtns">
+          <button class="cmb active" data-atm="spend">花費</button>
+          <button class="cmb" data-atm="roas">ROAS</button>
+          <button class="cmb" data-atm="cpc">CPC</button>
+          <button class="cmb" data-atm="ctr">CTR</button>
+          <button class="cmb" data-atm="cart">購物車</button>
+          <button class="cmb" data-atm="checkout">結帳</button>
+          <button class="cmb" data-atm="store">門市</button>
+        </div>
+      </div>
+      <div style="height:280px;position:relative" id="ad-trend-chart">
+        <div class="empty"><div class="ico">📈</div>需要至少 2 個月的 Meta 資料</div>
+      </div>
+      <div style="margin-top:.85rem;font-size:11px;color:var(--tx3);margin-bottom:.4rem">選擇廣告組合（最多 6 條）：</div>
+      <div id="ad-trend-selector" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+  </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px">
     <div class="ccrd"><div class="ctitle">各廣告花費</div><div class="cw-tall" id="cw1"><div class="empty"><div class="ico">📊</div>上傳報表後顯示</div></div></div>
     <div class="ccrd">
@@ -496,6 +519,7 @@ document.getElementById('ad-uarea').onclick=()=>document.getElementById('ad-file
 document.getElementById('ptabs').onclick=function(e){
   const b=e.target.closest('.ptab');if(!b)return;
   AP=b.dataset.p;
+  AD_TREND_SELECTED=new Set();
   document.querySelectorAll('.ptab').forEach(t=>t.classList.toggle('active',t.dataset.p===AP));
   const L={meta:'上傳 Meta Excel (.xlsx)',criteo:'上傳 Criteo Excel (.xlsx)',google:'上傳 Google Ads CSV/XLSX'};
   document.getElementById('ad-ulabel').textContent=L[AP];
@@ -793,7 +817,7 @@ async function renderAd(){
   const row=await dbGet('ad_data',CY,CM,`&platform=eq.${AP}`);
   const d=row?row.data:null;
   const ua=document.getElementById('ad-uarea'),ub=document.getElementById('ad-ubadge'),un=document.getElementById('ad-uname');
-  if(d&&d.rows&&d.rows.length){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';renderAdMetrics(d.rows);renderAdCharts(d.rows);renderAdTable(d.rows,d);}
+  if(d&&d.rows&&d.rows.length){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';renderAdMetrics(d.rows);renderAdCharts(d.rows);renderAdTable(d.rows,d);renderAdTrendSection();}
   else{ua.classList.remove('loaded');ub.style.display='none';const L={meta:'支援 .xlsx',criteo:'支援 .xlsx',google:'支援 .csv/.xlsx'};un.textContent=L[AP];clearAd();}
 }
 function clearAd(){
@@ -1541,7 +1565,120 @@ function initOverview(){
   });
 }
 
-// ── Render All ────────────────────────────────────────────────
+// ── Ad Trend Chart (Meta 跨月) ────────────────────────────────
+let AD_TREND_METRIC='spend';
+let AD_TREND_SELECTED=new Set(); // 選中的廣告名稱
+
+async function renderAdTrendSection(){
+  const section=document.getElementById('ad-trend-section');
+  if(AP!=='meta'){section.style.display='none';return;}
+
+  // 撈全年 meta 資料
+  const all=await dbGetAll('ad_data',CY);
+  const metaMonths=all.filter(r=>r.platform==='meta'&&r.data&&r.data.rows&&r.data.rows.length);
+  if(metaMonths.length<2){section.style.display='none';return;}
+  section.style.display='block';
+
+  // 收集所有出現過的廣告名稱（adset 層級）
+  const adNames=new Set();
+  metaMonths.forEach(mo=>mo.data.rows.forEach(r=>adNames.add(r.name)));
+
+  // 初始化：預設選花費前 5 名（用當月資料）
+  if(AD_TREND_SELECTED.size===0){
+    const curMonth=metaMonths.find(r=>r.month===CM)||metaMonths[metaMonths.length-1];
+    const top5=curMonth.data.rows.slice().sort((a,b)=>b.spend-a.spend).slice(0,5).map(r=>r.name);
+    top5.forEach(n=>AD_TREND_SELECTED.add(n));
+  }
+
+  // 渲染選擇器
+  const sel=document.getElementById('ad-trend-selector');
+  sel.innerHTML='';
+  [...adNames].sort().forEach(name=>{
+    const btn=document.createElement('button');
+    btn.className='cmb'+(AD_TREND_SELECTED.has(name)?' active':'');
+    btn.textContent=name.length>20?name.slice(0,20)+'…':name;
+    btn.title=name;
+    btn.onclick=()=>{
+      if(AD_TREND_SELECTED.has(name)){
+        AD_TREND_SELECTED.delete(name);btn.classList.remove('active');
+      } else {
+        if(AD_TREND_SELECTED.size>=6){showStatus('最多選 6 條廣告');return;}
+        AD_TREND_SELECTED.add(name);btn.classList.add('active');
+      }
+      drawAdTrendChart(metaMonths);
+    };
+    sel.appendChild(btn);
+  });
+
+  // 指標按鈕事件
+  const metricBtns=document.getElementById('adTrendMetricBtns');
+  if(!metricBtns.dataset.bound){
+    metricBtns.dataset.bound='1';
+    metricBtns.addEventListener('click',e=>{
+      const b=e.target.closest('.cmb');if(!b||!b.dataset.atm)return;
+      metricBtns.querySelectorAll('.cmb').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');AD_TREND_METRIC=b.dataset.atm;
+      drawAdTrendChart(metaMonths);
+    });
+  }
+
+  drawAdTrendChart(metaMonths);
+}
+
+function drawAdTrendChart(metaMonths){
+  const CFG={
+    spend:{key:'spend',label:'花費(TWD)',fmt:v=>'$'+Math.round(v).toLocaleString(),tickFmt:v=>'$'+fmtN(v)},
+    roas: {key:'roas', label:'ROAS',     fmt:v=>v.toFixed(2)+'x',              tickFmt:v=>v.toFixed(1)+'x'},
+    cpc:  {key:'cpc',  label:'CPC',      fmt:v=>'$'+v.toFixed(2),              tickFmt:v=>'$'+v.toFixed(0)},
+    ctr:  {key:'ctr',  label:'CTR',      fmt:v=>(v*100).toFixed(2)+'%',        tickFmt:v=>(v*100).toFixed(1)+'%'},
+    cart: {key:'cart', label:'購物車',   fmt:v=>Math.round(v)+'',              tickFmt:v=>Math.round(v)+''},
+    checkout:{key:'checkout',label:'結帳',fmt:v=>Math.round(v)+'',             tickFmt:v=>Math.round(v)+''},
+    store:{key:'store',label:'門市',     fmt:v=>Math.round(v)+'',              tickFmt:v=>Math.round(v)+''},
+  };
+  const c=CFG[AD_TREND_METRIC]||CFG.spend;
+  const labels=metaMonths.map(mo=>MZ[mo.month]);
+  const selected=[...AD_TREND_SELECTED];
+
+  killChart('ad-trend');
+  if(!selected.length){
+    document.getElementById('ad-trend-chart').innerHTML='<div class="empty"><div class="ico">📈</div>請選擇廣告組合</div>';
+    return;
+  }
+  document.getElementById('ad-trend-chart').innerHTML='<canvas id="c-ad-trend"></canvas>';
+  CHARTS['ad-trend']=new Chart(document.getElementById('c-ad-trend'),{
+    type:'line',
+    data:{
+      labels,
+      datasets:selected.map((name,i)=>({
+        label:name,
+        data:metaMonths.map(mo=>{
+          const row=mo.data.rows.find(r=>r.name===name);
+          return row?row[c.key]||0:null;
+        }),
+        borderColor:CC[i%CC.length],
+        backgroundColor:'transparent',
+        tension:.35,
+        pointRadius:4,
+        pointHoverRadius:6,
+        spanGaps:true,
+      }))
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{labels:{font:{size:10},boxWidth:10,padding:8,usePointStyle:true}},
+        tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+c.fmt(ctx.raw)}}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11}}},
+        y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>c.tickFmt(v),font:{size:10}}}
+      }
+    }
+  });
+}
+
+
 async function renderAll(){
   document.getElementById('monthLabel').textContent=CY+' / '+MZ[CM];
   document.getElementById('ga-m-sel').value=CM;
