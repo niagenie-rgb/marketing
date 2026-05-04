@@ -434,7 +434,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
   </div>
 
   <!-- 甘特圖 -->
-  <div class="gantt" id="ganttWrap" style="overflow-x:auto"></div>
+  <div class="gantt" id="ganttWrap" style="width:100%"></div>
 
   <!-- 專案列表 -->
   <div class="sec">專案列表</div>
@@ -1531,60 +1531,38 @@ async function renderGantt(){
     return;
   }
 
-  // 計算顯示範圍：取所有專案的起訖月份
-  const allDates=PROJ_ALL.map(p=>[p.startDate,p.endDate]).flat().filter(Boolean);
-  if(!allDates.length){wrap.innerHTML='<div class="gempty">尚無專案</div>';return;}
-  const minDate=allDates.reduce((a,b)=>a<b?a:b);
-  const maxDate=allDates.reduce((a,b)=>a>b?a:b);
-  const startYear=parseInt(minDate.slice(0,4));
-  const startMon=parseInt(minDate.slice(5,7))-1;
-  const endYear=parseInt(maxDate.slice(0,4));
-  const endMon=parseInt(maxDate.slice(5,7))-1;
-
-  // 建立月份陣列
-  const months=[];
-  let y=startYear,m=startMon;
-  while(y<endYear||(y===endYear&&m<=endMon)){months.push({y,m});m++;if(m>11){m=0;y++;}}
-
-  // 每月天數
+  // 固定12個月，每月平均寬度
   const daysInMonth=(y,m)=>new Date(y,m+1,0).getDate();
-  const totalDays=months.reduce((s,mo)=>s+daysInMonth(mo.y,mo.m),0);
+  const totalDays=Array.from({length:12},(_,i)=>daysInMonth(CY,i)).reduce((a,b)=>a+b,0);
+  const daysBefore=(m)=>Array.from({length:m},(_,i)=>daysInMonth(CY,i)).reduce((a,b)=>a+b,0);
 
-  // 日期轉換為相對位置（%）
+  // 日期轉換為相對位置（%），只計算當年
   const dateToPos=(dateStr)=>{
     if(!dateStr)return 0;
     const d=new Date(dateStr);
-    let days=0;
-    for(const mo of months){
-      const dim=daysInMonth(mo.y,mo.m);
-      if(d.getFullYear()===mo.y&&d.getMonth()===mo.m){
-        days+=d.getDate()-1;
-        break;
-      }
-      days+=dim;
-    }
-    return (days/totalDays*100).toFixed(2);
+    const yr=d.getFullYear();
+    const mo=d.getMonth();
+    const day=d.getDate()-1;
+    if(yr<CY)return 0;
+    if(yr>CY)return 100;
+    return Math.min(100,((daysBefore(mo)+day)/totalDays*100)).toFixed(2);
   };
   const dateToWidth=(s,e)=>{
     if(!s||!e)return 0;
-    const sd=new Date(s),ed=new Date(e);
-    const diff=Math.max(1,(ed-sd)/(1000*60*60*24)+1);
-    return (diff/totalDays*100).toFixed(2);
+    const sp=parseFloat(dateToPos(s));
+    const ep=parseFloat(dateToPos(e))+parseFloat((1/totalDays*100).toFixed(3));
+    return Math.max(0.5,Math.min(100-sp,ep-sp)).toFixed(2);
   };
 
-  // 甘特圖 HTML
-  const minColW=80;
-  const totalW=Math.max(months.length*minColW,600);
-
-  let gh=`<div style="min-width:${totalW+180}px">`;
-  // Header
-  gh+=`<div class="gh"><div class="gncol">專案</div><div style="flex:1;display:flex;position:relative">`;
-  months.forEach(mo=>{
-    const dim=daysInMonth(mo.y,mo.m);
-    const pct=(dim/totalDays*100).toFixed(2);
-    gh+=`<div style="width:${pct}%;text-align:center;font-size:10px;color:var(--tx3);padding:9px 0;border-right:1px solid var(--bd);flex-shrink:0">${mo.y}/${String(mo.m+1).padStart(2,'0')}</div>`;
+  // 甘特圖 HTML - 固定12個月，不產生捲軸
+  let gh=`<div style="width:100%">`;
+  // Header - 固定顯示全年12個月
+  const displayMonths=Array.from({length:12},(_,i)=>({y:CY,m:i}));
+  gh+=`<div class="gh" style="width:100%"><div class="gncol">專案</div><div style="flex:1;display:flex">`;
+  displayMonths.forEach(mo=>{
+    gh+=`<div style="flex:1;text-align:center;font-size:10px;color:var(--tx3);padding:9px 0;border-right:1px solid var(--bd);min-width:0">${String(mo.m+1).padStart(2,'0')}月</div>`;
   });
-  gh+=`</div></div>`;
+  gh+=`<div style="width:80px;flex-shrink:0"></div></div></div>`;
 
   // 主專案列
   mains.sort((a,b)=>a.startDate>b.startDate?1:-1).forEach((p,pi)=>{
@@ -1605,11 +1583,31 @@ async function renderGantt(){
     });
     const totalRowH=Math.max(40, 10+subRows.length*22+8);
 
-    gh+=`<div class="grow" style="min-height:${totalRowH}px;position:relative" onmouseenter="this.querySelector('.proj-actions').style.opacity=1" onmouseleave="this.querySelector('.proj-actions').style.opacity=0">`;
+    gh+=`<div class="grow" style="min-height:${totalRowH}px;width:100%">`;
     gh+=`<div class="grn" style="display:flex;flex-direction:column;justify-content:center">
       <span style="font-size:13px;font-weight:600">${p.name}</span>
       <span class="cat" style="font-size:10px;color:var(--tx3)">${p.cat||''}${p.desc?` · ${p.desc.slice(0,18)}${p.desc.length>18?'…':''}`:''}</span>
     </div>`;
+    gh+=`<div style="flex:1;position:relative;height:${totalRowH}px">`;
+    // 母專案條（細線）
+    gh+=`<div class="gbar ${barColor}" style="left:${l}%;width:${w}%;height:6px;top:${Math.floor(totalRowH/2)-3}px;cursor:pointer;opacity:.35;border-radius:3px" onclick="openProjModal('${p.id}')" title="${p.name}&#10;${p.startDate} ～ ${p.endDate}${p.desc?'&#10;'+p.desc:''}"></div>`;
+    // 子專案條
+    subRows.forEach((row,ri)=>{
+      row.forEach(s=>{
+        const sl=dateToPos(s.startDate);
+        const sw=dateToWidth(s.startDate,s.endDate);
+        const top=6+ri*22;
+        gh+=`<div class="gbar ${barColor}" style="left:${sl}%;width:${sw}%;height:18px;top:${top}px;font-size:10px;cursor:pointer;border:none;opacity:1" onclick="openProjModal('${s.id}')" title="${s.name}&#10;${s.startDate} ～ ${s.endDate}${s.desc?'&#10;'+s.desc:''}">${s.name}</div>`;
+      });
+    });
+    gh+=`</div>`;
+    // 固定寬度的操作欄（不影響甘特圖）
+    gh+=`<div style="width:80px;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:2px;border-left:1px solid var(--bd)">
+      <button class="rmbtn" onclick="openProjModal('${p.id}')" title="編輯" style="font-size:13px">✎</button>
+      <button class="rmbtn" onclick="openProjModal(null,'${p.id}')" title="新增子專案" style="font-size:11px;color:var(--meta)">＋子</button>
+      <button class="rmbtn" onclick="deleteProj('${p.id}')" title="刪除" style="font-size:13px;color:var(--dn)">✕</button>
+    </div>`;
+    gh+=`</div>`;
     gh+=`<div style="flex:1;position:relative;height:${totalRowH}px">`;
     // 母專案條（細線，作為時間範圍參考）
     gh+=`<div class="gbar ${barColor}" style="left:${l}%;width:${w}%;height:6px;top:18px;cursor:pointer;opacity:.4;border-radius:3px" onclick="openProjModal('${p.id}')" title="${p.name}&#10;${p.startDate} ～ ${p.endDate}${p.desc?'&#10;'+p.desc:''}"></div>`;
