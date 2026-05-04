@@ -532,6 +532,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     <span style="width:1px;height:18px;background:var(--bd);margin:0 4px;display:inline-block"></span>
     <button class="ntool" onclick="insertCodeBlock()" title="程式碼區塊">&lt;/&gt; 程式碼</button>
     <button class="ntool" onclick="insertMedia()" title="嵌入影音">▶ 影音</button>
+    <button class="ntool" onclick="insertRawHtml()" title="貼入 FB/IG 嵌入碼">⊞ 嵌入碼</button>
     <button class="ntool" onclick="insertLink()" title="連結">🔗 連結</button>
     <span style="flex:1"></span>
     <button class="ntool" onclick="saveNotes()" style="background:var(--ac);color:#fff;border-color:var(--ac);padding:3px 12px">儲存</button>
@@ -1713,6 +1714,23 @@ function insertMedia(){
     embed=`<iframe src="${url}" allowfullscreen></iframe>`;
   }
   document.execCommand('insertHTML',false,embed+'<p></p>');
+}
+
+function insertRawHtml(){
+  const html=prompt('貼入嵌入碼（FB、IG、Google Maps 等）：');
+  if(!html||!html.trim())return;
+  // 包一個容器避免樣式衝突
+  const wrapped=`<div style="margin:.75rem 0;overflow:hidden;border-radius:6px">${html.trim()}</div><p></p>`;
+  document.execCommand('insertHTML',false,wrapped);
+  // 如果包含 FB script，動態載入 FB SDK
+  if(html.includes('facebook.com')&&!document.getElementById('fb-sdk')){
+    const s=document.createElement('script');
+    s.id='fb-sdk';s.async=true;s.defer=true;
+    s.src='https://connect.facebook.net/zh_TW/sdk.js#xfbml=1&version=v18.0';
+    document.body.appendChild(s);
+  } else if(window.FB){
+    window.FB.XFBML.parse();
+  }
 }
 
 function insertLink(){
