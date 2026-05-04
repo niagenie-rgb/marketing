@@ -132,9 +132,16 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 .addrow input,.addrow select{padding:7px 11px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf);color:var(--tx);font-family:inherit;outline:none}
 .addrow input{flex:1;min-width:130px}
 .btn-p{padding:7px 18px;border-radius:var(--r);border:1px solid var(--ac);background:var(--ac);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
-.nta{width:100%;padding:12px 14px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf);color:var(--tx);resize:vertical;min-height:80px;font-family:inherit;line-height:1.7;outline:none}
-.nsave{margin-top:7px;padding:6px 16px;border-radius:var(--r);border:1px solid var(--bd);background:var(--sf);font-size:12px;cursor:pointer;color:var(--tx2);font-family:inherit}
-.nsave:hover{background:var(--sf2)}
+.ntool{padding:3px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;font-size:12px;cursor:pointer;color:var(--tx2);font-family:inherit;transition:all .15s}
+.ntool:hover{background:var(--sf2)}
+#notes-editor h2{font-size:18px;font-weight:700;margin:1rem 0 .5rem;border-bottom:1px solid var(--bd);padding-bottom:.3rem}
+#notes-editor h3{font-size:15px;font-weight:700;margin:.85rem 0 .4rem}
+#notes-editor pre{background:#1e1e1e;color:#d4d4d4;padding:1rem;border-radius:6px;overflow-x:auto;font-family:'Courier New',monospace;font-size:13px;margin:.75rem 0}
+#notes-editor code{background:var(--sf2);padding:1px 5px;border-radius:3px;font-family:'Courier New',monospace;font-size:12px}
+#notes-editor iframe{width:100%;aspect-ratio:16/9;border:none;border-radius:6px;margin:.5rem 0}
+#notes-editor a{color:var(--meta);text-decoration:underline}
+#notes-editor ul,#notes-editor ol{padding-left:1.5rem;margin:.5rem 0}
+#notes-editor blockquote{border-left:3px solid var(--bdm);padding-left:1rem;color:var(--tx2);margin:.5rem 0}
 .cmb{padding:3px 10px;border-radius:20px;border:1px solid var(--bd);background:transparent;font-size:11px;font-weight:600;cursor:pointer;color:var(--tx2);font-family:inherit;transition:all .15s}
 .cmb.active{background:var(--ac);color:#fff;border-color:var(--ac)}
 .cmb:hover:not(.active){background:var(--sf2)}
@@ -504,8 +511,39 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 
 <!-- 備注 -->
 <div class="tab-panel" id="panel-notes">
-  <textarea class="nta" id="nta" placeholder="策略重點、異常觀察、下月計畫…"></textarea><br>
-  <button class="nsave" id="nsave" onclick="saveNotes()">儲存備注</button>
+  <!-- 月份切換 -->
+  <div style="display:flex;align-items:center;gap:6px;margin-bottom:1rem;flex-wrap:wrap">
+    <div style="display:flex;gap:4px;flex-wrap:wrap" id="notes-month-tabs"></div>
+    <button class="rbtn" onclick="addNotesMonth()" style="font-size:11px">＋ 新增月份</button>
+    <button class="rbtn" onclick="delNotesMonth()" style="font-size:11px;color:var(--dn)">刪除此頁</button>
+  </div>
+
+  <!-- 編輯器 toolbar -->
+  <div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl) var(--rl) 0 0;padding:6px 10px;display:flex;gap:2px;flex-wrap:wrap;align-items:center;border-bottom:none">
+    <button class="ntool" onclick="nCmd('bold')" title="粗體"><b>B</b></button>
+    <button class="ntool" onclick="nCmd('italic')" title="斜體"><i>I</i></button>
+    <button class="ntool" onclick="nCmd('underline')" title="底線"><u>U</u></button>
+    <span style="width:1px;height:18px;background:var(--bd);margin:0 4px;display:inline-block"></span>
+    <button class="ntool" onclick="nCmd('formatBlock','h2')" title="標題">H2</button>
+    <button class="ntool" onclick="nCmd('formatBlock','h3')" title="小標">H3</button>
+    <button class="ntool" onclick="nCmd('formatBlock','p')" title="正文">¶</button>
+    <span style="width:1px;height:18px;background:var(--bd);margin:0 4px;display:inline-block"></span>
+    <button class="ntool" onclick="nCmd('insertUnorderedList')" title="項目清單">• 清單</button>
+    <button class="ntool" onclick="nCmd('insertOrderedList')" title="編號清單">1. 清單</button>
+    <span style="width:1px;height:18px;background:var(--bd);margin:0 4px;display:inline-block"></span>
+    <button class="ntool" onclick="insertCodeBlock()" title="程式碼區塊">&lt;/&gt; 程式碼</button>
+    <button class="ntool" onclick="insertMedia()" title="嵌入影音">▶ 影音</button>
+    <button class="ntool" onclick="insertLink()" title="連結">🔗 連結</button>
+    <span style="flex:1"></span>
+    <button class="ntool" onclick="saveNotes()" style="background:var(--ac);color:#fff;border-color:var(--ac);padding:3px 12px">儲存</button>
+  </div>
+
+  <!-- 編輯區 -->
+  <div id="notes-editor" contenteditable="true"
+    style="background:var(--sf);border:1px solid var(--bd);border-radius:0 0 var(--rl) var(--rl);min-height:400px;padding:1.25rem 1.5rem;outline:none;font-size:14px;line-height:1.8;color:var(--tx)"
+    oninput="notesChanged=true">
+  </div>
+  <div style="font-size:11px;color:var(--tx3);margin-top:6px" id="notes-save-hint"></div>
 </div>
 
 </div>
@@ -1646,15 +1684,131 @@ async function renderGantt(){
   }).join('');
 }
 
-// ── Notes ─────────────────────────────────────────────────────
-async function renderNotes(){const row=await dbGet('notes',CY,CM);document.getElementById('nta').value=row?row.content:'';}
-window.saveNotes=async function(){
-  const b=document.getElementById('nsave');b.textContent='儲存中…';setSyncStatus('syncing','儲存中…');
-  const ok=await dbUpsert('notes',{year:CY,month:CM,content:document.getElementById('nta').value});
-  if(ok){b.textContent='已儲存 ✓';setSyncStatus('ok','雲端已連線 ☁️');showStatus('備注已儲存');}
-  else{b.textContent='❌ 失敗';setSyncStatus('err','儲存失敗');}
-  setTimeout(()=>b.textContent='儲存備注',2000);
+// ── Notes (Rich Editor) ───────────────────────────────────────
+let NOTES_MONTH=0; // 當前筆記月份 index（0=總覽, 1-12=月份）
+let NOTES_MONTHS=[0]; // 已開啟的月份 index
+let notesChanged=false;
+
+function nCmd(cmd,val){document.execCommand(cmd,false,val||null);document.getElementById('notes-editor').focus();}
+
+function insertCodeBlock(){
+  const code=prompt('貼入程式碼：');
+  if(!code)return;
+  const escaped=code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  document.execCommand('insertHTML',false,`<pre>${escaped}</pre><p></p>`);
+}
+
+function insertMedia(){
+  const url=prompt('貼入 YouTube 或影片網址：');
+  if(!url)return;
+  let embed='';
+  const ytMatch=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]+)/);
+  if(ytMatch){
+    embed=`<iframe src="https://www.youtube.com/embed/${ytMatch[1]}" allowfullscreen></iframe>`;
+  } else if(url.match(/\.(mp4|webm|ogg)/i)){
+    embed=`<video controls style="width:100%;border-radius:6px;margin:.5rem 0"><source src="${url}"></video>`;
+  } else {
+    embed=`<iframe src="${url}" allowfullscreen></iframe>`;
+  }
+  document.execCommand('insertHTML',false,embed+'<p></p>');
+}
+
+function insertLink(){
+  const url=prompt('網址：');
+  if(!url)return;
+  const text=prompt('顯示文字：')||url;
+  document.execCommand('insertHTML',false,`<a href="${url}" target="_blank">${text}</a>`);
+}
+
+function notesKey(m){return `notes_${CY}_${m}`;}
+
+async function loadNotes(){
+  const el=document.getElementById('notes-editor');
+  const hint=document.getElementById('notes-save-hint');
+  el.innerHTML='<div style="color:var(--tx3);font-size:12px">載入中…</div>';
+  const row=await dbGet('notes',CY,NOTES_MONTH);
+  el.innerHTML=row?row.content:'';
+  notesChanged=false;
+  if(hint)hint.textContent='';
+}
+
+async function renderNotesMonthTabs(){
+  // 撈已有資料的月份
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/notes?year=eq.${CY}&month=neq.999&order=month.asc`,{headers:SBR});
+    if(r.ok){
+      const data=await r.json();
+      const existingMonths=data.map(d=>d.month);
+      // 合併已有月份和當前開啟的月份
+      NOTES_MONTHS=[...new Set([...NOTES_MONTHS,...existingMonths])].sort((a,b)=>a-b);
+      if(!NOTES_MONTHS.includes(0))NOTES_MONTHS.unshift(0);
+    }
+  }catch(e){}
+
+  const tabsEl=document.getElementById('notes-month-tabs');
+  tabsEl.innerHTML=NOTES_MONTHS.map(m=>{
+    const label=m===0?'📋 總覽':MZ[m-1];
+    return `<button class="rbtn ${NOTES_MONTH===m?'active':''}" onclick="switchNotesMonth(${m})">${label}</button>`;
+  }).join('');
+}
+
+window.switchNotesMonth=async function(m){
+  if(notesChanged){
+    if(!confirm('尚未儲存，確定切換？'))return;
+  }
+  NOTES_MONTH=m;
+  await renderNotesMonthTabs();
+  await loadNotes();
 };
+
+window.addNotesMonth=function(){
+  const options=MZ.map((l,i)=>`${i+1}. ${l}`).join('\n');
+  const input=prompt(`選擇月份（輸入數字 1-12，或 0 = 總覽）：\n${options}`);
+  const m=parseInt(input);
+  if(isNaN(m)||m<0||m>12){showStatus('請輸入 0-12 的數字');return;}
+  if(!NOTES_MONTHS.includes(m))NOTES_MONTHS.push(m);
+  NOTES_MONTHS.sort((a,b)=>a-b);
+  switchNotesMonth(m);
+};
+
+window.delNotesMonth=async function(){
+  if(NOTES_MONTH===0&&NOTES_MONTHS.length<=1){showStatus('至少保留一頁');return;}
+  if(!confirm(`確定刪除「${NOTES_MONTH===0?'總覽':MZ[NOTES_MONTH-1]}」的備注？`))return;
+  try{
+    await fetch(`${SB_URL}/rest/v1/notes?year=eq.${CY}&month=eq.${NOTES_MONTH}`,{method:'DELETE',headers:SBH});
+  }catch(e){}
+  NOTES_MONTHS=NOTES_MONTHS.filter(m=>m!==NOTES_MONTH);
+  if(!NOTES_MONTHS.includes(0))NOTES_MONTHS.unshift(0);
+  NOTES_MONTH=NOTES_MONTHS[0];
+  notesChanged=false;
+  await renderNotesMonthTabs();
+  await loadNotes();
+  showStatus('已刪除');
+};
+
+window.saveNotes=async function(){
+  const el=document.getElementById('notes-editor');
+  const hint=document.getElementById('notes-save-hint');
+  if(hint)hint.textContent='儲存中…';
+  setSyncStatus('syncing','儲存中…');
+  const ok=await dbUpsert('notes',{year:CY,month:NOTES_MONTH,content:el.innerHTML});
+  if(ok){
+    notesChanged=false;
+    setSyncStatus('ok','雲端已連線 ☁️');
+    if(hint)hint.textContent='✓ 已儲存 '+new Date().toLocaleTimeString('zh-TW');
+    showStatus('備注已儲存');
+    if(!NOTES_MONTHS.includes(NOTES_MONTH))NOTES_MONTHS.push(NOTES_MONTH);
+    renderNotesMonthTabs();
+  } else {
+    setSyncStatus('err','儲存失敗');
+    if(hint)hint.textContent='❌ 儲存失敗';
+  }
+};
+
+async function renderNotes(){
+  await renderNotesMonthTabs();
+  await loadNotes();
+}
 
 // ── Overview ──────────────────────────────────────────────────
 let OV_RANGE='month';
