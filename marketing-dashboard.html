@@ -1592,38 +1592,30 @@ async function renderGantt(){
     const barColor=BC[pi%BC.length];
     const l=dateToPos(p.startDate);
     const w=dateToWidth(p.startDate,p.endDate);
+    const rowH=subs.length?56:44;
 
-    gh+=`<div class="grow" style="min-height:44px;flex-direction:column;align-items:stretch;padding:0">`;
-    gh+=`<div style="display:flex;align-items:center;min-height:44px">`;
+    gh+=`<div class="grow" style="min-height:${rowH}px;position:relative" onmouseenter="this.querySelector('.proj-actions').style.opacity=1" onmouseleave="this.querySelector('.proj-actions').style.opacity=0">`;
     gh+=`<div class="grn" style="display:flex;flex-direction:column;justify-content:center">
       <span style="font-size:13px;font-weight:600">${p.name}</span>
-      <span class="cat" style="font-size:10px;color:var(--tx3)">${p.cat||''}${p.desc?` · ${p.desc.slice(0,20)}${p.desc.length>20?'…':''}`:''}</span>
+      <span class="cat" style="font-size:10px;color:var(--tx3)">${p.cat||''}${p.desc?` · ${p.desc.slice(0,18)}${p.desc.length>18?'…':''}`:''}</span>
     </div>`;
-    gh+=`<div style="flex:1;position:relative;height:44px">`;
-    gh+=`<div class="gbar ${barColor}" style="left:${l}%;width:${w}%;cursor:pointer" onclick="openProjModal('${p.id}')" title="${p.name}\n${p.startDate} ～ ${p.endDate}${p.desc?'\n'+p.desc:''}">${p.name}</div>`;
-    gh+=`</div>`;
-    gh+=`<button class="rmbtn" onclick="openProjModal('${p.id}')">✎</button>`;
-    gh+=`<button class="rmbtn" onclick="deleteProj('${p.id}')">✕</button>`;
-    gh+=`<button class="rmbtn" style="color:var(--meta);font-size:11px" onclick="openProjModal(null,'${p.id}')" title="新增子專案">＋子</button>`;
-    gh+=`</div>`;
-
-    // 子專案列
-    subs.sort((a,b)=>a.startDate>b.startDate?1:-1).forEach(s=>{
+    // 甘特區（佔滿剩餘寬度）
+    gh+=`<div style="flex:1;position:relative;height:${rowH}px">`;
+    // 母專案條
+    gh+=`<div class="gbar ${barColor}" style="left:${l}%;width:${w}%;height:20px;top:6px;cursor:pointer;opacity:.85" onclick="openProjModal('${p.id}')" title="${p.name}&#10;${p.startDate} ～ ${p.endDate}${p.desc?'&#10;'+p.desc:''}">${p.name}</div>`;
+    // 子專案條（疊在同一列下方）
+    subs.sort((a,b)=>a.startDate>b.startDate?1:-1).forEach((s,si)=>{
       const sl=dateToPos(s.startDate);
       const sw=dateToWidth(s.startDate,s.endDate);
-      gh+=`<div style="display:flex;align-items:center;min-height:36px;background:var(--sf2)">`;
-      gh+=`<div class="grn" style="padding-left:24px;display:flex;flex-direction:column;justify-content:center">
-        <span style="font-size:12px;color:var(--tx2)">↳ ${s.name}</span>
-        <span style="font-size:10px;color:var(--tx3)">${s.cat||''}${s.desc?` · ${s.desc.slice(0,18)}${s.desc.length>18?'…':''}`:''}</span>
-      </div>`;
-      gh+=`<div style="flex:1;position:relative;height:36px">`;
-      gh+=`<div class="gbar ${barColor}" style="left:${sl}%;width:${sw}%;height:16px;top:10px;opacity:.7;font-size:10px;cursor:pointer" onclick="openProjModal('${s.id}')" title="${s.name}\n${s.startDate} ～ ${s.endDate}">${s.name}</div>`;
-      gh+=`</div>`;
-      gh+=`<button class="rmbtn" onclick="openProjModal('${s.id}')">✎</button>`;
-      gh+=`<button class="rmbtn" onclick="deleteProj('${s.id}')">✕</button>`;
-      gh+=`<div style="width:42px"></div>`;
-      gh+=`</div>`;
+      gh+=`<div class="gbar ${barColor}" style="left:${sl}%;width:${sw}%;height:12px;top:30px;font-size:9px;cursor:pointer;border:1px solid rgba(0,0,0,.15);opacity:.9" onclick="openProjModal('${s.id}')" title="${s.name}&#10;${s.startDate} ～ ${s.endDate}${s.desc?'&#10;'+s.desc:''}">${s.name}</div>`;
     });
+    gh+=`</div>`;
+    // 操作按鈕（hover 才顯示，絕對定位在右上角）
+    gh+=`<div class="proj-actions" style="position:absolute;top:4px;right:4px;display:flex;gap:2px;opacity:0;transition:opacity .15s;background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:2px 4px">
+      <button class="rmbtn" onclick="openProjModal('${p.id}')" title="編輯" style="font-size:12px;padding:0 6px">✎</button>
+      <button class="rmbtn" onclick="openProjModal(null,'${p.id}')" title="新增子專案" style="font-size:11px;color:var(--meta);padding:0 6px">＋子</button>
+      <button class="rmbtn" onclick="deleteProj('${p.id}')" title="刪除" style="font-size:12px;padding:0 6px">✕</button>
+    </div>`;
     gh+=`</div>`;
   });
   gh+=`</div>`;
