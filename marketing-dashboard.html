@@ -589,7 +589,7 @@ async function doLogin(){
   if(!brandId||!pwd){errEl.textContent='請填寫品牌代碼和密碼';return;}
   errEl.textContent='驗證中…';
   try{
-    const r=await fetch(`${SB_URL}/rest/v1/brands?id=eq.${brandId}&password=eq.${encodeURIComponent(pwd)}&select=id,name`,{headers:SBR});
+    const r=await fetch(`${SB_URL}/rest/v1/brands?id=eq.${brandId}&password=eq.${pwd}&select=id,name`,{headers:SBR});
     const data=await r.json();
     if(data&&data.length){
       BRAND=data[0].id;
@@ -701,6 +701,7 @@ function doLogout(){
   sessionStorage.removeItem('brand_name');
   location.reload();
 }
+function fallbackCopy(url){
   // 建立暫時 textarea 複製
   const ta=document.createElement('textarea');
   ta.value=url;ta.style.position='fixed';ta.style.opacity='0';
