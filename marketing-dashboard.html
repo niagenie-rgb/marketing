@@ -172,6 +172,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     <button class="nbtn" id="prevBtn">&#8592;</button>
     <span class="mlabel" id="monthLabel"></span>
     <button class="nbtn" id="nextBtn">&#8594;</button>
+    <button onclick="copyReadonlyLink()" title="複製唯讀閱覽連結" style="padding:5px 12px;border-radius:20px;border:1px solid var(--bdm);background:var(--sf);font-size:12px;cursor:pointer;color:var(--tx2);font-family:inherit;margin-left:4px">👁 分享閱覽</button>
   </div>
 </div>
 
@@ -580,7 +581,29 @@ async function dbDelete(tbl,y,m){
   try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?year=eq.${y}&month=eq.${m}`,{method:'DELETE',headers:SBH});return r.ok;}catch(e){return false;}
 }
 
-// ── Constants ─────────────────────────────────────────────────
+// ── Readonly Mode ─────────────────────────────────────────────
+const IS_READONLY=new URLSearchParams(location.search).get('mode')==='readonly';
+if(IS_READONLY){
+  document.addEventListener('DOMContentLoaded',()=>{
+    // 加唯讀標示
+    const brand=document.querySelector('.brand');
+    if(brand)brand.innerHTML+=' <span style="color:#f59e0b;font-size:10px;letter-spacing:.05em">· 閱覽模式</span>';
+    // 隱藏操作類元素（延遲等 DOM 渲染完）
+    setTimeout(()=>{
+      ['.ucard','.uarea','button.btn-p','.nsave',
+       '[onclick="addNotesMonth()"]','[onclick="delNotesMonth()"]',
+       '.rmbtn','.mm-del','#ad-file',
+       '[onclick="copyReadonlyLink()"]'
+      ].forEach(sel=>document.querySelectorAll(sel).forEach(el=>el.style.display='none'));
+      // 備注編輯器改為唯讀
+      const editor=document.getElementById('notes-editor');
+      if(editor)editor.contentEditable='false';
+      // 隱藏 toolbar
+      const toolbar=document.querySelector('#panel-notes .ntool');
+      if(toolbar)toolbar.closest('div').style.display='none';
+    },500);
+  });
+}
 const MZ=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 const BC=['bp','bt','ba','bc','bb','bk'];
 const CC=['#4f86f7','#f4845f','#58c49a','#f7c94f','#a78bfa','#f472b6','#34d399','#fb923c','#60a5fa','#e879f9'];
@@ -593,6 +616,14 @@ const CACHE={};
 // ── Helpers ───────────────────────────────────────────────────
 function fmtN(v){const n=parseFloat(String(v||'').replace(/,/g,''));if(isNaN(n)||v==null)return '—';if(n>=10000)return (n/10000).toFixed(1)+'萬';return Math.round(n).toLocaleString('zh-TW');}
 function pNum(s){if(s==null||s==='')return 0;s=String(s).replace(/,/g,'').replace(/"/g,'');if(s.includes('萬'))return parseFloat(s)*10000;return parseFloat(s)||0;}
+function copyReadonlyLink(){
+  const url=location.href.split('?')[0]+'?mode=readonly';
+  navigator.clipboard.writeText(url).then(()=>{
+    showStatus('✓ 唯讀連結已複製到剪貼簿');
+  }).catch(()=>{
+    prompt('複製此連結給主管：',url);
+  });
+}
 function showStatus(msg,dur=2400){const b=document.getElementById('statusbar');b.textContent=msg;b.classList.add('show');setTimeout(()=>b.classList.remove('show'),dur);}
 function killChart(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id]}}
 function setSyncStatus(state,label){document.getElementById('syncDot').className='sync-dot '+(state==='ok'?'ok':state==='syncing'?'syncing':'err');document.getElementById('syncLbl').textContent=label;}
