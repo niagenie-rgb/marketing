@@ -141,6 +141,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 #notes-editor iframe{width:100%;aspect-ratio:16/9;border:none;border-radius:6px;margin:.5rem 0}
 #notes-editor img{max-width:50%;height:auto;border-radius:6px;cursor:pointer;}
 #notes-editor img:hover{outline:2px solid var(--meta);}
+#notes-editor img::after{content:'點擊調整大小';}
 #notes-editor ul,#notes-editor ol{padding-left:1.5rem;margin:.5rem 0}
 #notes-editor blockquote{border-left:3px solid var(--bdm);padding-left:1rem;color:var(--tx2);margin:.5rem 0}
 .cmb{padding:3px 10px;border-radius:20px;border:1px solid var(--bd);background:transparent;font-size:11px;font-weight:600;cursor:pointer;color:var(--tx2);font-family:inherit;transition:all .15s}
@@ -1786,9 +1787,40 @@ function insertRawHtml(){
 function insertLink(){
   const url=prompt('網址：');
   if(!url)return;
-  const text=prompt('顯示文字：')||url;
+  const sel=window.getSelection();
+  // 如果選取範圍內有圖片，直接包 <a>
+  if(sel&&!sel.isCollapsed){
+    const range=sel.getRangeAt(0);
+    const frag=range.cloneContents();
+    const hasImg=frag.querySelector('img');
+    if(hasImg){
+      const a=document.createElement('a');
+      a.href=url;a.target='_blank';
+      range.surroundContents(a);
+      return;
+    }
+  }
+  // 一般文字連結
+  const text=prompt('顯示文字（留空則用網址）：')||url;
   document.execCommand('insertHTML',false,`<a href="${url}" target="_blank">${text}</a>`);
 }
+
+// 圖片點擊可調整大小
+document.addEventListener('click',e=>{
+  if(e.target.tagName==='IMG'&&e.target.closest('#notes-editor')){
+    const img=e.target;
+    // 移除其他圖片的 resize handle
+    document.querySelectorAll('.img-resize-wrap').forEach(w=>{
+      const parent=w.parentNode;
+      parent.insertBefore(img.cloneNode?w.querySelector('img'):w,w);
+      // 直接解除包裝
+    });
+    // 顯示尺寸調整 UI
+    const currentW=img.style.width||'50%';
+    const newW=prompt(`圖片寬度（目前：${currentW}）\n輸入百分比如 30% 或像素如 300px：`,currentW);
+    if(newW){img.style.width=newW;img.style.height='auto';}
+  }
+});
 
 function notesKey(m){return `notes_${CY}_${m}`;}
 
