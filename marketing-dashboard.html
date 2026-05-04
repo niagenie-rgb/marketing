@@ -816,7 +816,13 @@ function renderAdMetrics(rows){
     totalImp+=r.impressions||0;
   });
   const roas=sp>0&&totalRevenue>0?totalRevenue/sp:0;
-  const cpc=totalClicks>0?sp/totalClicks:0;
+  // CPC: 優先用 clicks 計算，沒有 clicks 則用各 row 存好的 cpc 加權平均
+  let cpc=totalClicks>0?sp/totalClicks:0;
+  if(!cpc){
+    let cpcSum=0,cpcW=0;
+    rows.forEach(r=>{if(r.cpc>0&&r.spend>0){cpcSum+=r.cpc*r.spend;cpcW+=r.spend;}});
+    if(cpcW>0)cpc=cpcSum/cpcW;
+  }
   // CTR: prefer impressions-based; fallback to weighted average of stored ctr per row
   let ctr=totalImp>0?totalClicks/totalImp:0;
   if(!ctr){
@@ -1008,7 +1014,7 @@ function parseMeta(wb){
   const iCampaign=col('行銷活動名稱');
   const iAdset=col('廣告組合名稱');
   const iSp=findCol([h=>h.includes('花費金額'),h=>h==='花費']);
-  const iRoas=findCol([h=>h.includes('成果 ROAS'),h=>h.includes('購買 ROAS')&&!h.includes('購買 ROAS（')]);
+  const iRoas=findCol([h=>h.includes('成果 ROAS'),h=>h.includes('購買 ROAS')]);
   const iClicks=hdrs.findIndex(h=>h==='連結點擊次數');
   const iImp=hdrs.findIndex(h=>h==='曝光次數');
   // CPC：優先「單次點擊成本」，其次「CPC（全部）」
