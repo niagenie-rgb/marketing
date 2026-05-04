@@ -584,24 +584,31 @@ async function dbDelete(tbl,y,m){
 // ── Readonly Mode ─────────────────────────────────────────────
 const IS_READONLY=new URLSearchParams(location.search).get('mode')==='readonly';
 if(IS_READONLY){
+  // 立即注入 CSS 隱藏所有操作元素
+  const style=document.createElement('style');
+  style.textContent=`
+    .ucard, .uarea, .ufile, .nsave, .btn-p,
+    #ad-file, .mm-del, .rmbtn, .addrow,
+    [onclick="addNotesMonth()"], [onclick="delNotesMonth()"],
+    [onclick="copyReadonlyLink()"],
+    #proj-modal, #adTrendRangeBtns,
+    .ntool:not(.ntool-view)
+    { display:none !important; }
+    #notes-editor { pointer-events:none; user-select:text; }
+  `;
+  document.head.appendChild(style);
+  // 備注工具列整個隱藏
   document.addEventListener('DOMContentLoaded',()=>{
-    // 加唯讀標示
     const brand=document.querySelector('.brand');
-    if(brand)brand.innerHTML+=' <span style="color:#f59e0b;font-size:10px;letter-spacing:.05em">· 閱覽模式</span>';
-    // 隱藏操作類元素（延遲等 DOM 渲染完）
-    setTimeout(()=>{
-      ['.ucard','.uarea','button.btn-p','.nsave',
-       '[onclick="addNotesMonth()"]','[onclick="delNotesMonth()"]',
-       '.rmbtn','.mm-del','#ad-file',
-       '[onclick="copyReadonlyLink()"]'
-      ].forEach(sel=>document.querySelectorAll(sel).forEach(el=>el.style.display='none'));
-      // 備注編輯器改為唯讀
-      const editor=document.getElementById('notes-editor');
-      if(editor)editor.contentEditable='false';
-      // 隱藏 toolbar
-      const toolbar=document.querySelector('#panel-notes .ntool');
-      if(toolbar)toolbar.closest('div').style.display='none';
-    },500);
+    if(brand)brand.innerHTML+='&nbsp;<span style="color:#f59e0b;font-size:10px">· 閱覽模式</span>';
+    // 備注 toolbar
+    const toolbars=document.querySelectorAll('#panel-notes > div:first-child, #panel-notes > div:nth-child(2)');
+    toolbars.forEach(el=>{
+      if(el.querySelector('.ntool'))el.style.display='none';
+    });
+    // 備注編輯器唯讀
+    const editor=document.getElementById('notes-editor');
+    if(editor){editor.contentEditable='false';editor.style.cursor='default';}
   });
 }
 const MZ=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
