@@ -596,6 +596,7 @@ if(IS_READONLY){
     .ntool:not(.ntool-view)
     { display:none !important; }
     #notes-editor { pointer-events:none; user-select:text; }
+    #notes-editor a { pointer-events:auto; cursor:pointer; }
   `;
   document.head.appendChild(style);
   // 備注工具列整個隱藏
