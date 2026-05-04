@@ -1000,30 +1000,29 @@ function parseMeta(wb){
   const hdrs=arr[hIdx].map(v=>String(v));
   const col=t=>hdrs.findIndex(h=>h.includes(t));
 
+  // 找到 header row 後，重新建立一個只包含非空欄位的索引映射
+  // 因為 XLSX.js 讀取時第一欄可能是空的 None
+  const col=t=>hdrs.findIndex(h=>h.includes(t));
+  const findCol=fns=>{for(const fn of fns){const i=hdrs.findIndex(fn);if(i>=0)return i;}return -1;};
+
   const iCampaign=col('行銷活動名稱');
   const iAdset=col('廣告組合名稱');
-  const iSp=col('花費金額')>=0?col('花費金額'):col('花費');
-  const iRoas=hdrs.findIndex(h=>h.includes('購買 ROAS')||h.includes('成果 ROAS'));
+  const iSp=findCol([h=>h.includes('花費金額'),h=>h==='花費']);
+  const iRoas=findCol([h=>h.includes('成果 ROAS'),h=>h.includes('購買 ROAS')&&!h.includes('購買 ROAS（')]);
   const iClicks=hdrs.findIndex(h=>h==='連結點擊次數');
   const iImp=hdrs.findIndex(h=>h==='曝光次數');
   // CPC：優先「單次點擊成本」，其次「CPC（全部）」
-  const iCpcDirect=(()=>{
-    const i1=hdrs.findIndex(h=>h.includes('單次點擊成本'));
-    if(i1>=0)return i1;
-    return hdrs.findIndex(h=>h.includes('CPC'));
-  })();
+  const iCpcDirect=findCol([h=>h.includes('單次點擊成本'),h=>h.includes('CPC')]);
   // CTR：優先「連結點閱率」，其次「CTR（全部）」
-  const iCtrDirect=(()=>{
-    const i1=hdrs.findIndex(h=>h.includes('連結點閱率'));
-    if(i1>=0)return i1;
-    return hdrs.findIndex(h=>h.includes('CTR'));
-  })();
+  const iCtrDirect=findCol([h=>h.includes('連結點閱率'),h=>h.includes('CTR（全部）'),h=>h.includes('CTR')]);
   const iResult=col('成果');
   const iResultType=col('成果類型');
-  const iCart_old=hdrs.findIndex(h=>h.includes('加到購物車'));
-  const iCheckout_old=hdrs.findIndex(h=>h.includes('開始結帳'));
+  const iCart_old=findCol([h=>h.includes('加到購物車')]);
+  const iCheckout_old=findCol([h=>h.includes('開始結帳'),h=>h.includes('網站開始結帳')]);
   const iStore=col('門市資訊');
   const iLevel=col('投遞層級');
+  console.log('[parseMeta] cols:', {iCampaign,iAdset,iSp,iRoas,iClicks,iImp,iCpcDirect,iCtrDirect,iCart_old,iCheckout_old,iStore,iLevel});
+  console.log('[parseMeta] hdrs:', hdrs);
 
   const map={};
   for(let i=hIdx+1;i<arr.length;i++){
