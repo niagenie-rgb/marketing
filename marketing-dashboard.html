@@ -817,8 +817,9 @@ async function renderAd(){
   const row=await dbGet('ad_data',CY,CM,`&platform=eq.${AP}`);
   const d=row?row.data:null;
   const ua=document.getElementById('ad-uarea'),ub=document.getElementById('ad-ubadge'),un=document.getElementById('ad-uname');
-  if(d&&d.rows&&d.rows.length){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';renderAdMetrics(d.rows);renderAdCharts(d.rows);renderAdTable(d.rows,d);renderAdTrendSection();}
+  if(d&&d.rows&&d.rows.length){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';renderAdMetrics(d.rows);renderAdCharts(d.rows);renderAdTable(d.rows,d);}
   else{ua.classList.remove('loaded');ub.style.display='none';const L={meta:'支援 .xlsx',criteo:'支援 .xlsx',google:'支援 .csv/.xlsx'};un.textContent=L[AP];clearAd();}
+  renderAdTrendSection();
 }
 function clearAd(){
   AD_CHART_ROWS=[];AD_CHART_METRIC='roas';
@@ -1571,23 +1572,53 @@ let AD_TREND_SELECTED=new Set(); // 選中的廣告名稱
 
 async function renderAdTrendSection(){
   const section=document.getElementById('ad-trend-section');
-  if(AP!=='meta'){section.style.display='none';return;}
 
-  // 撈全年 meta 資料
-  const all=await dbGetAll('ad_data',CY);
-  const metaMonths=all.filter(r=>r.platform==='meta'&&r.data&&r.data.rows&&r.data.rows.length);
-  if(metaMonths.length<2){section.style.display='none';return;}
+  // 撈全年當前平台資料
+  let months=[];
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/ad_data?year=eq.${CY}&platform=eq.${AP}&order=month.asc`,{headers:SBR});
+    if(r.ok){const d=await r.json();months=d.filter(r=>r.data&&r.data.rows&&r.data.rows.length);}
+  }catch(e){}
+
+  if(months.length<1){section.style.display='none';return;}
   section.style.display='block';
 
-  // 收集所有出現過的廣告名稱（adset 層級）
-  const adNames=new Set();
-  metaMonths.forEach(mo=>mo.data.rows.forEach(r=>adNames.add(r.name)));
+  // 標題依平台
+  const platLabel={meta:'Meta',criteo:'Criteo',google:'Google Ads'};
+  section.querySelector('.ctitle').textContent=`${platLabel[AP]||AP} 廣告跨月趨勢`;
 
-  // 初始化：預設選花費前 5 名（用當月資料）
+  // 重建指標按鈕（依平台不同）
+  const metricBtnsEl=document.getElementById('adTrendMetricBtns');
+  const btns=[
+    {k:'spend',l:'花費',show:true},
+    {k:'roas',l:'ROAS',show:AP!=='criteo'},
+    {k:'cpc',l:'CPC',show:true},
+    {k:'ctr',l:'CTR',show:true},
+    {k:'displays',l:'曝光',show:AP==='criteo'},
+    {k:'clicks',l:'點擊',show:AP==='criteo'},
+    {k:'cart',l:'購物車',show:AP==='meta'||AP==='google'},
+    {k:'checkout',l:'結帳',show:AP==='meta'||AP==='google'},
+    {k:'store',l:'門市',show:AP==='meta'||AP==='google'},
+  ].filter(b=>b.show);
+  // 確保當前選的指標在當前平台有效
+  if(!btns.find(b=>b.k===AD_TREND_METRIC))AD_TREND_METRIC='spend';
+  metricBtnsEl.innerHTML=btns.map(b=>`<button class="cmb ${AD_TREND_METRIC===b.k?'active':''}" data-atm="${b.k}">${b.l}</button>`).join('');
+  metricBtnsEl.dataset.bound='';
+  metricBtnsEl.onclick=e=>{
+    const b=e.target.closest('.cmb');if(!b||!b.dataset.atm)return;
+    metricBtnsEl.querySelectorAll('.cmb').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');AD_TREND_METRIC=b.dataset.atm;
+    drawAdTrendChart(months);
+  };
+
+  // 收集所有廣告名稱
+  const adNames=new Set();
+  months.forEach(mo=>mo.data.rows.forEach(r=>adNames.add(r.name)));
+
+  // 重置選取（換平台時清空）
   if(AD_TREND_SELECTED.size===0){
-    const curMonth=metaMonths.find(r=>r.month===CM)||metaMonths[metaMonths.length-1];
-    const top5=curMonth.data.rows.slice().sort((a,b)=>b.spend-a.spend).slice(0,5).map(r=>r.name);
-    top5.forEach(n=>AD_TREND_SELECTED.add(n));
+    const cur=months.find(r=>r.month===CM)||months[months.length-1];
+    cur.data.rows.slice().sort((a,b)=>b.spend-a.spend).slice(0,5).forEach(r=>AD_TREND_SELECTED.add(r.name));
   }
 
   // 渲染選擇器
@@ -1596,47 +1627,41 @@ async function renderAdTrendSection(){
   [...adNames].sort().forEach(name=>{
     const btn=document.createElement('button');
     btn.className='cmb'+(AD_TREND_SELECTED.has(name)?' active':'');
-    btn.textContent=name.length>20?name.slice(0,20)+'…':name;
+    btn.textContent=name.length>22?name.slice(0,22)+'…':name;
     btn.title=name;
     btn.onclick=()=>{
-      if(AD_TREND_SELECTED.has(name)){
-        AD_TREND_SELECTED.delete(name);btn.classList.remove('active');
-      } else {
+      if(AD_TREND_SELECTED.has(name)){AD_TREND_SELECTED.delete(name);btn.classList.remove('active');}
+      else{
         if(AD_TREND_SELECTED.size>=6){showStatus('最多選 6 條廣告');return;}
         AD_TREND_SELECTED.add(name);btn.classList.add('active');
       }
-      drawAdTrendChart(metaMonths);
+      drawAdTrendChart(months);
     };
     sel.appendChild(btn);
   });
 
-  // 指標按鈕事件
-  const metricBtns=document.getElementById('adTrendMetricBtns');
-  if(!metricBtns.dataset.bound){
-    metricBtns.dataset.bound='1';
-    metricBtns.addEventListener('click',e=>{
-      const b=e.target.closest('.cmb');if(!b||!b.dataset.atm)return;
-      metricBtns.querySelectorAll('.cmb').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active');AD_TREND_METRIC=b.dataset.atm;
-      drawAdTrendChart(metaMonths);
-    });
+  if(months.length<2){
+    document.getElementById('ad-trend-chart').innerHTML='<div class="empty"><div class="ico">📈</div>需要至少 2 個月資料才能顯示趨勢</div>';
+    return;
   }
-
-  drawAdTrendChart(metaMonths);
+  drawAdTrendChart(months);
 }
 
-function drawAdTrendChart(metaMonths){
+
+function drawAdTrendChart(months){
   const CFG={
-    spend:{key:'spend',label:'花費(TWD)',fmt:v=>'$'+Math.round(v).toLocaleString(),tickFmt:v=>'$'+fmtN(v)},
-    roas: {key:'roas', label:'ROAS',     fmt:v=>v.toFixed(2)+'x',              tickFmt:v=>v.toFixed(1)+'x'},
-    cpc:  {key:'cpc',  label:'CPC',      fmt:v=>'$'+v.toFixed(2),              tickFmt:v=>'$'+v.toFixed(0)},
-    ctr:  {key:'ctr',  label:'CTR',      fmt:v=>(v*100).toFixed(2)+'%',        tickFmt:v=>(v*100).toFixed(1)+'%'},
-    cart: {key:'cart', label:'購物車',   fmt:v=>Math.round(v)+'',              tickFmt:v=>Math.round(v)+''},
-    checkout:{key:'checkout',label:'結帳',fmt:v=>Math.round(v)+'',             tickFmt:v=>Math.round(v)+''},
-    store:{key:'store',label:'門市',     fmt:v=>Math.round(v)+'',              tickFmt:v=>Math.round(v)+''},
+    spend:   {key:'spend',   label:'花費(TWD)', fmt:v=>'$'+Math.round(v).toLocaleString(), tickFmt:v=>'$'+fmtN(v)},
+    roas:    {key:'roas',    label:'ROAS',      fmt:v=>v.toFixed(2)+'x',                   tickFmt:v=>v.toFixed(1)+'x'},
+    cpc:     {key:'cpc',    label:'CPC',        fmt:v=>'$'+v.toFixed(2),                   tickFmt:v=>'$'+v.toFixed(0)},
+    ctr:     {key:'ctr',    label:'CTR',        fmt:v=>(v*100).toFixed(2)+'%',             tickFmt:v=>(v*100).toFixed(1)+'%'},
+    cart:    {key:'cart',   label:'購物車',     fmt:v=>Math.round(v)+'',                   tickFmt:v=>Math.round(v)+''},
+    checkout:{key:'checkout',label:'結帳',      fmt:v=>Math.round(v)+'',                   tickFmt:v=>Math.round(v)+''},
+    store:   {key:'store',  label:'門市',       fmt:v=>Math.round(v)+'',                   tickFmt:v=>Math.round(v)+''},
+    displays:{key:'displays',label:'曝光',      fmt:v=>Math.round(v).toLocaleString(),     tickFmt:v=>fmtN(v)},
+    clicks:  {key:'clicks', label:'點擊',       fmt:v=>Math.round(v).toLocaleString(),     tickFmt:v=>fmtN(v)},
   };
   const c=CFG[AD_TREND_METRIC]||CFG.spend;
-  const labels=metaMonths.map(mo=>MZ[mo.month]);
+  const labels=months.map(mo=>MZ[mo.month]);
   const selected=[...AD_TREND_SELECTED];
 
   killChart('ad-trend');
@@ -1651,7 +1676,7 @@ function drawAdTrendChart(metaMonths){
       labels,
       datasets:selected.map((name,i)=>({
         label:name,
-        data:metaMonths.map(mo=>{
+        data:months.map(mo=>{
           const row=mo.data.rows.find(r=>r.name===name);
           return row?row[c.key]||0:null;
         }),
