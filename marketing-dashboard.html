@@ -1003,15 +1003,18 @@ function parseMeta(wb){
   const iCampaign=col('行銷活動名稱');
   const iAdset=col('廣告組合名稱');
   const iSp=col('花費金額')>=0?col('花費金額'):col('花費');
-  const iRoas=col('成果 ROAS')>=0?col('成果 ROAS'):col('ROAS');
+  const iRoas=hdrs.findIndex(h=>h.includes('ROAS'));
   const iClicks=hdrs.findIndex(h=>h==='連結點擊次數');
   const iImp=hdrs.findIndex(h=>h==='曝光次數');
-  // 直接讀取 CTR 欄位（Meta 報表勾選「CTR(全部)」時會有此欄）
+  // CPC：優先「CPC（單次點擊成本）」，其次任何含 CPC 的欄位
+  const iCpcDirect=hdrs.findIndex(h=>h.includes('CPC（單次點擊成本）'))>=0
+    ?hdrs.findIndex(h=>h.includes('CPC（單次點擊成本）'))
+    :hdrs.findIndex(h=>h.includes('CPC'));
   const iCtrDirect=hdrs.findIndex(h=>h.includes('CTR'));
   const iResult=col('成果');
   const iResultType=col('成果類型');
-  const iCart_old=col('購物車');
-  const iCheckout_old=col('網站開始結帳次數')>=0?col('網站開始結帳次數'):col('結帳');
+  const iCart_old=hdrs.findIndex(h=>h.includes('加到購物車'));
+  const iCheckout_old=hdrs.findIndex(h=>h.includes('開始結帳'));
   const iStore=col('門市資訊');
   const iLevel=col('投遞層級');
 
@@ -1047,6 +1050,12 @@ function parseMeta(wb){
     a.impressions+=imp;
     a.store+=iStore>=0?parseFloat(r[iStore])||0:0;
 
+    // 直接讀取 CPC 欄位（加權平均）
+    if(iCpcDirect>=0){
+      const cpcVal=parseFloat(r[iCpcDirect])||0;
+      if(cpcVal>0){a.cpcSum=(a.cpcSum||0)+cpcVal*spend;a.cpcW=(a.cpcW||0)+spend;}
+    }
+
     // 直接讀取 CTR 欄位（格式可能是 "3.65%" 或 0.0365）
     if(iCtrDirect>=0){
       const rawCtr=String(r[iCtrDirect]||'').replace('%','').trim();
@@ -1074,7 +1083,7 @@ function parseMeta(wb){
     campaignName:a.campaignName,
     spend:a.spend,
     roas:a.spend>0&&a.roasW>0?a.roasW/a.spend:0,
-    cpc:a.clicks>0?a.spend/a.clicks:0,
+    cpc:a.cpcW>0?a.cpcSum/a.cpcW:(a.clicks>0?a.spend/a.clicks:0),
     // CTR 優先用直讀欄位加權平均；沒有則用 clicks/impressions
     ctr:a.ctrCount>0?a.ctrSum/a.ctrCount:(a.impressions>0?a.clicks/a.impressions:0),
     cart:Math.round(a.cart),
