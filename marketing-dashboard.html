@@ -1592,22 +1592,35 @@ async function renderGantt(){
     const barColor=BC[pi%BC.length];
     const l=dateToPos(p.startDate);
     const w=dateToWidth(p.startDate,p.endDate);
-    const rowH=subs.length?56:44;
 
-    gh+=`<div class="grow" style="min-height:${rowH}px;position:relative" onmouseenter="this.querySelector('.proj-actions').style.opacity=1" onmouseleave="this.querySelector('.proj-actions').style.opacity=0">`;
+    // 子專案條（重疊時換行）
+    const subRows=[]; // 每個 row 是一個不重疊的 sub 陣列
+    subs.sort((a,b)=>a.startDate>b.startDate?1:-1).forEach(s=>{
+      let placed=false;
+      for(const row of subRows){
+        const last=row[row.length-1];
+        if(s.startDate>last.endDate){row.push(s);placed=true;break;}
+      }
+      if(!placed)subRows.push([s]);
+    });
+    const totalRowH=Math.max(40, 10+subRows.length*22+8);
+
+    gh+=`<div class="grow" style="min-height:${totalRowH}px;position:relative" onmouseenter="this.querySelector('.proj-actions').style.opacity=1" onmouseleave="this.querySelector('.proj-actions').style.opacity=0">`;
     gh+=`<div class="grn" style="display:flex;flex-direction:column;justify-content:center">
       <span style="font-size:13px;font-weight:600">${p.name}</span>
       <span class="cat" style="font-size:10px;color:var(--tx3)">${p.cat||''}${p.desc?` · ${p.desc.slice(0,18)}${p.desc.length>18?'…':''}`:''}</span>
     </div>`;
-    // 甘特區（佔滿剩餘寬度）
-    gh+=`<div style="flex:1;position:relative;height:${rowH}px">`;
-    // 母專案條
-    gh+=`<div class="gbar ${barColor}" style="left:${l}%;width:${w}%;height:20px;top:6px;cursor:pointer;opacity:.85" onclick="openProjModal('${p.id}')" title="${p.name}&#10;${p.startDate} ～ ${p.endDate}${p.desc?'&#10;'+p.desc:''}">${p.name}</div>`;
-    // 子專案條（疊在同一列下方）
-    subs.sort((a,b)=>a.startDate>b.startDate?1:-1).forEach((s,si)=>{
-      const sl=dateToPos(s.startDate);
-      const sw=dateToWidth(s.startDate,s.endDate);
-      gh+=`<div class="gbar ${barColor}" style="left:${sl}%;width:${sw}%;height:12px;top:30px;font-size:9px;cursor:pointer;border:1px solid rgba(0,0,0,.15);opacity:.9" onclick="openProjModal('${s.id}')" title="${s.name}&#10;${s.startDate} ～ ${s.endDate}${s.desc?'&#10;'+s.desc:''}">${s.name}</div>`;
+    gh+=`<div style="flex:1;position:relative;height:${totalRowH}px">`;
+    // 母專案條（細線，作為時間範圍參考）
+    gh+=`<div class="gbar ${barColor}" style="left:${l}%;width:${w}%;height:6px;top:18px;cursor:pointer;opacity:.4;border-radius:3px" onclick="openProjModal('${p.id}')" title="${p.name}&#10;${p.startDate} ～ ${p.endDate}${p.desc?'&#10;'+p.desc:''}"></div>`;
+    // 子專案條（粗條，主要作業）
+    subRows.forEach((row,ri)=>{
+      row.forEach(s=>{
+        const sl=dateToPos(s.startDate);
+        const sw=dateToWidth(s.startDate,s.endDate);
+        const top=6+ri*22;
+        gh+=`<div class="gbar ${barColor}" style="left:${sl}%;width:${sw}%;height:18px;top:${top}px;font-size:10px;cursor:pointer;border:none;opacity:1" onclick="openProjModal('${s.id}')" title="${s.name}&#10;${s.startDate} ～ ${s.endDate}${s.desc?'&#10;'+s.desc:''}">${s.name}</div>`;
+      });
     });
     gh+=`</div>`;
     // 操作按鈕（hover 才顯示，絕對定位在右上角）
