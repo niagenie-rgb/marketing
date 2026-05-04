@@ -424,13 +424,81 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 
 <!-- 時程 -->
 <div class="tab-panel" id="panel-proj">
-  <div class="gantt" id="ganttWrap"></div>
-  <div class="addrow">
-    <input id="pname" placeholder="專案名稱"/>
-    <select id="pcat"><option>KOL</option><option>合作</option><option>新品拍攝</option><option>新品上市</option><option>促銷活動</option><option>其他</option></select>
-    <select id="pstart"><option value="0">W1起</option><option value="1">W2起</option><option value="2">W3起</option><option value="3">W4起</option></select>
-    <select id="pdur"><option value="1">1週</option><option value="2">2週</option><option value="3">3週</option><option value="4">4週</option></select>
-    <button class="btn-p" onclick="addProj()">＋ 新增</button>
+
+  <!-- 工具列 -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:1rem">
+    <div style="display:flex;gap:6px;flex-wrap:wrap" id="proj-cat-filter">
+      <button class="rbtn active" data-pf="all">全部</button>
+    </div>
+    <button class="btn-p" onclick="openProjModal()">＋ 新增專案</button>
+  </div>
+
+  <!-- 甘特圖 -->
+  <div class="gantt" id="ganttWrap" style="overflow-x:auto"></div>
+
+  <!-- 專案列表 -->
+  <div class="sec">專案列表</div>
+  <div id="proj-list"></div>
+
+  <!-- 新增/編輯 Modal -->
+  <div id="proj-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;align-items:center;justify-content:center">
+    <div style="background:var(--sf);border-radius:var(--rl);padding:1.5rem;width:min(520px,95vw);max-height:90vh;overflow-y:auto;position:relative">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+        <strong id="proj-modal-title" style="font-size:15px">新增專案</strong>
+        <button onclick="closeProjModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--tx3);line-height:1">✕</button>
+      </div>
+
+      <!-- 父專案選擇（子專案時顯示） -->
+      <div id="proj-parent-row" style="margin-bottom:.85rem">
+        <label style="font-size:12px;color:var(--tx3);font-weight:600;display:block;margin-bottom:4px">類型</label>
+        <div style="display:flex;gap:6px">
+          <button class="rbtn active" id="proj-type-main" onclick="setProjType('main')">主專案</button>
+          <button class="rbtn" id="proj-type-sub" onclick="setProjType('sub')">子專案</button>
+        </div>
+      </div>
+      <div id="proj-parent-select-row" style="display:none;margin-bottom:.85rem">
+        <label style="font-size:12px;color:var(--tx3);font-weight:600;display:block;margin-bottom:4px">所屬主專案</label>
+        <select id="proj-parent" style="width:100%;padding:8px 11px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit;outline:none"></select>
+      </div>
+
+      <!-- 專案名稱 -->
+      <div style="margin-bottom:.85rem">
+        <label style="font-size:12px;color:var(--tx3);font-weight:600;display:block;margin-bottom:4px">專案名稱 *</label>
+        <input id="proj-name" placeholder="輸入專案名稱" style="width:100%;padding:8px 11px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit;outline:none">
+      </div>
+
+      <!-- 類別 -->
+      <div style="margin-bottom:.85rem">
+        <label style="font-size:12px;color:var(--tx3);font-weight:600;display:block;margin-bottom:4px">類別</label>
+        <div style="display:flex;gap:6px">
+          <select id="proj-cat" style="flex:1;padding:8px 11px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit;outline:none"></select>
+          <button class="rbtn" onclick="addNewCat()" style="white-space:nowrap;font-size:12px">＋ 新類別</button>
+        </div>
+      </div>
+
+      <!-- 日期 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:.85rem">
+        <div>
+          <label style="font-size:12px;color:var(--tx3);font-weight:600;display:block;margin-bottom:4px">開始日期 *</label>
+          <input type="date" id="proj-start" style="width:100%;padding:8px 11px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit;outline:none">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--tx3);font-weight:600;display:block;margin-bottom:4px">結束日期 *</label>
+          <input type="date" id="proj-end" style="width:100%;padding:8px 11px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit;outline:none">
+        </div>
+      </div>
+
+      <!-- 說明 -->
+      <div style="margin-bottom:1.25rem">
+        <label style="font-size:12px;color:var(--tx3);font-weight:600;display:block;margin-bottom:4px">簡短說明</label>
+        <textarea id="proj-desc" placeholder="專案說明、備注…" rows="2" style="width:100%;padding:8px 11px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit;outline:none;resize:vertical"></textarea>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closeProjModal()" style="padding:8px 18px;border-radius:var(--r);border:1px solid var(--bdm);background:var(--sf);font-size:13px;cursor:pointer;font-family:inherit;color:var(--tx2)">取消</button>
+        <button onclick="saveProj()" class="btn-p" id="proj-save-btn">儲存</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1293,21 +1361,305 @@ function parseGoogle(wb){
   return rows;
 }
 
-// ── Gantt ─────────────────────────────────────────────────────
-async function renderGantt(){
-  const row=await dbGet('projects',CY,CM);const ps=row?row.data:[];
-  let h='<div class="gh"><div class="gncol">專案</div><div class="gwks"><div class="wl">W1</div><div class="wl">W2</div><div class="wl">W3</div><div class="wl">W4</div></div></div>';
-  if(!ps.length)h+='<div class="gempty">尚無專案，請在下方新增</div>';
-  else ps.forEach((p,i)=>{const l=(p.start*25).toFixed(1),w=(p.dur*25).toFixed(1),c=BC[i%BC.length];h+=`<div class="grow"><div class="grn">${p.name}<span class="cat">${p.cat}</span></div><div class="gbrs"><div class="gcl"></div><div class="gcl"></div><div class="gcl"></div><div class="gcl"></div><div class="gbar ${c}" style="left:${l}%;width:${w}%">${p.name}</div></div><button class="rmbtn" onclick="rmP(${i})">✕</button></div>`;});
-  document.getElementById('ganttWrap').innerHTML=h;
+// ── Project Management ────────────────────────────────────────
+const DEFAULT_CATS=['KOL','合作','新品拍攝','新品上市','促銷活動','其他'];
+let PROJ_CATS=[...DEFAULT_CATS];
+let PROJ_ALL=[]; // 全年專案
+let PROJ_EDIT_ID=null; // 編輯中的專案 id
+let PROJ_TYPE='main'; // main | sub
+let PROJ_FILTER='all'; // 類別篩選
+
+// 讀取全年專案（按年存，month=0）
+async function loadProjects(){
+  const row=await dbGet('projects',CY,0);
+  PROJ_ALL=row?row.data:[];
+  // 相容舊格式（按月存的資料）
+  if(!Array.isArray(PROJ_ALL))PROJ_ALL=[];
+  // 載入自定類別
+  const catRow=await dbGet('notes',CY,999); // 用 month=999 存類別設定
+  if(catRow&&catRow.content){try{PROJ_CATS=JSON.parse(catRow.content);}catch(e){}}
 }
-window.rmP=async function(i){const row=await dbGet('projects',CY,CM);const ps=row?row.data:[];ps.splice(i,1);await dbUpsert('projects',{year:CY,month:CM,data:ps});renderGantt();};
-window.addProj=async function(){
-  const n=document.getElementById('pname').value.trim();if(!n)return;
-  const row=await dbGet('projects',CY,CM);const ps=row?row.data:[];
-  ps.push({name:n,cat:document.getElementById('pcat').value,start:+document.getElementById('pstart').value,dur:+document.getElementById('pdur').value});
-  await dbUpsert('projects',{year:CY,month:CM,data:ps});document.getElementById('pname').value='';renderGantt();
+
+async function saveProjects(){
+  await dbUpsert('projects',{year:CY,month:0,data:PROJ_ALL});
+}
+
+async function saveCats(){
+  await dbUpsert('notes',{year:CY,month:999,content:JSON.stringify(PROJ_CATS)});
+}
+
+// 產生唯一 id
+function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+
+// Modal 開啟
+window.openProjModal=function(editId=null,parentId=null){
+  PROJ_EDIT_ID=editId;
+  document.getElementById('proj-modal-title').textContent=editId?'編輯專案':'新增專案';
+  document.getElementById('proj-save-btn').textContent=editId?'更新':'儲存';
+
+  // 填類別下拉
+  const catSel=document.getElementById('proj-cat');
+  catSel.innerHTML=PROJ_CATS.map(c=>`<option>${c}</option>`).join('');
+
+  // 填父專案下拉
+  const parents=PROJ_ALL.filter(p=>!p.parentId);
+  const parentSel=document.getElementById('proj-parent');
+  parentSel.innerHTML=parents.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+
+  if(editId){
+    const p=PROJ_ALL.find(x=>x.id===editId);
+    if(p){
+      setProjType(p.parentId?'sub':'main');
+      if(p.parentId)parentSel.value=p.parentId;
+      document.getElementById('proj-name').value=p.name||'';
+      catSel.value=p.cat||PROJ_CATS[0];
+      document.getElementById('proj-start').value=p.startDate||'';
+      document.getElementById('proj-end').value=p.endDate||'';
+      document.getElementById('proj-desc').value=p.desc||'';
+    }
+  } else {
+    setProjType(parentId?'sub':'main');
+    if(parentId)parentSel.value=parentId;
+    document.getElementById('proj-name').value='';
+    document.getElementById('proj-start').value='';
+    document.getElementById('proj-end').value='';
+    document.getElementById('proj-desc').value='';
+    catSel.value=PROJ_CATS[0];
+  }
+
+  const modal=document.getElementById('proj-modal');
+  modal.style.display='flex';
 };
+
+window.closeProjModal=function(){
+  document.getElementById('proj-modal').style.display='none';
+  PROJ_EDIT_ID=null;
+};
+
+window.setProjType=function(type){
+  PROJ_TYPE=type;
+  document.getElementById('proj-type-main').classList.toggle('active',type==='main');
+  document.getElementById('proj-type-sub').classList.toggle('active',type==='sub');
+  document.getElementById('proj-parent-select-row').style.display=type==='sub'?'block':'none';
+};
+
+window.addNewCat=function(){
+  const name=prompt('輸入新類別名稱：');
+  if(!name||!name.trim())return;
+  const n=name.trim();
+  if(PROJ_CATS.includes(n)){showStatus('類別已存在');return;}
+  PROJ_CATS.push(n);
+  saveCats();
+  const catSel=document.getElementById('proj-cat');
+  catSel.innerHTML=PROJ_CATS.map(c=>`<option>${c}</option>`).join('');
+  catSel.value=n;
+  renderProjCatFilter();
+  showStatus(`✓ 已新增類別「${n}」`);
+};
+
+window.saveProj=async function(){
+  const name=document.getElementById('proj-name').value.trim();
+  const startDate=document.getElementById('proj-start').value;
+  const endDate=document.getElementById('proj-end').value;
+  if(!name){showStatus('請輸入專案名稱');return;}
+  if(!startDate||!endDate){showStatus('請選擇日期');return;}
+  if(endDate<startDate){showStatus('結束日期不能早於開始日期');return;}
+
+  const parentId=PROJ_TYPE==='sub'?document.getElementById('proj-parent').value:null;
+  const proj={
+    id:PROJ_EDIT_ID||genId(),
+    name,
+    cat:document.getElementById('proj-cat').value,
+    startDate,endDate,
+    desc:document.getElementById('proj-desc').value.trim(),
+    parentId:parentId||null,
+  };
+
+  if(PROJ_EDIT_ID){
+    const idx=PROJ_ALL.findIndex(p=>p.id===PROJ_EDIT_ID);
+    if(idx>=0)PROJ_ALL[idx]=proj;
+  } else {
+    PROJ_ALL.push(proj);
+  }
+
+  setSyncStatus('syncing','儲存中…');
+  await saveProjects();
+  setSyncStatus('ok','雲端已連線 ☁️');
+  showStatus(PROJ_EDIT_ID?'✓ 已更新':'✓ 已新增');
+  closeProjModal();
+  renderGantt();
+};
+
+window.deleteProj=async function(id){
+  if(!confirm('確定刪除此專案？子專案也會一起刪除。'))return;
+  PROJ_ALL=PROJ_ALL.filter(p=>p.id!==id&&p.parentId!==id);
+  await saveProjects();
+  showStatus('已刪除');
+  renderGantt();
+};
+
+// 類別篩選列
+function renderProjCatFilter(){
+  const el=document.getElementById('proj-cat-filter');
+  if(!el)return;
+  const allCats=[...new Set(PROJ_ALL.map(p=>p.cat).filter(Boolean))];
+  el.innerHTML=`<button class="rbtn ${PROJ_FILTER==='all'?'active':''}" data-pf="all">全部</button>`
+    +allCats.map(c=>`<button class="rbtn ${PROJ_FILTER===c?'active':''}" data-pf="${c}">${c}</button>`).join('');
+  el.onclick=e=>{
+    const b=e.target.closest('.rbtn');if(!b)return;
+    el.querySelectorAll('.rbtn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');PROJ_FILTER=b.dataset.pf;
+    renderGantt();
+  };
+}
+
+// 甘特圖（橫軸月份＋日期線條）
+async function renderGantt(){
+  await loadProjects();
+  renderProjCatFilter();
+
+  const wrap=document.getElementById('ganttWrap');
+  const listEl=document.getElementById('proj-list');
+
+  // 篩選
+  const filtered=PROJ_FILTER==='all'?PROJ_ALL:PROJ_ALL.filter(p=>p.cat===PROJ_FILTER);
+  const mains=filtered.filter(p=>!p.parentId);
+
+  if(!mains.length){
+    wrap.innerHTML='<div class="gempty">尚無專案，點右上角新增</div>';
+    listEl.innerHTML='';
+    return;
+  }
+
+  // 計算顯示範圍：取所有專案的起訖月份
+  const allDates=PROJ_ALL.map(p=>[p.startDate,p.endDate]).flat().filter(Boolean);
+  if(!allDates.length){wrap.innerHTML='<div class="gempty">尚無專案</div>';return;}
+  const minDate=allDates.reduce((a,b)=>a<b?a:b);
+  const maxDate=allDates.reduce((a,b)=>a>b?a:b);
+  const startYear=parseInt(minDate.slice(0,4));
+  const startMon=parseInt(minDate.slice(5,7))-1;
+  const endYear=parseInt(maxDate.slice(0,4));
+  const endMon=parseInt(maxDate.slice(5,7))-1;
+
+  // 建立月份陣列
+  const months=[];
+  let y=startYear,m=startMon;
+  while(y<endYear||(y===endYear&&m<=endMon)){months.push({y,m});m++;if(m>11){m=0;y++;}}
+
+  // 每月天數
+  const daysInMonth=(y,m)=>new Date(y,m+1,0).getDate();
+  const totalDays=months.reduce((s,mo)=>s+daysInMonth(mo.y,mo.m),0);
+
+  // 日期轉換為相對位置（%）
+  const dateToPos=(dateStr)=>{
+    if(!dateStr)return 0;
+    const d=new Date(dateStr);
+    let days=0;
+    for(const mo of months){
+      const dim=daysInMonth(mo.y,mo.m);
+      if(d.getFullYear()===mo.y&&d.getMonth()===mo.m){
+        days+=d.getDate()-1;
+        break;
+      }
+      days+=dim;
+    }
+    return (days/totalDays*100).toFixed(2);
+  };
+  const dateToWidth=(s,e)=>{
+    if(!s||!e)return 0;
+    const sd=new Date(s),ed=new Date(e);
+    const diff=Math.max(1,(ed-sd)/(1000*60*60*24)+1);
+    return (diff/totalDays*100).toFixed(2);
+  };
+
+  // 甘特圖 HTML
+  const minColW=80;
+  const totalW=Math.max(months.length*minColW,600);
+
+  let gh=`<div style="min-width:${totalW+180}px">`;
+  // Header
+  gh+=`<div class="gh"><div class="gncol">專案</div><div style="flex:1;display:flex;position:relative">`;
+  months.forEach(mo=>{
+    const dim=daysInMonth(mo.y,mo.m);
+    const pct=(dim/totalDays*100).toFixed(2);
+    gh+=`<div style="width:${pct}%;text-align:center;font-size:10px;color:var(--tx3);padding:9px 0;border-right:1px solid var(--bd);flex-shrink:0">${mo.y}/${String(mo.m+1).padStart(2,'0')}</div>`;
+  });
+  gh+=`</div></div>`;
+
+  // 主專案列
+  mains.sort((a,b)=>a.startDate>b.startDate?1:-1).forEach((p,pi)=>{
+    const subs=filtered.filter(x=>x.parentId===p.id);
+    const barColor=BC[pi%BC.length];
+    const l=dateToPos(p.startDate);
+    const w=dateToWidth(p.startDate,p.endDate);
+
+    gh+=`<div class="grow" style="min-height:44px;flex-direction:column;align-items:stretch;padding:0">`;
+    gh+=`<div style="display:flex;align-items:center;min-height:44px">`;
+    gh+=`<div class="grn" style="display:flex;flex-direction:column;justify-content:center">
+      <span style="font-size:13px;font-weight:600">${p.name}</span>
+      <span class="cat" style="font-size:10px;color:var(--tx3)">${p.cat||''}${p.desc?` · ${p.desc.slice(0,20)}${p.desc.length>20?'…':''}`:''}</span>
+    </div>`;
+    gh+=`<div style="flex:1;position:relative;height:44px">`;
+    gh+=`<div class="gbar ${barColor}" style="left:${l}%;width:${w}%;cursor:pointer" onclick="openProjModal('${p.id}')" title="${p.name}\n${p.startDate} ～ ${p.endDate}${p.desc?'\n'+p.desc:''}">${p.name}</div>`;
+    gh+=`</div>`;
+    gh+=`<button class="rmbtn" onclick="openProjModal('${p.id}')">✎</button>`;
+    gh+=`<button class="rmbtn" onclick="deleteProj('${p.id}')">✕</button>`;
+    gh+=`<button class="rmbtn" style="color:var(--meta);font-size:11px" onclick="openProjModal(null,'${p.id}')" title="新增子專案">＋子</button>`;
+    gh+=`</div>`;
+
+    // 子專案列
+    subs.sort((a,b)=>a.startDate>b.startDate?1:-1).forEach(s=>{
+      const sl=dateToPos(s.startDate);
+      const sw=dateToWidth(s.startDate,s.endDate);
+      gh+=`<div style="display:flex;align-items:center;min-height:36px;background:var(--sf2)">`;
+      gh+=`<div class="grn" style="padding-left:24px;display:flex;flex-direction:column;justify-content:center">
+        <span style="font-size:12px;color:var(--tx2)">↳ ${s.name}</span>
+        <span style="font-size:10px;color:var(--tx3)">${s.cat||''}${s.desc?` · ${s.desc.slice(0,18)}${s.desc.length>18?'…':''}`:''}</span>
+      </div>`;
+      gh+=`<div style="flex:1;position:relative;height:36px">`;
+      gh+=`<div class="gbar ${barColor}" style="left:${sl}%;width:${sw}%;height:16px;top:10px;opacity:.7;font-size:10px;cursor:pointer" onclick="openProjModal('${s.id}')" title="${s.name}\n${s.startDate} ～ ${s.endDate}">${s.name}</div>`;
+      gh+=`</div>`;
+      gh+=`<button class="rmbtn" onclick="openProjModal('${s.id}')">✎</button>`;
+      gh+=`<button class="rmbtn" onclick="deleteProj('${s.id}')">✕</button>`;
+      gh+=`<div style="width:42px"></div>`;
+      gh+=`</div>`;
+    });
+    gh+=`</div>`;
+  });
+  gh+=`</div>`;
+  wrap.innerHTML=gh;
+
+  // 專案列表（卡片）
+  listEl.innerHTML=mains.map((p,pi)=>{
+    const subs=filtered.filter(x=>x.parentId===p.id);
+    return `<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:1rem 1.25rem;margin-bottom:8px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:3px">${p.name}</div>
+          <div style="font-size:11px;color:var(--tx3)">${p.cat||''} ｜ ${p.startDate} ～ ${p.endDate}</div>
+          ${p.desc?`<div style="font-size:12px;color:var(--tx2);margin-top:4px">${p.desc}</div>`:''}
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button class="rbtn" style="font-size:11px;padding:3px 8px" onclick="openProjModal(null,'${p.id}')">＋子專案</button>
+          <button class="rbtn" style="font-size:11px;padding:3px 8px" onclick="openProjModal('${p.id}')">編輯</button>
+          <button class="rbtn" style="font-size:11px;padding:3px 8px;color:var(--dn)" onclick="deleteProj('${p.id}')">刪除</button>
+        </div>
+      </div>
+      ${subs.length?`<div style="margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--bd)">`+subs.map(s=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+          <div>
+            <span style="font-size:12px;color:var(--tx2)">↳ ${s.name}</span>
+            <span style="font-size:11px;color:var(--tx3);margin-left:6px">${s.startDate} ～ ${s.endDate}</span>
+            ${s.desc?`<span style="font-size:11px;color:var(--tx3)"> · ${s.desc}</span>`:''}
+          </div>
+          <div style="display:flex;gap:4px">
+            <button class="rbtn" style="font-size:11px;padding:2px 7px" onclick="openProjModal('${s.id}')">編輯</button>
+            <button class="rbtn" style="font-size:11px;padding:2px 7px;color:var(--dn)" onclick="deleteProj('${s.id}')">刪除</button>
+          </div>
+        </div>`).join('')+`</div>`:''}
+    </div>`;
+  }).join('');
+}
 
 // ── Notes ─────────────────────────────────────────────────────
 async function renderNotes(){const row=await dbGet('notes',CY,CM);document.getElementById('nta').value=row?row.content:'';}
