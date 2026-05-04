@@ -1581,31 +1581,33 @@ async function renderGantt(){
       }
       if(!placed)subRows.push([s]);
     });
-    const totalRowH=Math.max(40, 10+subRows.length*22+8);
+    const totalRowH=subRows.length===0?44:10+subRows.length*22+10;
 
-    gh+=`<div class="grow" style="min-height:${totalRowH}px;width:100%">`;
+    gh+=`<div class="grow" style="min-height:${totalRowH}px;width:100%;position:relative" 
+      onmouseenter="document.getElementById('proj-hover-${p.id}').style.display='flex'" 
+      onmouseleave="document.getElementById('proj-hover-${p.id}').style.display='none'">`;
     gh+=`<div class="grn" style="display:flex;flex-direction:column;justify-content:center">
       <span style="font-size:13px;font-weight:600">${p.name}</span>
       <span class="cat" style="font-size:10px;color:var(--tx3)">${p.cat||''}${p.desc?` · ${p.desc.slice(0,18)}${p.desc.length>18?'…':''}`:''}</span>
     </div>`;
     gh+=`<div style="flex:1;position:relative;height:${totalRowH}px">`;
     // 母專案條（細線）
-    gh+=`<div class="gbar ${barColor}" style="left:${l}%;width:${w}%;height:6px;top:${Math.floor(totalRowH/2)-3}px;cursor:pointer;opacity:.35;border-radius:3px" onclick="openProjModal('${p.id}')" title="${p.name}&#10;${p.startDate} ～ ${p.endDate}${p.desc?'&#10;'+p.desc:''}"></div>`;
+    gh+=`<div class="gbar ${barColor}" style="left:${l}%;width:${w}%;height:5px;top:${Math.floor(totalRowH/2)-2}px;cursor:pointer;opacity:.3;border-radius:3px" onclick="openProjModal('${p.id}')" title="${p.name}&#10;${p.startDate} ～ ${p.endDate}${p.desc?'&#10;'+p.desc:''}"></div>`;
     // 子專案條
     subRows.forEach((row,ri)=>{
       row.forEach(s=>{
         const sl=dateToPos(s.startDate);
         const sw=dateToWidth(s.startDate,s.endDate);
-        const top=6+ri*22;
+        const top=4+ri*22;
         gh+=`<div class="gbar ${barColor}" style="left:${sl}%;width:${sw}%;height:18px;top:${top}px;font-size:10px;cursor:pointer;border:none;opacity:1" onclick="openProjModal('${s.id}')" title="${s.name}&#10;${s.startDate} ～ ${s.endDate}${s.desc?'&#10;'+s.desc:''}">${s.name}</div>`;
       });
     });
     gh+=`</div>`;
-    // 固定寬度的操作欄（不影響甘特圖）
-    gh+=`<div style="width:80px;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:2px;border-left:1px solid var(--bd)">
-      <button class="rmbtn" onclick="openProjModal('${p.id}')" title="編輯" style="font-size:13px">✎</button>
-      <button class="rmbtn" onclick="openProjModal(null,'${p.id}')" title="新增子專案" style="font-size:11px;color:var(--meta)">＋子</button>
-      <button class="rmbtn" onclick="deleteProj('${p.id}')" title="刪除" style="font-size:13px;color:var(--dn)">✕</button>
+    // Hover 按鈕（sticky right，不佔版面）
+    gh+=`<div id="proj-hover-${p.id}" style="display:none;position:sticky;right:0;align-items:center;gap:2px;background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:2px 4px;z-index:10;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.1)">
+      <button class="rmbtn" onclick="openProjModal('${p.id}')" title="編輯" style="font-size:12px">✎</button>
+      <button class="rmbtn" onclick="openProjModal(null,'${p.id}')" title="＋子" style="font-size:11px;color:var(--meta)">＋</button>
+      <button class="rmbtn" onclick="deleteProj('${p.id}')" title="刪除" style="font-size:12px;color:var(--dn)">✕</button>
     </div>`;
     gh+=`</div>`;
     gh+=`<div style="flex:1;position:relative;height:${totalRowH}px">`;
