@@ -546,7 +546,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
   </div>
 
   <!-- 編輯器 toolbar -->
-  <div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl) var(--rl) 0 0;padding:6px 10px;display:flex;gap:2px;flex-wrap:wrap;align-items:center;border-bottom:none">
+  <div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl) var(--rl) 0 0;padding:6px 10px;display:flex;gap:2px;flex-wrap:wrap;align-items:center;border-bottom:none;position:sticky;top:0;z-index:50">
     <button class="ntool" onclick="nCmd('bold')" title="粗體"><b>B</b></button>
     <button class="ntool" onclick="nCmd('italic')" title="斜體"><i>I</i></button>
     <button class="ntool" onclick="nCmd('underline')" title="底線"><u>U</u></button>
@@ -582,6 +582,13 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 let BRAND=sessionStorage.getItem('brand')||'';
 let BRAND_NAME=sessionStorage.getItem('brand_name')||'';
 
+// ── Supabase ──────────────────────────────────────────────────
+const SB_URL='https://yrroqndpcgaqvgxeydgn.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlycm9xbmRwY2dhcXZneGV5ZGduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1MTE0NjYsImV4cCI6MjA5MzA4NzQ2Nn0.4Zw2GWnuzbusCWrplOJSbV1_Nqp7KR_GWwQ-Ed0CDxE';
+const SBH={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'resolution=merge-duplicates,return=minimal'};
+const SBR={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+
+// ── Brand Login ───────────────────────────────────────────────
 async function doLogin(){
   const brandId=document.getElementById('login-brand').value.trim().toLowerCase();
   const pwd=document.getElementById('login-pwd').value;
@@ -606,20 +613,10 @@ async function doLogin(){
 function startApp(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('main-wrap').style.display='block';
-  // 更新 brand 顯示
   const brandEl=document.querySelector('.brand');
   if(brandEl)brandEl.textContent=`${BRAND_NAME} · 月份行銷報告`;
-  // 初始化 app
   initApp();
 }
-
-// ── Supabase ──────────────────────────────────────────────────
-const SB_URL='https://yrroqndpcgaqvgxeydgn.supabase.co';
-const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlycm9xbmRwY2dhcXZneGV5ZGduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1MTE0NjYsImV4cCI6MjA5MzA4NzQ2Nn0.4Zw2GWnuzbusCWrplOJSbV1_Nqp7KR_GWwQ-Ed0CDxE';
-const SBH={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Prefer':'resolution=merge-duplicates,return=minimal'};
-const SBR={'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
-
-async function dbGet(tbl,y,m,extra=''){
   try{const r=await fetch(`${SB_URL}/rest/v1/${tbl}?brand=eq.${BRAND}&year=eq.${y}&month=eq.${m}${extra}&limit=1`,{headers:SBR});if(!r.ok)return null;const d=await r.json();return d&&d[0]?d[0]:null;}catch(e){return null;}
 }
 async function dbUpsert(tbl,payload){
