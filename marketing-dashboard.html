@@ -132,7 +132,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 .addrow input,.addrow select{padding:7px 11px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf);color:var(--tx);font-family:inherit;outline:none}
 .addrow input{flex:1;min-width:130px}
 .btn-p{padding:7px 18px;border-radius:var(--r);border:1px solid var(--ac);background:var(--ac);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
-.ntool{padding:3px 8px;border-radius:4px;border:1px solid var(--bd);background:transparent;font-size:12px;cursor:pointer;color:var(--tx2);font-family:inherit;transition:all .15s}
+.tsep{display:inline-block;width:1px;height:18px;background:var(--bd);margin:0 4px;vertical-align:middle}
 .ntool:hover{background:var(--sf2)}
 #notes-editor h2{font-size:18px;font-weight:700;margin:1rem 0 .5rem;border-bottom:1px solid var(--bd);padding-bottom:.3rem}
 #notes-editor h3{font-size:15px;font-weight:700;margin:.85rem 0 .4rem}
@@ -538,40 +538,67 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 
 <!-- 備注 -->
 <div class="tab-panel" id="panel-notes">
-  <!-- 月份切換 -->
-  <div style="display:flex;align-items:center;gap:6px;margin-bottom:1rem;flex-wrap:wrap">
-    <div style="display:flex;gap:4px;flex-wrap:wrap" id="notes-month-tabs"></div>
-    <button class="rbtn" onclick="addNotesMonth()" style="font-size:11px">＋ 新增月份</button>
-    <button class="rbtn" onclick="delNotesMonth()" style="font-size:11px;color:var(--dn)">刪除此頁</button>
+
+  <!-- 主 Tab 切換：月份備注 / 提案庫 -->
+  <div style="display:flex;gap:0;margin-bottom:1.25rem;border-bottom:2px solid var(--bd)">
+    <button class="ntab active" id="ntab-monthly" onclick="switchNotesTab('monthly')" style="padding:8px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--tx);border-bottom:2px solid var(--ac);margin-bottom:-2px;font-family:inherit">📅 月份備注</button>
+    <button class="ntab" id="ntab-proposals" onclick="switchNotesTab('proposals')" style="padding:8px 18px;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--tx3);border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit">📁 提案庫</button>
   </div>
 
-  <!-- 編輯器 toolbar -->
-  <div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl) var(--rl) 0 0;padding:6px 10px;display:flex;gap:2px;flex-wrap:wrap;align-items:center;border-bottom:none;position:sticky;top:0;z-index:50">
-    <button class="ntool" onclick="nCmd('bold')" title="粗體"><b>B</b></button>
-    <button class="ntool" onclick="nCmd('italic')" title="斜體"><i>I</i></button>
-    <button class="ntool" onclick="nCmd('underline')" title="底線"><u>U</u></button>
-    <span style="width:1px;height:18px;background:var(--bd);margin:0 4px;display:inline-block"></span>
-    <button class="ntool" onclick="nCmd('formatBlock','h2')" title="標題">H2</button>
-    <button class="ntool" onclick="nCmd('formatBlock','h3')" title="小標">H3</button>
-    <button class="ntool" onclick="nCmd('formatBlock','p')" title="正文">¶</button>
-    <span style="width:1px;height:18px;background:var(--bd);margin:0 4px;display:inline-block"></span>
-    <button class="ntool" onclick="nCmd('insertUnorderedList')" title="項目清單">• 清單</button>
-    <button class="ntool" onclick="nCmd('insertOrderedList')" title="編號清單">1. 清單</button>
-    <span style="width:1px;height:18px;background:var(--bd);margin:0 4px;display:inline-block"></span>
-    <button class="ntool" onclick="insertCodeBlock()" title="程式碼區塊">&lt;/&gt; 程式碼</button>
-    <button class="ntool" onclick="insertMedia()" title="嵌入影音">▶ 影音</button>
-    <button class="ntool" onclick="insertRawHtml()" title="貼入 FB/IG 嵌入碼">⊞ 嵌入碼</button>
-    <button class="ntool" onclick="insertLink()" title="連結">🔗 連結</button>
-    <span style="flex:1"></span>
-    <button class="ntool" onclick="saveNotes()" style="background:var(--ac);color:#fff;border-color:var(--ac);padding:3px 12px">儲存</button>
+  <!-- ① 月份備注 -->
+  <div id="notes-monthly-panel">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:1rem;flex-wrap:wrap">
+      <div style="display:flex;gap:4px;flex-wrap:wrap" id="notes-month-tabs"></div>
+      <button class="rbtn" onclick="addNotesMonth()" style="font-size:11px">＋ 新增月份</button>
+      <button class="rbtn" onclick="delNotesMonth()" style="font-size:11px;color:var(--dn)">刪除此頁</button>
+    </div>
+    <div id="notes-toolbar-monthly"><!-- toolbar 插入這裡 --></div>
+    <div id="notes-editor-monthly" contenteditable="true"
+      style="background:var(--sf);border:1px solid var(--bd);border-radius:0 0 var(--rl) var(--rl);min-height:400px;padding:1.25rem 1.5rem;outline:none;font-size:14px;line-height:1.8;color:var(--tx)"
+      oninput="notesChanged=true"></div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:6px" id="notes-save-hint"></div>
   </div>
 
-  <!-- 編輯區 -->
-  <div id="notes-editor" contenteditable="true"
-    style="background:var(--sf);border:1px solid var(--bd);border-radius:0 0 var(--rl) var(--rl);min-height:400px;padding:1.25rem 1.5rem;outline:none;font-size:14px;line-height:1.8;color:var(--tx)"
-    oninput="notesChanged=true">
+  <!-- ② 提案庫 -->
+  <div id="notes-proposals-panel" style="display:none">
+    <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;min-height:600px">
+
+      <!-- 左側列表 -->
+      <div style="border:1px solid var(--bd);border-radius:var(--rl);overflow:hidden;display:flex;flex-direction:column">
+        <!-- 搜尋 + 新增 -->
+        <div style="padding:10px;border-bottom:1px solid var(--bd);background:var(--sf2)">
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <input id="prop-search" placeholder="搜尋標題…" oninput="renderPropList()"
+              style="flex:1;padding:6px 10px;font-size:12px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf);color:var(--tx);font-family:inherit;outline:none">
+            <button class="btn-p" onclick="newProposal()" style="padding:6px 10px;font-size:12px;white-space:nowrap">＋ 新增</button>
+          </div>
+          <!-- 分類篩選 -->
+          <div style="display:flex;gap:4px;flex-wrap:wrap" id="prop-cat-filter"></div>
+        </div>
+        <!-- 列表 -->
+        <div id="prop-list" style="flex:1;overflow-y:auto"></div>
+      </div>
+
+      <!-- 右側編輯器 -->
+      <div id="prop-editor-wrap" style="display:flex;flex-direction:column;border:1px solid var(--bd);border-radius:var(--rl);overflow:hidden">
+        <!-- 提案 header -->
+        <div style="padding:12px 16px;border-bottom:1px solid var(--bd);background:var(--sf2)" id="prop-header">
+          <div style="color:var(--tx3);font-size:13px;text-align:center">選擇或新增提案</div>
+        </div>
+        <!-- Toolbar -->
+        <div id="notes-toolbar-proposals" style="border-bottom:1px solid var(--bd)"><!-- toolbar 插入 --></div>
+        <!-- 編輯器 -->
+        <div id="notes-editor-proposals" contenteditable="true"
+          style="flex:1;min-height:400px;padding:1.25rem 1.5rem;outline:none;font-size:14px;line-height:1.8;color:var(--tx);background:var(--sf)"
+          oninput="propChanged=true"></div>
+        <!-- 底部 -->
+        <div style="padding:10px 16px;border-top:1px solid var(--bd);background:var(--sf2);display:flex;align-items:center;justify-content:space-between" id="prop-footer" style="display:none">
+          <span style="font-size:11px;color:var(--tx3)" id="prop-save-hint"></span>
+          <button class="btn-p" onclick="saveProposal()" style="padding:6px 16px;font-size:13px">儲存</button>
+        </div>
+      </div>
+    </div>
   </div>
-  <div style="font-size:11px;color:var(--tx3);margin-top:6px" id="notes-save-hint"></div>
 </div>
 
 </div><!-- /main-wrap -->
@@ -1814,178 +1841,197 @@ async function renderGantt(){
   }).join('');
 }
 
-// ── Notes (Rich Editor) ───────────────────────────────────────
-let NOTES_MONTH=0; // 當前筆記月份 index（0=總覽, 1-12=月份）
-let NOTES_MONTHS=[0]; // 已開啟的月份 index
-let notesChanged=false;
+// ── Notes & Proposals ────────────────────────────────────────
+let NOTES_MONTH=0,NOTES_MONTHS=[0],notesChanged=false,NOTES_TAB='monthly';
+let PROP_ID=null,propChanged=false,PROP_ALL=[],PROP_CAT_FILTER='all';
 
-function nCmd(cmd,val){document.execCommand(cmd,false,val||null);document.getElementById('notes-editor').focus();}
-
-function insertCodeBlock(){
-  const code=prompt('貼入程式碼：');
-  if(!code)return;
-  const escaped=code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  document.execCommand('insertHTML',false,`<pre>${escaped}</pre><p></p>`);
+// Toolbar 產生器
+function buildToolbar(editorId,saveCallback){
+  const COLORS=['#000000','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#6b7280','#92400e','#1e40af','#ffffff'];
+  const BGHLS=['#fef9c3','#dcfce7','#dbeafe','#fce7f3','#ede9fe','#fee2e2','#ffedd5','transparent'];
+  return `<div style="background:var(--sf);padding:6px 10px;display:flex;gap:2px;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:50;border-bottom:1px solid var(--bd)">
+    <button class="ntool" onclick="nCmdE('${editorId}','bold')" title="粗體"><b>B</b></button>
+    <button class="ntool" onclick="nCmdE('${editorId}','italic')" title="斜體"><i>I</i></button>
+    <button class="ntool" onclick="nCmdE('${editorId}','underline')" title="底線"><u>U</u></button>
+    <span class="tsep"></span>
+    <button class="ntool" onclick="nCmdE('${editorId}','formatBlock','h2')">H2</button>
+    <button class="ntool" onclick="nCmdE('${editorId}','formatBlock','h3')">H3</button>
+    <button class="ntool" onclick="nCmdE('${editorId}','formatBlock','p')">¶</button>
+    <span class="tsep"></span>
+    <button class="ntool" onclick="nCmdE('${editorId}','insertUnorderedList')">• 清單</button>
+    <button class="ntool" onclick="nCmdE('${editorId}','insertOrderedList')">1. 清單</button>
+    <span class="tsep"></span>
+    <div style="position:relative;display:inline-flex">
+      <button class="ntool" onclick="togglePicker('cp-${editorId}')" title="文字顏色" style="display:flex;align-items:center;gap:2px"><b style="font-size:13px">A</b><span id="cbar-${editorId}" style="display:block;width:12px;height:3px;background:#000;border-radius:2px"></span>▾</button>
+      <div id="cp-${editorId}" style="display:none;position:absolute;top:34px;left:0;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:200;width:180px">
+        <div style="font-size:10px;color:var(--tx3);margin-bottom:6px">文字顏色</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">${COLORS.map(c=>`<button onclick="applyColor('${editorId}','${c}')" style="width:22px;height:22px;border-radius:4px;border:1px solid var(--bd);background:${c};cursor:pointer"></button>`).join('')}</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+          <input type="color" id="cc-${editorId}" value="#000000" style="width:32px;height:28px;border:none;padding:0;cursor:pointer;border-radius:4px">
+          <button class="rbtn" style="font-size:11px" onclick="applyColor('${editorId}',document.getElementById('cc-${editorId}').value)">套用</button>
+        </div>
+        <button class="rbtn" style="font-size:11px;width:100%" onclick="applyColor('${editorId}','inherit')">移除顏色</button>
+      </div>
+    </div>
+    <div style="position:relative;display:inline-flex">
+      <button class="ntool" onclick="togglePicker('bp-${editorId}')" title="背景色">🖍▾</button>
+      <div id="bp-${editorId}" style="display:none;position:absolute;top:34px;left:0;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:200;width:160px">
+        <div style="font-size:10px;color:var(--tx3);margin-bottom:6px">背景色</div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">${BGHLS.map(c=>`<button onclick="applyBg('${editorId}','${c}')" style="width:22px;height:22px;border-radius:4px;border:1px solid var(--bd);background:${c==='transparent'?'#fff':c};cursor:pointer" title="${c==='transparent'?'移除':c}">${c==='transparent'?'✕':''}</button>`).join('')}</div>
+      </div>
+    </div>
+    <span class="tsep"></span>
+    <button class="ntool" onclick="insertCodeBlockE('${editorId}')">&lt;/&gt;</button>
+    <button class="ntool" onclick="insertMediaE('${editorId}')">▶</button>
+    <button class="ntool" onclick="insertRawHtmlE('${editorId}')">⊞</button>
+    <button class="ntool" onclick="insertLinkE('${editorId}')">🔗</button>
+    <span style="flex:1"></span>
+    <button class="ntool" onclick="${saveCallback}" style="background:var(--ac);color:#fff;border-color:var(--ac);padding:3px 14px">儲存</button>
+  </div>`;
 }
 
-function insertMedia(){
-  const url=prompt('貼入 YouTube 或影片網址：');
-  if(!url)return;
-  let embed='';
-  const ytMatch=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]+)/);
-  if(ytMatch){
-    embed=`<iframe src="https://www.youtube.com/embed/${ytMatch[1]}" allowfullscreen></iframe>`;
-  } else if(url.match(/\.(mp4|webm|ogg)/i)){
-    embed=`<video controls style="width:100%;border-radius:6px;margin:.5rem 0"><source src="${url}"></video>`;
-  } else {
-    embed=`<iframe src="${url}" allowfullscreen></iframe>`;
-  }
-  document.execCommand('insertHTML',false,embed+'<p></p>');
-}
+function nCmdE(eid,cmd,val){document.getElementById(eid).focus();document.execCommand(cmd,false,val||null);}
+function nCmd(cmd,val){nCmdE('notes-editor-monthly',cmd,val);}
 
-function insertRawHtml(){
-  const html=prompt('貼入嵌入碼（FB、IG、Google Maps 等）：');
-  if(!html||!html.trim())return;
-  // 包一個容器避免樣式衝突
-  const wrapped=`<div style="margin:.75rem 0;overflow:hidden;border-radius:6px">${html.trim()}</div><p></p>`;
-  document.execCommand('insertHTML',false,wrapped);
-  // 如果包含 FB script，動態載入 FB SDK
-  if(html.includes('facebook.com')&&!document.getElementById('fb-sdk')){
-    const s=document.createElement('script');
-    s.id='fb-sdk';s.async=true;s.defer=true;
-    s.src='https://connect.facebook.net/zh_TW/sdk.js#xfbml=1&version=v18.0';
-    document.body.appendChild(s);
-  } else if(window.FB){
-    window.FB.XFBML.parse();
-  }
+function togglePicker(id){
+  const el=document.getElementById(id);
+  document.querySelectorAll('[id^="cp-"],[id^="bp-"]').forEach(e=>{if(e.id!==id)e.style.display='none';});
+  el.style.display=el.style.display==='none'?'block':'none';
 }
-
-function insertLink(){
-  const url=prompt('網址：');
-  if(!url)return;
-  const sel=window.getSelection();
-  // 如果選取範圍內有圖片，直接包 <a>
-  if(sel&&!sel.isCollapsed){
-    const range=sel.getRangeAt(0);
-    const frag=range.cloneContents();
-    const hasImg=frag.querySelector('img');
-    if(hasImg){
-      const a=document.createElement('a');
-      a.href=url;a.target='_blank';
-      range.surroundContents(a);
-      return;
-    }
-  }
-  // 一般文字連結
-  const text=prompt('顯示文字（留空則用網址）：')||url;
-  document.execCommand('insertHTML',false,`<a href="${url}" target="_blank">${text}</a>`);
-}
-
-// 圖片點擊可調整大小
 document.addEventListener('click',e=>{
-  if(e.target.tagName==='IMG'&&e.target.closest('#notes-editor')){
-    const img=e.target;
-    // 移除其他圖片的 resize handle
-    document.querySelectorAll('.img-resize-wrap').forEach(w=>{
-      const parent=w.parentNode;
-      parent.insertBefore(img.cloneNode?w.querySelector('img'):w,w);
-      // 直接解除包裝
-    });
-    // 顯示尺寸調整 UI
-    const currentW=img.style.width||'50%';
-    const newW=prompt(`圖片寬度（目前：${currentW}）\n輸入百分比如 30% 或像素如 300px：`,currentW);
-    if(newW){img.style.width=newW;img.style.height='auto';}
+  if(!e.target.closest('[id^="cp-"],[id^="bp-"]')&&!e.target.closest('.ntool'))
+    document.querySelectorAll('[id^="cp-"],[id^="bp-"]').forEach(el=>el.style.display='none');
+  if(e.target.tagName==='IMG'&&e.target.closest('[contenteditable]')){
+    const img=e.target,cur=img.style.width||'50%';
+    const nw=prompt(`圖片寬度（目前：${cur}）`,cur);
+    if(nw){img.style.width=nw;img.style.height='auto';}
   }
 });
+function applyColor(eid,color){
+  document.getElementById(eid).focus();
+  if(color==='inherit')document.execCommand('removeFormat',false,null);
+  else document.execCommand('foreColor',false,color);
+  const bar=document.getElementById('cbar-'+eid);
+  if(bar)bar.style.background=color==='inherit'?'#000':color;
+  togglePicker('cp-'+eid);
+}
+function applyBg(eid,color){
+  document.getElementById(eid).focus();
+  document.execCommand('hiliteColor',false,color==='transparent'?'transparent':color);
+  togglePicker('bp-'+eid);
+}
+function insertCodeBlockE(eid){const code=prompt('貼入程式碼：');if(!code)return;const esc=code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');document.getElementById(eid).focus();document.execCommand('insertHTML',false,`<pre>${esc}</pre><p></p>`);}
+function insertMediaE(eid){const url=prompt('YouTube 或影片網址：');if(!url)return;let e='';const yt=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]+)/);if(yt)e=`<iframe src="https://www.youtube.com/embed/${yt[1]}" allowfullscreen></iframe>`;else if(url.match(/\.(mp4|webm|ogg)/i))e=`<video controls style="width:100%;border-radius:6px"><source src="${url}"></video>`;else e=`<iframe src="${url}" allowfullscreen></iframe>`;document.getElementById(eid).focus();document.execCommand('insertHTML',false,e+'<p></p>');}
+function insertRawHtmlE(eid){const html=prompt('貼入嵌入碼：');if(!html)return;document.getElementById(eid).focus();document.execCommand('insertHTML',false,`<div style="margin:.75rem 0">${html.trim()}</div><p></p>`);if(html.includes('facebook.com')&&!document.getElementById('fb-sdk')){const s=document.createElement('script');s.id='fb-sdk';s.async=s.defer=true;s.src='https://connect.facebook.net/zh_TW/sdk.js#xfbml=1&version=v18.0';document.body.appendChild(s);}else if(window.FB)window.FB.XFBML.parse();}
+function insertLinkE(eid){const url=prompt('網址：');if(!url)return;document.getElementById(eid).focus();const sel=window.getSelection();if(sel&&!sel.isCollapsed){const r=sel.getRangeAt(0);const f=r.cloneContents();if(f.querySelector('img')){const a=document.createElement('a');a.href=url;a.target='_blank';r.surroundContents(a);return;}}const text=prompt('顯示文字（留空用網址）：')||url;document.execCommand('insertHTML',false,`<a href="${url}" target="_blank">${text}</a>`);}
+function insertCodeBlock(){insertCodeBlockE('notes-editor-monthly');}
+function insertMedia(){insertMediaE('notes-editor-monthly');}
+function insertRawHtml(){insertRawHtmlE('notes-editor-monthly');}
+function insertLink(){insertLinkE('notes-editor-monthly');}
 
-function notesKey(m){return `notes_${CY}_${m}`;}
+// Tab 切換
+function switchNotesTab(tab){
+  NOTES_TAB=tab;
+  document.getElementById('notes-monthly-panel').style.display=tab==='monthly'?'block':'none';
+  document.getElementById('notes-proposals-panel').style.display=tab==='proposals'?'block':'none';
+  ['monthly','proposals'].forEach(t=>{
+    const b=document.getElementById(`ntab-${t}`);
+    b.style.color=tab===t?'var(--tx)':'var(--tx3)';
+    b.style.borderBottom=tab===t?'2px solid var(--ac)':'2px solid transparent';
+  });
+  if(tab==='proposals')renderPropList();
+}
 
+// 月份備注
 async function loadNotes(){
-  const el=document.getElementById('notes-editor');
-  const hint=document.getElementById('notes-save-hint');
+  const el=document.getElementById('notes-editor-monthly');
   el.innerHTML='<div style="color:var(--tx3);font-size:12px">載入中…</div>';
   const row=await dbGet('notes',CY,NOTES_MONTH);
-  el.innerHTML=row?row.content:'';
-  notesChanged=false;
-  if(hint)hint.textContent='';
+  el.innerHTML=row?row.content:'';notesChanged=false;
+  const hint=document.getElementById('notes-save-hint');if(hint)hint.textContent='';
 }
-
 async function renderNotesMonthTabs(){
-  // 撈已有資料的月份
-  try{
-    const r=await fetch(`${SB_URL}/rest/v1/notes?year=eq.${CY}&month=neq.999&order=month.asc`,{headers:SBR});
-    if(r.ok){
-      const data=await r.json();
-      const existingMonths=data.map(d=>d.month);
-      // 合併已有月份和當前開啟的月份
-      NOTES_MONTHS=[...new Set([...NOTES_MONTHS,...existingMonths])].sort((a,b)=>a-b);
-      if(!NOTES_MONTHS.includes(0))NOTES_MONTHS.unshift(0);
-    }
-  }catch(e){}
-
-  const tabsEl=document.getElementById('notes-month-tabs');
-  tabsEl.innerHTML=NOTES_MONTHS.map(m=>{
-    const label=m===0?'📋 總覽':MZ[m-1];
-    return `<button class="rbtn ${NOTES_MONTH===m?'active':''}" onclick="switchNotesMonth(${m})">${label}</button>`;
-  }).join('');
-}
-
-window.switchNotesMonth=async function(m){
-  if(notesChanged){
-    if(!confirm('尚未儲存，確定切換？'))return;
-  }
-  NOTES_MONTH=m;
-  await renderNotesMonthTabs();
-  await loadNotes();
-};
-
-window.addNotesMonth=function(){
-  const options=MZ.map((l,i)=>`${i+1}. ${l}`).join('\n');
-  const input=prompt(`選擇月份（輸入數字 1-12，或 0 = 總覽）：\n${options}`);
-  const m=parseInt(input);
-  if(isNaN(m)||m<0||m>12){showStatus('請輸入 0-12 的數字');return;}
-  if(!NOTES_MONTHS.includes(m))NOTES_MONTHS.push(m);
-  NOTES_MONTHS.sort((a,b)=>a-b);
-  switchNotesMonth(m);
-};
-
-window.delNotesMonth=async function(){
-  if(NOTES_MONTH===0&&NOTES_MONTHS.length<=1){showStatus('至少保留一頁');return;}
-  if(!confirm(`確定刪除「${NOTES_MONTH===0?'總覽':MZ[NOTES_MONTH-1]}」的備注？`))return;
-  try{
-    await fetch(`${SB_URL}/rest/v1/notes?year=eq.${CY}&month=eq.${NOTES_MONTH}`,{method:'DELETE',headers:SBH});
-  }catch(e){}
-  NOTES_MONTHS=NOTES_MONTHS.filter(m=>m!==NOTES_MONTH);
+  try{const r=await fetch(`${SB_URL}/rest/v1/notes?brand=eq.${BRAND}&year=eq.${CY}&month=lt.800&order=month.asc`,{headers:SBR});if(r.ok){const data=await r.json();const ex=data.map(d=>d.month);NOTES_MONTHS=[...new Set([...NOTES_MONTHS,...ex])].sort((a,b)=>a-b);}}catch(e){}
   if(!NOTES_MONTHS.includes(0))NOTES_MONTHS.unshift(0);
-  NOTES_MONTH=NOTES_MONTHS[0];
-  notesChanged=false;
-  await renderNotesMonthTabs();
-  await loadNotes();
-  showStatus('已刪除');
-};
+  document.getElementById('notes-month-tabs').innerHTML=NOTES_MONTHS.map(m=>`<button class="rbtn ${NOTES_MONTH===m?'active':''}" onclick="switchNotesMonth(${m})">${m===0?'📋 總覽':MZ[m-1]}</button>`).join('');
+}
+window.switchNotesMonth=async function(m){if(notesChanged&&!confirm('尚未儲存，確定切換？'))return;NOTES_MONTH=m;await renderNotesMonthTabs();await loadNotes();};
+window.addNotesMonth=function(){const m=parseInt(prompt('月份（1-12，0=總覽）：'));if(isNaN(m)||m<0||m>12){showStatus('請輸入 0-12');return;}if(!NOTES_MONTHS.includes(m))NOTES_MONTHS.push(m);NOTES_MONTHS.sort((a,b)=>a-b);switchNotesMonth(m);};
+window.delNotesMonth=async function(){if(!confirm('確定刪除？'))return;try{await fetch(`${SB_URL}/rest/v1/notes?brand=eq.${BRAND}&year=eq.${CY}&month=eq.${NOTES_MONTH}`,{method:'DELETE',headers:SBH});}catch(e){}NOTES_MONTHS=NOTES_MONTHS.filter(m=>m!==NOTES_MONTH);if(!NOTES_MONTHS.includes(0))NOTES_MONTHS.unshift(0);NOTES_MONTH=NOTES_MONTHS[0];notesChanged=false;await renderNotesMonthTabs();await loadNotes();showStatus('已刪除');};
+window.saveNotes=async function(){const el=document.getElementById('notes-editor-monthly');const hint=document.getElementById('notes-save-hint');setSyncStatus('syncing','儲存中…');const ok=await dbUpsert('notes',{year:CY,month:NOTES_MONTH,content:el.innerHTML});if(ok){notesChanged=false;setSyncStatus('ok','雲端已連線 ☁️');if(hint)hint.textContent='✓ 已儲存 '+new Date().toLocaleTimeString('zh-TW');showStatus('備注已儲存');if(!NOTES_MONTHS.includes(NOTES_MONTH))NOTES_MONTHS.push(NOTES_MONTH);renderNotesMonthTabs();}else{setSyncStatus('err','儲存失敗');if(hint)hint.textContent='❌ 儲存失敗';}};
 
-window.saveNotes=async function(){
-  const el=document.getElementById('notes-editor');
-  const hint=document.getElementById('notes-save-hint');
-  if(hint)hint.textContent='儲存中…';
-  setSyncStatus('syncing','儲存中…');
-  const ok=await dbUpsert('notes',{year:CY,month:NOTES_MONTH,content:el.innerHTML});
-  if(ok){
-    notesChanged=false;
-    setSyncStatus('ok','雲端已連線 ☁️');
-    if(hint)hint.textContent='✓ 已儲存 '+new Date().toLocaleTimeString('zh-TW');
-    showStatus('備注已儲存');
-    if(!NOTES_MONTHS.includes(NOTES_MONTH))NOTES_MONTHS.push(NOTES_MONTH);
-    renderNotesMonthTabs();
-  } else {
-    setSyncStatus('err','儲存失敗');
-    if(hint)hint.textContent='❌ 儲存失敗';
-  }
+// 提案庫
+async function loadProposals(){
+  try{const r=await fetch(`${SB_URL}/rest/v1/notes?brand=eq.${BRAND}&year=eq.${CY}&month=gte.800&month=lt.900&order=month.desc`,{headers:SBR});
+  if(r.ok){const data=await r.json();PROP_ALL=data.map(d=>{try{const c=JSON.parse(d.content);return{...c,_month:d.month};}catch(e){return null;}}).filter(Boolean);}}catch(e){}
+}
+function renderPropList(){
+  const search=(document.getElementById('prop-search')?.value||'').toLowerCase();
+  const filtered=PROP_ALL.filter(p=>(PROP_CAT_FILTER==='all'||p.category===PROP_CAT_FILTER)&&(!search||p.title.toLowerCase().includes(search))).sort((a,b)=>b.updatedAt>a.updatedAt?1:-1);
+  const cats=[...new Set(PROP_ALL.map(p=>p.category).filter(Boolean))];
+  const fe=document.getElementById('prop-cat-filter');
+  if(fe)fe.innerHTML=`<button class="rbtn ${PROP_CAT_FILTER==='all'?'active':''}" style="font-size:10px;padding:2px 8px" onclick="setPropCat('all')">全部</button>`+cats.map(c=>`<button class="rbtn ${PROP_CAT_FILTER===c?'active':''}" style="font-size:10px;padding:2px 8px" onclick="setPropCat('${c}')">${c}</button>`).join('');
+  const le=document.getElementById('prop-list');
+  if(!filtered.length){le.innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--tx3);font-size:13px">無提案</div>';return;}
+  le.innerHTML=filtered.map(p=>`<div onclick="openProposal('${p.id}')" style="padding:12px 14px;border-bottom:1px solid var(--bd);cursor:pointer;background:${PROP_ID===p.id?'var(--sf2)':'transparent'}" onmouseenter="this.style.background='var(--sf2)'" onmouseleave="this.style.background='${PROP_ID===p.id?'var(--sf2)':'transparent'}'">
+    <div style="font-size:13px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title||'無標題'}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${p.category?`<span style="font-size:10px;background:var(--sf2);border:1px solid var(--bd);border-radius:10px;padding:1px 7px;color:var(--tx3)">${p.category}</span>`:''}<span style="font-size:10px;color:var(--tx3)">${p.updatedAt||''}</span></div>
+  </div>`).join('');
+}
+window.setPropCat=function(cat){PROP_CAT_FILTER=cat;renderPropList();};
+window.newProposal=async function(){
+  if(propChanged&&!confirm('尚未儲存，確定新增？'))return;
+  const title=prompt('提案標題：');if(!title)return;
+  const category=prompt('分類：')||'未分類';
+  const now=new Date().toISOString().slice(0,10);
+  const id=Date.now().toString(36);
+  const month=800+Math.floor(Math.random()*99);
+  const prop={id,title,category,body:'',createdAt:now,updatedAt:now};
+  await dbUpsert('notes',{year:CY,month,content:JSON.stringify(prop)});
+  await loadProposals();renderPropList();openProposal(id);
+};
+window.openProposal=function(id){
+  const p=PROP_ALL.find(x=>x.id===id);if(!p)return;
+  PROP_ID=id;propChanged=false;
+  document.getElementById('prop-header').innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div style="flex:1">
+      <input id="prop-title-input" value="${p.title||''}" style="font-size:15px;font-weight:700;border:none;background:transparent;color:var(--tx);font-family:inherit;outline:none;width:100%" onchange="propChanged=true">
+      <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+        <input id="prop-cat-input" value="${p.category||''}" placeholder="分類" style="font-size:11px;border:1px solid var(--bdm);border-radius:10px;padding:2px 10px;background:var(--sf2);color:var(--tx3);font-family:inherit;outline:none" onchange="propChanged=true">
+        <span style="font-size:11px;color:var(--tx3)">更新：${p.updatedAt||''}</span>
+      </div>
+    </div>
+    <button class="rbtn" style="font-size:11px;color:var(--dn)" onclick="deleteProposal('${id}')">刪除</button>
+  </div>`;
+  document.getElementById('prop-footer').style.display='flex';
+  document.getElementById('notes-editor-proposals').innerHTML=p.body||'';
+  renderPropList();
+};
+window.saveProposal=async function(){
+  if(!PROP_ID)return;const p=PROP_ALL.find(x=>x.id===PROP_ID);if(!p)return;
+  const title=document.getElementById('prop-title-input')?.value||p.title;
+  const category=document.getElementById('prop-cat-input')?.value||p.category;
+  const body=document.getElementById('notes-editor-proposals').innerHTML;
+  const now=new Date().toISOString().slice(0,10);
+  const updated={...p,title,category,body,updatedAt:now};
+  const ok=await dbUpsert('notes',{year:CY,month:p._month,content:JSON.stringify(updated)});
+  if(ok){propChanged=false;showStatus('✓ 提案已儲存');document.getElementById('prop-save-hint').textContent='✓ '+new Date().toLocaleTimeString('zh-TW');await loadProposals();renderPropList();}
+  else showStatus('❌ 儲存失敗');
+};
+window.deleteProposal=async function(id){
+  if(!confirm('確定刪除？'))return;const p=PROP_ALL.find(x=>x.id===id);if(!p)return;
+  try{await fetch(`${SB_URL}/rest/v1/notes?brand=eq.${BRAND}&year=eq.${CY}&month=eq.${p._month}`,{method:'DELETE',headers:SBH});}catch(e){}
+  PROP_ID=null;propChanged=false;
+  document.getElementById('prop-header').innerHTML='<div style="color:var(--tx3);font-size:13px;text-align:center">選擇或新增提案</div>';
+  document.getElementById('notes-editor-proposals').innerHTML='';
+  document.getElementById('prop-footer').style.display='none';
+  await loadProposals();renderPropList();showStatus('已刪除');
 };
 
 async function renderNotes(){
-  await renderNotesMonthTabs();
-  await loadNotes();
+  document.getElementById('notes-toolbar-monthly').innerHTML=buildToolbar('notes-editor-monthly','saveNotes()');
+  document.getElementById('notes-toolbar-proposals').innerHTML=buildToolbar('notes-editor-proposals','saveProposal()');
+  await renderNotesMonthTabs();await loadNotes();await loadProposals();
 }
 
 // ── Overview ──────────────────────────────────────────────────
