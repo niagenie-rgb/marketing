@@ -760,16 +760,16 @@ async function initApp(){
   renderAll();
 }
 
-// 頁面載入：已有 session 直接進入，否則顯示登入
-if(BRAND){
-  startApp();
-} else {
-  // 唯讀模式不需要登入
-  if(IS_READONLY){
-    BRAND='dios';BRAND_NAME='迪奧斯';
+// 頁面載入：先檢查是否為提案閱覽模式
+checkProposalViewMode().then(isProposalView=>{
+  if(isProposalView)return; // 提案全頁模式，不繼續載入 dashboard
+  // 已有 session 直接進入，否則顯示登入
+  if(BRAND){
     startApp();
+  } else {
+    if(IS_READONLY){BRAND='dios';BRAND_NAME='迪奧斯';startApp();}
   }
-}
+});
 
 // ── Navigation ────────────────────────────────────────────────
 document.querySelectorAll('.mtab').forEach(t=>t.addEventListener('click',()=>{
@@ -1940,27 +1940,79 @@ function insertHtmlPreviewE(eid){
   document.execCommand('insertHTML',false,wrapped);
 }
 
-// 全頁閱覽
+// 全頁閱覽 - 產生分享網址
 function openFullPage(id){
-  const p=PROP_ALL.find(x=>x.id===id);if(!p)return;
-  const win=window.open('','_blank');
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${p.title||'提案'}</title>
-  <style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:860px;margin:0 auto;padding:2rem;line-height:1.8;color:#1a1a1a}
-  h1{font-size:26px;margin-bottom:.5rem}
-  .meta{color:#888;font-size:13px;margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid #eee}
-  h2{font-size:20px;margin:1.5rem 0 .5rem;border-bottom:1px solid #eee;padding-bottom:.3rem}
-  h3{font-size:16px;margin:1rem 0 .4rem}
-  pre{background:#1e1e1e;color:#d4d4d4;padding:1rem;border-radius:6px;overflow-x:auto;font-family:monospace}
-  img{max-width:100%;border-radius:6px}
-  a{color:#3b82f6}
-  iframe{width:100%;border:none;border-radius:6px}
-  @media print{body{padding:0}}</style>
-  </head><body>
-  <h1>${p.title||'無標題'}</h1>
-  <div class="meta">分類：${p.category||'—'} ｜ 建立：${p.createdAt||''} ｜ 更新：${p.updatedAt||''}</div>
-  ${p.body||''}
-  </body></html>`);
-  win.document.close();
+  const url=location.href.split('?')[0]+`?view=proposal&id=${id}&brand=${BRAND}`;
+  window.open(url,'_blank');
+}
+
+// 複製分享連結
+function copyPropLink(id){
+  const url=location.href.split('?')[0]+`?view=proposal&id=${id}&brand=${BRAND}`;
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(url).then(()=>showStatus('✓ 連結已複製！')).catch(()=>fallbackCopy(url));
+  } else fallbackCopy(url);
+}
+
+// 提案全頁模式（URL 參數觸發）
+async function checkProposalViewMode(){
+  const params=new URLSearchParams(location.search);
+  if(params.get('view')!=='proposal')return false;
+  const id=params.get('id');
+  const brand=params.get('brand')||'dios';
+  if(!id)return false;
+
+  // 撈提案資料
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/notes?brand=eq.${brand}&year=gte.2000&month=gte.800&month=lt.900`,{headers:SBR});
+    if(!r.ok)return false;
+    const data=await r.json();
+    const row=data.find(d=>{try{return JSON.parse(d.content).id===id;}catch(e){return false;}});
+    if(!row)return false;
+    const p=JSON.parse(row.content);
+
+    // 全頁渲染
+    document.body.innerHTML=`
+      <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f8f6;color:#1a1a1a;min-height:100vh}
+        .pv-topbar{background:#fff;border-bottom:1px solid #e5e7eb;padding:12px 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+        .pv-brand{font-size:12px;font-weight:700;letter-spacing:.12em;color:#888}
+        .pv-actions{display:flex;gap:8px}
+        .pv-btn{padding:6px 14px;border-radius:20px;border:1px solid #e5e7eb;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;color:#555}
+        .pv-btn:hover{background:#f3f4f6}
+        .pv-wrap{max-width:860px;margin:0 auto;padding:3rem 2rem}
+        .pv-cat{display:inline-block;font-size:11px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:20px;padding:3px 12px;color:#888;margin-bottom:1rem}
+        .pv-title{font-size:32px;font-weight:800;line-height:1.3;margin-bottom:1rem}
+        .pv-meta{font-size:12px;color:#aaa;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid #e5e7eb}
+        .pv-body{font-size:15px;line-height:1.9}
+        .pv-body h2{font-size:22px;font-weight:700;margin:2rem 0 .75rem;padding-bottom:.4rem;border-bottom:1px solid #e5e7eb}
+        .pv-body h3{font-size:17px;font-weight:700;margin:1.5rem 0 .5rem}
+        .pv-body p{margin:.6rem 0}
+        .pv-body pre{background:#1e1e1e;color:#d4d4d4;padding:1.2rem;border-radius:8px;overflow-x:auto;font-family:monospace;font-size:13px;margin:1rem 0}
+        .pv-body img{max-width:100%;border-radius:8px;margin:.5rem 0}
+        .pv-body a{color:#3b82f6;text-decoration:underline}
+        .pv-body ul,.pv-body ol{padding-left:1.5rem;margin:.5rem 0}
+        .pv-body iframe{width:100%;border:none;border-radius:8px;margin:.5rem 0}
+        .pv-body blockquote{border-left:3px solid #e5e7eb;padding-left:1rem;color:#666;margin:.75rem 0}
+        @media(max-width:600px){.pv-wrap{padding:1.5rem 1rem}.pv-title{font-size:24px}}
+        @media print{.pv-topbar{display:none}.pv-wrap{padding:0}}
+      </style>
+      <div class="pv-topbar">
+        <span class="pv-brand">迪奧斯 · 提案庫</span>
+        <div class="pv-actions">
+          <button class="pv-btn" onclick="navigator.clipboard&&navigator.clipboard.writeText(location.href).then(()=>alert('連結已複製！'))">🔗 複製連結</button>
+          <button class="pv-btn" onclick="window.print()">🖨 列印</button>
+        </div>
+      </div>
+      <div class="pv-wrap">
+        <div class="pv-cat">${p.category||'未分類'}</div>
+        <div class="pv-title">${p.title||'無標題'}</div>
+        <div class="pv-meta">建立：${p.createdAt||'—'} ｜ 更新：${p.updatedAt||'—'}</div>
+        <div class="pv-body">${p.body||'<p style="color:#aaa">此提案尚無內容</p>'}</div>
+      </div>`;
+    return true;
+  }catch(e){return false;}
 }
 
 // Tab 切換
@@ -2013,6 +2065,7 @@ function renderPropList(){
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:space-between">
         <div style="display:flex;gap:6px;flex-wrap:wrap">${p.category?`<span style="font-size:10px;background:var(--sf2);border:1px solid var(--bd);border-radius:10px;padding:1px 7px;color:var(--tx3)">${p.category}</span>`:''}<span style="font-size:10px;color:var(--tx3)">${p.updatedAt||''}</span></div>
         <button onclick="event.stopPropagation();openFullPage('${p.id}')" style="font-size:10px;padding:1px 8px;border:1px solid var(--bdm);border-radius:10px;background:var(--sf);cursor:pointer;color:var(--tx3);font-family:inherit;white-space:nowrap">↗ 全頁</button>
+        <button onclick="event.stopPropagation();copyPropLink('${p.id}')" style="font-size:10px;padding:1px 8px;border:1px solid var(--bdm);border-radius:10px;background:var(--sf);cursor:pointer;color:var(--tx3);font-family:inherit;white-space:nowrap">🔗</button>
       </div>
     </div>
   </div>`).join('');
