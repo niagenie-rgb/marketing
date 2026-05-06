@@ -1762,7 +1762,7 @@ async function renderGantt(){
 
   // 主專案列
   mains.sort((a,b)=>a.startDate>b.startDate?1:-1).forEach((p,pi)=>{
-    const subs=filtered.filter(x=>x.parentId===p.id);
+    const subs=PROJ_ALL.filter(x=>x.parentId===p.id);
     const barColor=BC[pi%BC.length];
     const l=dateToPos(p.startDate);
     const w=dateToWidth(p.startDate,p.endDate);
@@ -1812,7 +1812,7 @@ async function renderGantt(){
 
   // 專案列表（卡片）
   listEl.innerHTML=mains.map((p,pi)=>{
-    const subs=filtered.filter(x=>x.parentId===p.id);
+    const subs=PROJ_ALL.filter(x=>x.parentId===p.id);
     return `<div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:1rem 1.25rem;margin-bottom:8px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
         <div>
