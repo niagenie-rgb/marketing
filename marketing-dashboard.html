@@ -1746,7 +1746,7 @@ async function renderGantt(){
   const dateToWidth=(s,e)=>{
     if(!s||!e)return 0;
     const sp=parseFloat(dateToPos(s));
-    const ep=parseFloat(dateToPos(e))+parseFloat((1/totalDays*100).toFixed(3));
+    const ep=parseFloat(dateToPos(e));
     return Math.max(0.5,Math.min(100-sp,ep-sp)).toFixed(2);
   };
 
