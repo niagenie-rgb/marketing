@@ -1843,7 +1843,7 @@ async function renderGantt(){
 }
 
 // ── Notes & Proposals ────────────────────────────────────────
-let NOTES_MONTH=0,NOTES_MONTHS=[0],notesChanged=false,NOTES_TAB='monthly';
+let NOTES_MONTH=0,NOTES_MONTHS=[],notesChanged=false,NOTES_TAB='monthly';
 let PROP_ID=null,propChanged=false,PROP_ALL=[],PROP_CAT_FILTER='all';
 
 // Toolbar 產生器
@@ -2075,7 +2075,11 @@ async function loadNotes(){
 }
 async function renderNotesMonthTabs(){
   try{const r=await fetch(`${SB_URL}/rest/v1/notes?brand=eq.${BRAND}&year=eq.${CY}&month=lt.800&order=month.asc`,{headers:SBR});if(r.ok){const data=await r.json();const ex=data.map(d=>d.month);NOTES_MONTHS=[...new Set([...NOTES_MONTHS,...ex])].sort((a,b)=>a-b);}}catch(e){}
-  if(!NOTES_MONTHS.includes(0))NOTES_MONTHS.unshift(0);
+  if(!NOTES_MONTHS.length)NOTES_MONTHS=[0];
+  // 預設選最新的月份（最大值）
+  if(NOTES_MONTH===0&&NOTES_MONTHS.length>1){
+    NOTES_MONTH=NOTES_MONTHS[NOTES_MONTHS.length-1];
+  }
   document.getElementById('notes-month-tabs').innerHTML=NOTES_MONTHS.map(m=>`<button class="rbtn ${NOTES_MONTH===m?'active':''}" onclick="switchNotesMonth(${m})">${m===0?'📋 總覽':MZ[m-1]}</button>`).join('');
 }
 window.switchNotesMonth=async function(m){if(notesChanged&&!confirm('尚未儲存，確定切換？'))return;NOTES_MONTH=m;await renderNotesMonthTabs();await loadNotes();};
