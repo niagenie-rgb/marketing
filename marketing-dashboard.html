@@ -1756,7 +1756,9 @@ async function renderGantt(){
   const displayMonths=Array.from({length:12},(_,i)=>({y:CY,m:i}));
   gh+=`<div class="gh" style="width:100%"><div class="gncol">專案</div><div style="flex:1;display:flex">`;
   displayMonths.forEach(mo=>{
-    gh+=`<div style="flex:1;text-align:center;font-size:10px;color:var(--tx3);padding:9px 0;border-right:1px solid var(--bd);min-width:0">${String(mo.m+1).padStart(2,'0')}月</div>`;
+    const dim=daysInMonth(mo.y,mo.m);
+    const pct=(dim/totalDays*100).toFixed(3);
+    gh+=`<div style="width:${pct}%;text-align:center;font-size:10px;color:var(--tx3);padding:9px 0;border-right:1px solid var(--bd);flex-shrink:0;overflow:hidden">${String(mo.m+1).padStart(2,'0')}月</div>`;
   });
   gh+=`<div style="width:80px;flex-shrink:0"></div></div></div>`;
 
