@@ -132,7 +132,8 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 .addrow input,.addrow select{padding:7px 11px;font-size:13px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf);color:var(--tx);font-family:inherit;outline:none}
 .addrow input{flex:1;min-width:130px}
 .btn-p{padding:7px 18px;border-radius:var(--r);border:1px solid var(--ac);background:var(--ac);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
-.tsep{display:inline-block;width:1px;height:18px;background:var(--bd);margin:0 4px;vertical-align:middle}
+.tsep{display:inline-block;width:1px;height:18px;background:var(--bd);margin:0 5px;vertical-align:middle;flex-shrink:0}
+.ntool{padding:4px 9px;border-radius:4px;border:1px solid var(--bd);background:transparent;font-size:12px;cursor:pointer;color:var(--tx2);font-family:inherit;transition:all .15s;white-space:nowrap;flex-shrink:0}
 .ntool:hover{background:var(--sf2)}
 #notes-editor h2{font-size:18px;font-weight:700;margin:1rem 0 .5rem;border-bottom:1px solid var(--bd);padding-bottom:.3rem}
 #notes-editor h3{font-size:15px;font-weight:700;margin:.85rem 0 .4rem}
@@ -1881,10 +1882,11 @@ function buildToolbar(editorId,saveCallback){
       </div>
     </div>
     <span class="tsep"></span>
-    <button class="ntool" onclick="insertCodeBlockE('${editorId}')">&lt;/&gt;</button>
-    <button class="ntool" onclick="insertMediaE('${editorId}')">▶</button>
-    <button class="ntool" onclick="insertRawHtmlE('${editorId}')">⊞</button>
-    <button class="ntool" onclick="insertLinkE('${editorId}')">🔗</button>
+    <button class="ntool" onclick="insertCodeBlockE('${editorId}')">&lt;/&gt; 程式碼</button>
+    <button class="ntool" onclick="insertHtmlPreviewE('${editorId}')">🌐 HTML預覽</button>
+    <button class="ntool" onclick="insertMediaE('${editorId}')">▶ 影音</button>
+    <button class="ntool" onclick="insertRawHtmlE('${editorId}')">⊞ 嵌入碼</button>
+    <button class="ntool" onclick="insertLinkE('${editorId}')">🔗 連結</button>
     <span style="flex:1"></span>
     <button class="ntool" onclick="${saveCallback}" style="background:var(--ac);color:#fff;border-color:var(--ac);padding:3px 14px">儲存</button>
   </div>`;
@@ -1924,10 +1926,42 @@ function insertCodeBlockE(eid){const code=prompt('貼入程式碼：');if(!code)
 function insertMediaE(eid){const url=prompt('YouTube 或影片網址：');if(!url)return;let e='';const yt=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]+)/);if(yt)e=`<iframe src="https://www.youtube.com/embed/${yt[1]}" allowfullscreen></iframe>`;else if(url.match(/\.(mp4|webm|ogg)/i))e=`<video controls style="width:100%;border-radius:6px"><source src="${url}"></video>`;else e=`<iframe src="${url}" allowfullscreen></iframe>`;document.getElementById(eid).focus();document.execCommand('insertHTML',false,e+'<p></p>');}
 function insertRawHtmlE(eid){const html=prompt('貼入嵌入碼：');if(!html)return;document.getElementById(eid).focus();document.execCommand('insertHTML',false,`<div style="margin:.75rem 0">${html.trim()}</div><p></p>`);if(html.includes('facebook.com')&&!document.getElementById('fb-sdk')){const s=document.createElement('script');s.id='fb-sdk';s.async=s.defer=true;s.src='https://connect.facebook.net/zh_TW/sdk.js#xfbml=1&version=v18.0';document.body.appendChild(s);}else if(window.FB)window.FB.XFBML.parse();}
 function insertLinkE(eid){const url=prompt('網址：');if(!url)return;document.getElementById(eid).focus();const sel=window.getSelection();if(sel&&!sel.isCollapsed){const r=sel.getRangeAt(0);const f=r.cloneContents();if(f.querySelector('img')){const a=document.createElement('a');a.href=url;a.target='_blank';r.surroundContents(a);return;}}const text=prompt('顯示文字（留空用網址）：')||url;document.execCommand('insertHTML',false,`<a href="${url}" target="_blank">${text}</a>`);}
-function insertCodeBlock(){insertCodeBlockE('notes-editor-monthly');}
-function insertMedia(){insertMediaE('notes-editor-monthly');}
-function insertRawHtml(){insertRawHtmlE('notes-editor-monthly');}
-function insertLink(){insertLinkE('notes-editor-monthly');}
+function insertHtmlPreviewE(eid){
+  const html=prompt('貼入 HTML 碼（將直接渲染顯示）：');
+  if(!html||!html.trim())return;
+  const id='htmlpv-'+Date.now();
+  const wrapped=`<div id="${id}" style="margin:.75rem 0;border:1px solid var(--bd);border-radius:8px;overflow:hidden">
+    <div style="background:var(--sf2);padding:4px 10px;font-size:10px;color:var(--tx3);display:flex;align-items:center;justify-content:space-between">
+      <span>HTML 預覽</span>
+    </div>
+    <iframe srcdoc="${html.replace(/"/g,'&quot;')}" style="width:100%;border:none;min-height:200px" onload="this.style.height=this.contentDocument.body.scrollHeight+20+'px'"></iframe>
+  </div><p></p>`;
+  document.getElementById(eid).focus();
+  document.execCommand('insertHTML',false,wrapped);
+}
+
+// 全頁閱覽
+function openFullPage(id){
+  const p=PROP_ALL.find(x=>x.id===id);if(!p)return;
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${p.title||'提案'}</title>
+  <style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:860px;margin:0 auto;padding:2rem;line-height:1.8;color:#1a1a1a}
+  h1{font-size:26px;margin-bottom:.5rem}
+  .meta{color:#888;font-size:13px;margin-bottom:2rem;padding-bottom:1rem;border-bottom:1px solid #eee}
+  h2{font-size:20px;margin:1.5rem 0 .5rem;border-bottom:1px solid #eee;padding-bottom:.3rem}
+  h3{font-size:16px;margin:1rem 0 .4rem}
+  pre{background:#1e1e1e;color:#d4d4d4;padding:1rem;border-radius:6px;overflow-x:auto;font-family:monospace}
+  img{max-width:100%;border-radius:6px}
+  a{color:#3b82f6}
+  iframe{width:100%;border:none;border-radius:6px}
+  @media print{body{padding:0}}</style>
+  </head><body>
+  <h1>${p.title||'無標題'}</h1>
+  <div class="meta">分類：${p.category||'—'} ｜ 建立：${p.createdAt||''} ｜ 更新：${p.updatedAt||''}</div>
+  ${p.body||''}
+  </body></html>`);
+  win.document.close();
+}
 
 // Tab 切換
 function switchNotesTab(tab){
@@ -1973,9 +2007,14 @@ function renderPropList(){
   if(fe)fe.innerHTML=`<button class="rbtn ${PROP_CAT_FILTER==='all'?'active':''}" style="font-size:10px;padding:2px 8px" onclick="setPropCat('all')">全部</button>`+cats.map(c=>`<button class="rbtn ${PROP_CAT_FILTER===c?'active':''}" style="font-size:10px;padding:2px 8px" onclick="setPropCat('${c}')">${c}</button>`).join('');
   const le=document.getElementById('prop-list');
   if(!filtered.length){le.innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--tx3);font-size:13px">無提案</div>';return;}
-  le.innerHTML=filtered.map(p=>`<div onclick="openProposal('${p.id}')" style="padding:12px 14px;border-bottom:1px solid var(--bd);cursor:pointer;background:${PROP_ID===p.id?'var(--sf2)':'transparent'}" onmouseenter="this.style.background='var(--sf2)'" onmouseleave="this.style.background='${PROP_ID===p.id?'var(--sf2)':'transparent'}'">
-    <div style="font-size:13px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title||'無標題'}</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">${p.category?`<span style="font-size:10px;background:var(--sf2);border:1px solid var(--bd);border-radius:10px;padding:1px 7px;color:var(--tx3)">${p.category}</span>`:''}<span style="font-size:10px;color:var(--tx3)">${p.updatedAt||''}</span></div>
+  le.innerHTML=filtered.map(p=>`<div style="padding:12px 14px;border-bottom:1px solid var(--bd);background:${PROP_ID===p.id?'var(--sf2)':'transparent'}">
+    <div onclick="openProposal('${p.id}')" style="cursor:pointer">
+      <div style="font-size:13px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title||'無標題'}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${p.category?`<span style="font-size:10px;background:var(--sf2);border:1px solid var(--bd);border-radius:10px;padding:1px 7px;color:var(--tx3)">${p.category}</span>`:''}<span style="font-size:10px;color:var(--tx3)">${p.updatedAt||''}</span></div>
+        <button onclick="event.stopPropagation();openFullPage('${p.id}')" style="font-size:10px;padding:1px 8px;border:1px solid var(--bdm);border-radius:10px;background:var(--sf);cursor:pointer;color:var(--tx3);font-family:inherit;white-space:nowrap">↗ 全頁</button>
+      </div>
+    </div>
   </div>`).join('');
 }
 window.setPropCat=function(cat){PROP_CAT_FILTER=cat;renderPropList();};
