@@ -1850,7 +1850,7 @@ let PROP_ID=null,propChanged=false,PROP_ALL=[],PROP_CAT_FILTER='all';
 function buildToolbar(editorId,saveCallback){
   const COLORS=['#000000','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#6b7280','#92400e','#1e40af','#ffffff'];
   const BGHLS=['#fef9c3','#dcfce7','#dbeafe','#fce7f3','#ede9fe','#fee2e2','#ffedd5','transparent'];
-  return `<div style="background:var(--sf);padding:6px 10px;display:flex;gap:2px;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:50;border-bottom:1px solid var(--bd)">
+  return `<div style="background:var(--sf);padding:6px 10px;display:flex;gap:2px;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:200;border-bottom:1px solid var(--bd);box-shadow:0 2px 6px rgba(0,0,0,.07)">
     <button class="ntool" onclick="nCmdE('${editorId}','bold')" title="粗體"><b>B</b></button>
     <button class="ntool" onclick="nCmdE('${editorId}','italic')" title="斜體"><i>I</i></button>
     <button class="ntool" onclick="nCmdE('${editorId}','underline')" title="底線"><u>U</u></button>
@@ -1930,17 +1930,54 @@ function insertHtmlPreviewE(eid){
   const html=prompt('貼入 HTML 碼（將直接渲染顯示）：');
   if(!html||!html.trim())return;
   const id='htmlpv-'+Date.now();
-  const wrapped=`<div id="${id}" style="margin:.75rem 0;border:1px solid var(--bd);border-radius:8px;overflow:hidden">
+  const encoded=encodeURIComponent(html);
+  const wrapped=`<div id="${id}" style="margin:.75rem 0;border:1px solid var(--bd);border-radius:8px;overflow:hidden" contenteditable="false">
     <div style="background:var(--sf2);padding:4px 10px;font-size:10px;color:var(--tx3);display:flex;align-items:center;justify-content:space-between">
       <span>HTML 預覽</span>
+      <button onclick="editHtmlBlock('${id}')" style="font-size:10px;padding:1px 8px;border:1px solid var(--bdm);border-radius:8px;background:var(--sf);cursor:pointer;font-family:inherit;color:var(--tx2)">✎ 編輯原始碼</button>
     </div>
-    <iframe srcdoc="${html.replace(/"/g,'&quot;')}" style="width:100%;border:none;min-height:200px" onload="this.style.height=this.contentDocument.body.scrollHeight+20+'px'"></iframe>
+    <iframe srcdoc="${html.replace(/"/g,'&quot;').replace(/`/g,'&#96;')}" style="width:100%;border:none;min-height:200px" onload="this.style.height=this.contentDocument.body.scrollHeight+20+'px'"></iframe>
   </div><p></p>`;
   document.getElementById(eid).focus();
   document.execCommand('insertHTML',false,wrapped);
 }
 
-// 全頁閱覽 - 產生分享網址
+function editHtmlBlock(blockId){
+  const block=document.getElementById(blockId);if(!block)return;
+  const iframe=block.querySelector('iframe');if(!iframe)return;
+  // 取出目前的 HTML（從 srcdoc 屬性）
+  const current=iframe.getAttribute('srcdoc')||'';
+  // 建立編輯 modal
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`<div style="background:var(--sf);border-radius:var(--rl);padding:1.5rem;width:min(720px,95vw);max-height:90vh;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <strong style="font-size:14px">編輯 HTML 原始碼</strong>
+      <button id="htmledit-close" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--tx3)">✕</button>
+    </div>
+    <textarea id="htmledit-ta" style="flex:1;min-height:350px;padding:10px;font-size:12px;font-family:'Courier New',monospace;border:1px solid var(--bdm);border-radius:var(--r);background:#1e1e1e;color:#d4d4d4;resize:vertical;outline:none;line-height:1.6">${current.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button id="htmledit-cancel" style="padding:8px 18px;border-radius:var(--r);border:1px solid var(--bdm);background:var(--sf);font-size:13px;cursor:pointer;font-family:inherit;color:var(--tx2)">取消</button>
+      <button id="htmledit-apply" class="btn-p" style="padding:8px 18px">套用更新</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  const ta=overlay.querySelector('#htmledit-ta');
+  // 解碼 HTML entities 讓 textarea 顯示原始碼
+  ta.value=current;
+  ta.focus();
+  overlay.querySelector('#htmledit-close').onclick=()=>overlay.remove();
+  overlay.querySelector('#htmledit-cancel').onclick=()=>overlay.remove();
+  overlay.querySelector('#htmledit-apply').onclick=()=>{
+    const newHtml=ta.value;
+    iframe.setAttribute('srcdoc',newHtml);
+    iframe.onload=()=>{iframe.style.height=iframe.contentDocument.body.scrollHeight+20+'px';};
+    // 觸發內容變更
+    notesChanged=true;propChanged=true;
+    overlay.remove();
+    showStatus('✓ HTML 已更新，請記得儲存');
+  };
+}
 function openFullPage(id){
   const url=location.href.split('?')[0]+`?view=proposal&id=${id}&brand=${BRAND}`;
   window.open(url,'_blank');
