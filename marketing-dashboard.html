@@ -1174,13 +1174,9 @@ async function toggleAdMetricCard(key){
     if(AD_METRIC_SELECTED.size<=1)return;
     AD_METRIC_SELECTED.delete(key);
   } else {
-    if(AD_METRIC_SELECTED.size>=2){
-      const first=[...AD_METRIC_SELECTED][0];
-      AD_METRIC_SELECTED.delete(first);
-    }
     AD_METRIC_SELECTED.add(key);
   }
-  AD_METRIC_ALL_DATA=null; // 清快取讓重撈
+  AD_METRIC_ALL_DATA=null;
   renderAdMetrics(rows);
 }
 
@@ -1213,7 +1209,7 @@ async function renderAdMetricTrendChart(metrics){
   const selected=[...AD_METRIC_SELECTED];
   const datasets=selected.map((key,idx)=>{
     const m=metrics.find(x=>x.key===key);
-    const color=m?.color||CC[idx];
+    const color=m?.color||CC[idx%CC.length];
     return {
       label:m?.l||key,
       data:Array.from({length:12},(_,mi)=>{
@@ -1224,7 +1220,7 @@ async function renderAdMetricTrendChart(metrics){
       backgroundColor:color+'18',
       tension:.35,pointRadius:4,pointHoverRadius:6,
       fill:selected.length===1,spanGaps:true,
-      yAxisID:idx===1?'y2':'y',
+      yAxisID:idx===0?'y':'y2',
       _fmt:FMTS[key],
     };
   });
