@@ -394,6 +394,8 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     <div class="mc"><div class="mc-l">加到購物車</div><div class="mc-v">—</div></div>
     <div class="mc"><div class="mc-l">開始結帳</div><div class="mc-v">—</div></div>
   </div>
+  <!-- 指標跨月趨勢圖 -->
+  <div id="ad-metric-trend-chart" style="display:none;height:220px;margin:10px 0 4px"></div>
 
   <!-- 跨月廣告趨勢圖（Meta 限定） -->
   <div id="ad-trend-section" style="display:none;margin-top:14px">
@@ -800,6 +802,8 @@ document.getElementById('ptabs').onclick=function(e){
   AD_TREND_SELECTED=new Set();
   AD_TREND_METRICS=new Set(['spend']);
   AD_TREND_RANGE='year';AD_TREND_M1=0;AD_TREND_M2=11;
+  AD_METRIC_SELECTED=new Set();
+  AD_METRIC_ALL_DATA=null;
   document.querySelectorAll('.ptab').forEach(t=>t.classList.toggle('active',t.dataset.p===AP));
   const L={meta:'上傳 Meta Excel (.xlsx)',criteo:'上傳 Criteo Excel (.xlsx)',google:'上傳 Google Ads CSV/XLSX'};
   document.getElementById('ad-ulabel').textContent=L[AP];
@@ -1112,7 +1116,12 @@ function clearAd(){
   document.getElementById('cw2').innerHTML='<div class="empty"><div class="ico">📈</div>上傳報表後顯示</div>';
   killChart('c1');killChart('c2');
 }
+let AD_METRIC_SELECTED=new Set();
+let AD_METRIC_ALL_DATA=null;
+
 function renderAdMetrics(rows){
+  // 儲存 rows 供切換指標時重用
+  document.getElementById('adMetrics').__rows=rows;
   let sp=0,cart=0,co=0,store=0,totalRevenue=0,totalClicks=0,totalImp=0;
   rows.forEach(r=>{
     sp+=r.spend||0;cart+=r.cart||0;co+=r.checkout||0;store+=r.store||0;
@@ -1126,94 +1135,115 @@ function renderAdMetrics(rows){
   if(!ctr){let ctrSum=0,ctrW=0;rows.forEach(r=>{if(r.ctr>0&&r.spend>0){ctrSum+=r.ctr*r.spend;ctrW+=r.spend;}});if(ctrW>0)ctr=ctrSum/ctrW;}
 
   const metrics=[
-    {l:'花費 (TWD)',v:'$'+Math.round(sp).toLocaleString(),key:'spend',fmt:v=>'$'+Math.round(v).toLocaleString()},
-    {l:'ROAS',v:roas>0?roas.toFixed(2)+'x':'—',key:'roas',fmt:v=>v.toFixed(2)+'x'},
-    {l:'CPC',v:cpc>0?'$'+cpc.toFixed(2):'—',key:'cpc',fmt:v=>'$'+v.toFixed(2)},
-    {l:'CTR',v:ctr>0?(ctr*100).toFixed(2)+'%':'—',key:'ctr',fmt:v=>(v*100).toFixed(2)+'%'},
-    {l:'加到購物車',v:cart>0?Math.round(cart).toLocaleString():'—',key:'cart',fmt:v=>Math.round(v).toLocaleString()},
-    {l:'開始結帳',v:co>0?Math.round(co).toLocaleString():'—',key:'checkout',fmt:v=>Math.round(v).toLocaleString()},
-    {l:'門市資訊',v:store>0?Math.round(store).toLocaleString():'—',key:'store',fmt:v=>Math.round(v).toLocaleString(),metaOnly:true},
-  ];
-  document.getElementById('adMetrics').innerHTML=metrics
-    .filter(m=>AP==='meta'||!m.metaOnly)
-    .map(m=>`<div class="mc" style="cursor:pointer" onclick="toggleAdSparkline('${m.key}')" title="點擊查看跨月趨勢">
-      <div class="mc-l">${m.l}</div>
-      <div class="mc-v">${m.v}</div>
-      <canvas id="spark-${m.key}" style="display:none;width:100%;height:36px;margin-top:6px"></canvas>
-    </div>`).join('');
-  // 儲存 metrics 配置供 sparkline 用
-  document.getElementById('adMetrics').dataset.metrics=JSON.stringify(metrics.map(m=>({key:m.key,fmt:m.fmt.toString()})));
+    {key:'spend',   l:'花費(TWD)', v:'$'+Math.round(sp).toLocaleString(),    color:'#3b82f6', metaOnly:false},
+    {key:'roas',    l:'ROAS',      v:roas>0?roas.toFixed(2)+'x':'—',         color:'#ef4444', metaOnly:false},
+    {key:'cpc',     l:'CPC',       v:cpc>0?'$'+cpc.toFixed(2):'—',           color:'#f97316', metaOnly:false},
+    {key:'ctr',     l:'CTR',       v:ctr>0?(ctr*100).toFixed(2)+'%':'—',     color:'#22c55e', metaOnly:false},
+    {key:'cart',    l:'加到購物車',v:cart>0?Math.round(cart)+'':'—',          color:'#8b5cf6', metaOnly:false},
+    {key:'checkout',l:'開始結帳',  v:co>0?Math.round(co)+'':'—',             color:'#ec4899', metaOnly:false},
+    {key:'store',   l:'門市資訊',  v:store>0?Math.round(store)+'':'—',       color:'#f59e0b', metaOnly:true},
+  ].filter(m=>AP==='meta'||!m.metaOnly);
+
+  // 預設選前兩個有值的指標
+  if(!AD_METRIC_SELECTED.size)
+    metrics.filter(m=>m.v!=='—').slice(0,2).forEach(m=>AD_METRIC_SELECTED.add(m.key));
+
+  document.getElementById('adMetrics').innerHTML=metrics.map(m=>{
+    const on=AD_METRIC_SELECTED.has(m.key);
+    return `<div onclick="toggleAdMetricCard('${m.key}')" style="cursor:pointer;padding:12px 14px;border-radius:var(--rl);border:2px solid ${on?m.color:'var(--bd)'};background:${on?m.color+'12':'var(--sf)'};transition:all .15s;position:relative;overflow:hidden">
+      ${on?`<div style="position:absolute;top:0;left:0;right:0;height:3px;background:${m.color}"></div>`:''}
+      <div style="font-size:11px;color:${on?m.color:'var(--tx3)'};font-weight:${on?700:500};margin-bottom:5px;display:flex;align-items:center;gap:4px">
+        ${on?`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${m.color}"></span>`:''}
+        ${m.l}
+      </div>
+      <div style="font-size:22px;font-weight:700;letter-spacing:-.03em;color:${on?m.color:'var(--tx)'}">${m.v}</div>
+    </div>`;
+  }).join('');
+
+  renderAdMetricTrendChart(metrics);
 }
 
-let SPARK_ACTIVE=null;
-async function toggleAdSparkline(key){
-  // 切換：點同一個關閉，點不同的切換
-  const prev=SPARK_ACTIVE;
-  // 關閉所有 sparkline
-  document.querySelectorAll('[id^="spark-"]').forEach(c=>{
-    c.style.display='none';
-    const mc=c.closest('.mc');if(mc)mc.style.background='';
-  });
-  if(prev===key){SPARK_ACTIVE=null;return;}
-  SPARK_ACTIVE=key;
+async function toggleAdMetricCard(key){
+  const rows=document.getElementById('adMetrics').__rows||[];
+  if(AD_METRIC_SELECTED.has(key)){
+    if(AD_METRIC_SELECTED.size<=1)return;
+    AD_METRIC_SELECTED.delete(key);
+  } else {
+    if(AD_METRIC_SELECTED.size>=2){
+      const first=[...AD_METRIC_SELECTED][0];
+      AD_METRIC_SELECTED.delete(first);
+    }
+    AD_METRIC_SELECTED.add(key);
+  }
+  AD_METRIC_ALL_DATA=null; // 清快取讓重撈
+  renderAdMetrics(rows);
+}
 
-  // 撈全年資料
-  const allData=await (async()=>{
-    try{const r=await fetch(`${SB_URL}/rest/v1/ad_data?brand=eq.${BRAND}&year=eq.${CY}&platform=eq.${AP}&order=month.asc`,{headers:SBR});if(r.ok)return await r.json();return[];}catch(e){return[];}
-  })();
+async function renderAdMetricTrendChart(metrics){
+  const chartEl=document.getElementById('ad-metric-trend-chart');
+  if(!chartEl)return;
 
-  const months=allData.filter(r=>r.data&&r.data.rows&&r.data.rows.length);
-  if(!months.length){showStatus('沒有跨月資料');SPARK_ACTIVE=null;return;}
+  if(!AD_METRIC_ALL_DATA){
+    try{
+      const r=await fetch(`${SB_URL}/rest/v1/ad_data?brand=eq.${BRAND}&year=eq.${CY}&platform=eq.${AP}&order=month.asc`,{headers:SBR});
+      AD_METRIC_ALL_DATA=r.ok?await r.json():[];
+    }catch(e){AD_METRIC_ALL_DATA=[];}
+  }
+  const months=AD_METRIC_ALL_DATA.filter(r=>r.data&&r.data.rows&&r.data.rows.length);
+  if(months.length<2){chartEl.style.display='none';return;}
+  chartEl.style.display='block';
 
-  // 計算每月該指標的加總
   const CALCS={
     spend:rows=>rows.reduce((s,r)=>s+(r.spend||0),0),
     roas:rows=>{let sp=0,rev=0;rows.forEach(r=>{sp+=r.spend||0;if(r.roas>0)rev+=r.roas*r.spend;});return sp>0?rev/sp:0;},
-    cpc:rows=>{let cks=0,sp=0,cs=0,cw=0;rows.forEach(r=>{cks+=r.clicks||0;sp+=r.spend||0;if(r.cpc>0&&r.spend>0){cs+=r.cpc*r.spend;cw+=r.spend;}});return cks>0?sp/cks:(cw>0?cs/cw:0);},
+    cpc:rows=>{let sp=0,cs=0,cw=0,cks=0;rows.forEach(r=>{sp+=r.spend||0;cks+=r.clicks||0;if(r.cpc>0&&r.spend>0){cs+=r.cpc*r.spend;cw+=r.spend;}});return cks>0?sp/cks:(cw>0?cs/cw:0);},
     ctr:rows=>{let ci=0,ck=0,cs=0,cw=0;rows.forEach(r=>{ci+=r.impressions||0;ck+=r.clicks||0;if(r.ctr>0&&r.spend>0){cs+=r.ctr*r.spend;cw+=r.spend;}});return ci>0?ck/ci:(cw>0?cs/cw:0);},
     cart:rows=>rows.reduce((s,r)=>s+(r.cart||0),0),
     checkout:rows=>rows.reduce((s,r)=>s+(r.checkout||0),0),
     store:rows=>rows.reduce((s,r)=>s+(r.store||0),0),
   };
-  const fmts={spend:v=>'$'+Math.round(v).toLocaleString(),roas:v=>v.toFixed(2)+'x',cpc:v=>'$'+v.toFixed(2),ctr:v=>(v*100).toFixed(2)+'%',cart:v=>Math.round(v)+'',checkout:v=>Math.round(v)+'',store:v=>Math.round(v)+''};
+  const FMTS={spend:v=>'$'+Math.round(v).toLocaleString(),roas:v=>v.toFixed(2)+'x',cpc:v=>'$'+v.toFixed(2),ctr:v=>(v*100).toFixed(2)+'%',cart:v=>Math.round(v)+'',checkout:v=>Math.round(v)+'',store:v=>Math.round(v)+''};
 
   const labels=Array.from({length:12},(_,i)=>MZ[i]);
-  const data=Array.from({length:12},(_,m)=>{
-    const mo=months.find(r=>r.month===m);
-    return mo?(CALCS[key]?.(mo.data.rows)||0):null;
+  const selected=[...AD_METRIC_SELECTED];
+  const datasets=selected.map((key,idx)=>{
+    const m=metrics.find(x=>x.key===key);
+    const color=m?.color||CC[idx];
+    return {
+      label:m?.l||key,
+      data:Array.from({length:12},(_,mi)=>{
+        const mo=months.find(r=>r.month===mi);
+        return mo?(CALCS[key]?.(mo.data.rows)??null):null;
+      }),
+      borderColor:color,
+      backgroundColor:color+'18',
+      tension:.35,pointRadius:4,pointHoverRadius:6,
+      fill:selected.length===1,spanGaps:true,
+      yAxisID:idx===1?'y2':'y',
+      _fmt:FMTS[key],
+    };
   });
 
-  const canvas=document.getElementById(`spark-${key}`);
-  if(!canvas)return;
-  canvas.style.display='block';
-  canvas.closest('.mc').style.background='var(--sf2)';
-
-  // 銷毀舊 chart
-  if(CHARTS[`spark-${key}`]){CHARTS[`spark-${key}`].destroy();delete CHARTS[`spark-${key}`];}
-  canvas.width=canvas.offsetWidth;canvas.height=36;
-
-  CHARTS[`spark-${key}`]=new Chart(canvas,{
-    type:'line',
-    data:{
-      labels,
-      datasets:[{
-        data,
-        borderColor:'var(--ac)',
-        backgroundColor:'transparent',
-        tension:.35,pointRadius:2,pointHoverRadius:4,spanGaps:true,borderWidth:1.5,
-      }]
-    },
+  killChart('ad-metric-trend');
+  chartEl.innerHTML='<canvas id="c-ad-metric-trend"></canvas>';
+  CHARTS['ad-metric-trend']=new Chart(document.getElementById('c-ad-metric-trend'),{
+    type:'line',data:{labels,datasets},
     options:{
-      responsive:false,maintainAspectRatio:false,
+      responsive:true,maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
       plugins:{
-        legend:{display:false},
-        tooltip:{callbacks:{label:ctx=>fmts[key]?.(ctx.raw||0)||'—'}}
+        legend:{labels:{font:{size:11},boxWidth:12,padding:10,usePointStyle:true}},
+        tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.dataset._fmt?ctx.dataset._fmt(ctx.raw):ctx.raw)}}
       },
-      scales:{x:{display:false},y:{display:false}}
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11}}},
+        y:{position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:10},callback:v=>FMTS[selected[0]]?.(v)||v}},
+        y2:{display:selected.length>1,position:'right',grid:{drawOnChartArea:false},ticks:{font:{size:10},callback:v=>FMTS[selected[1]]?.(v)||v}},
+      }
     }
   });
 }
+
 let AD_CHART_ROWS=[];
 let AD_CHART_METRIC='roas';
 
