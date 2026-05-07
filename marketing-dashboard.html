@@ -1167,7 +1167,7 @@ window.handleAdUpload=async function(e){
         const wb=XLSX.read(ev.target.result,{type:'array'});
         const result=parseCriteo(wb);
         rows=result.rows;
-        const ok=await dbUpsert('ad_data',{year:CY,month:CM,platform:AP,data:{rows,findings:result.findings,_fn:f.name}});
+        const ok=await dbUpsert('ad_data',{year:CY,month:CM,platform:AP,data:{rows,findings:result.findings,_dailyTotal:result._dailyTotal,_fn:f.name}});
         if(ok){setSyncStatus('ok','雲端已連線 ☁️');showStatus(`✓ 載入成功：${rows.length} 筆廣告`);}
         else{setSyncStatus('err','儲存失敗');showStatus('❌ 儲存失敗',4000);}
         renderAd();
