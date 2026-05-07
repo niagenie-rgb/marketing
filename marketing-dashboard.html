@@ -1197,7 +1197,7 @@ async function renderAd(){
   const ua=document.getElementById('ad-uarea'),ub=document.getElementById('ad-ubadge'),un=document.getElementById('ad-uname');
   if(d&&d.rows&&d.rows.length){
     if(!IS_READONLY){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';}
-    renderAdMetrics(d.rows);renderAdCharts(d.rows);renderAdTable(d.rows,d);
+    renderAdMetrics(d.rows, d);renderAdCharts(d.rows);renderAdTable(d.rows,d);
   } else {
     if(!IS_READONLY){ua.classList.remove('loaded');ub.style.display='none';const L={meta:'支援 .xlsx',criteo:'支援 .xlsx',google:'支援 .csv/.xlsx'};un.textContent=L[AP];}
     clearAd();
@@ -1215,12 +1215,37 @@ function clearAd(){
   document.getElementById('cw2').innerHTML='<div class="empty"><div class="ico">📈</div>上傳報表後顯示</div>';
   killChart('c1');killChart('c2');
 }
-let AD_METRIC_SELECTED=new Set();
-let AD_METRIC_ALL_DATA=null;
-
-function renderAdMetrics(rows){
+function renderAdMetrics(rows, dataObj){
   // 儲存 rows 供切換指標時重用
   document.getElementById('adMetrics').__rows=rows;
+  document.getElementById('adMetrics').__dataObj=dataObj;
+
+  // Criteo：優先使用 Daily 頁籤總計
+  if(AP==='criteo'&&dataObj?._dailyTotal){
+    const dt=dataObj._dailyTotal;
+    const metrics=[
+      {key:'spend',   l:'花費(TWD)', v:'$'+Math.round(dt.spend).toLocaleString(),    color:'#3b82f6', metaOnly:false},
+      {key:'roas',    l:'ROAS',      v:dt.roas>0?dt.roas.toFixed(2)+'x':'—',         color:'#ef4444', metaOnly:false},
+      {key:'cpc',     l:'CPC',       v:dt.cpc>0?'$'+dt.cpc.toFixed(2):'—',           color:'#f97316', metaOnly:false},
+      {key:'ctr',     l:'CTR',       v:dt.ctr>0?(dt.ctr*100).toFixed(2)+'%':'—',     color:'#22c55e', metaOnly:false},
+      {key:'displays',l:'曝光',      v:dt.displays>0?fmtN(dt.displays):'—',           color:'#8b5cf6', metaOnly:false},
+      {key:'clicks',  l:'點擊',      v:dt.clicks>0?fmtN(dt.clicks):'—',              color:'#ec4899', metaOnly:false},
+    ];
+    if(!AD_METRIC_SELECTED.size)
+      metrics.filter(m=>m.v!=='—').slice(0,2).forEach(m=>AD_METRIC_SELECTED.add(m.key));
+    document.getElementById('adMetrics').innerHTML=metrics.map(m=>{
+      const on=AD_METRIC_SELECTED.has(m.key);
+      return `<div onclick="toggleAdMetricCard('${m.key}')" style="cursor:pointer;padding:12px 14px;border-radius:var(--rl);border:2px solid ${on?m.color:'var(--bd)'};background:${on?m.color+'12':'var(--sf)'};transition:all .15s;position:relative;overflow:hidden">
+        ${on?`<div style="position:absolute;top:0;left:0;right:0;height:3px;background:${m.color}"></div>`:''}
+        <div style="font-size:11px;color:${on?m.color:'var(--tx3)'};font-weight:${on?700:500};margin-bottom:5px;display:flex;align-items:center;gap:4px">
+          ${on?`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${m.color}"></span>`:''}${m.l}
+        </div>
+        <div style="font-size:22px;font-weight:700;letter-spacing:-.03em;color:${on?m.color:'var(--tx)'}">${m.v}</div>
+      </div>`;
+    }).join('');
+    renderAdMetricTrendChart(metrics);
+    return;
+  }
   let sp=0,cart=0,co=0,store=0,totalRevenue=0,totalClicks=0,totalImp=0;
   rows.forEach(r=>{
     sp+=r.spend||0;cart+=r.cart||0;co+=r.checkout||0;store+=r.store||0;
@@ -1264,6 +1289,7 @@ function renderAdMetrics(rows){
 
 async function toggleAdMetricCard(key){
   const rows=document.getElementById('adMetrics').__rows||[];
+  const dataObj=document.getElementById('adMetrics').__dataObj||null;
   if(AD_METRIC_SELECTED.has(key)){
     if(AD_METRIC_SELECTED.size<=1)return;
     AD_METRIC_SELECTED.delete(key);
@@ -1271,7 +1297,7 @@ async function toggleAdMetricCard(key){
     AD_METRIC_SELECTED.add(key);
   }
   AD_METRIC_ALL_DATA=null;
-  renderAdMetrics(rows);
+  renderAdMetrics(rows, dataObj);
 }
 
 async function renderAdMetricTrendChart(metrics){
@@ -1607,6 +1633,30 @@ function parseMeta(wb){
 }
 
 function parseCriteo(wb){
+  // ── 從 Daily 頁籤讀取總計（最準確）──
+  let totalSpend=0,totalDisplays=0,totalClicks=0,totalRoas=0,totalCpc=0,totalCtr=0;
+  const dailyName=wb.SheetNames.find(n=>n==='Daily');
+  if(dailyName){
+    const dailyArr=XLSX.utils.sheet_to_json(wb.Sheets[dailyName],{header:1,defval:''});
+    const dHdrs=(dailyArr[0]||[]).map(v=>String(v).trim());
+    const iDDisplays=dHdrs.findIndex(h=>h.includes('Displays'));
+    const iDClicks=dHdrs.findIndex(h=>h.includes('Clicks'));
+    const iDCtr=dHdrs.findIndex(h=>h.includes('CTR'));
+    const iDCpc=dHdrs.findIndex(h=>h.includes('CPC'));
+    const iDCost=dHdrs.findIndex(h=>h==='Cost'||h===' Cost');
+    const iDRoas=dHdrs.findIndex(h=>h.includes('ROAS'));
+    // 找總計列
+    const totalRow=dailyArr.slice(1).find(r=>String(r[0]).trim()==='總計');
+    if(totalRow){
+      totalSpend=parseFloat(totalRow[iDCost])||0;
+      totalDisplays=parseFloat(totalRow[iDDisplays])||0;
+      totalClicks=parseFloat(totalRow[iDClicks])||0;
+      totalCtr=parseFloat(totalRow[iDCtr])||0;
+      totalCpc=parseFloat(totalRow[iDCpc])||0;
+      totalRoas=parseFloat(totalRow[iDRoas])||0;
+    }
+  }
+
   // ── 第一層：Ad set 層級（從 Download 頁籤 group by Ad set）──
   const dlName=wb.SheetNames.find(n=>n==='Download')||wb.SheetNames[0];
   const dlWs=wb.Sheets[dlName];
@@ -1619,8 +1669,8 @@ function parseCriteo(wb){
   const iCost=dlHdrs.findIndex(h=>h==='Cost');
   const iRevenue=dlHdrs.findIndex(h=>h.includes('Revenue'));
 
-  const adsetMap={};  // Ad set 加總
-  const adMap={};     // Ad set → Ad 明細
+  const adsetMap={};
+  const adMap={};
 
   if(iAdset>=0){
     for(let i=1;i<dlArr.length;i++){
@@ -1631,14 +1681,12 @@ function parseCriteo(wb){
       const cost=parseFloat(r[iCost])||0;
       if(!cost)continue;
 
-      // Ad set 層加總
       if(!adsetMap[adset])adsetMap[adset]={name:adset,spend:0,displays:0,clicks:0,revenue:0};
       adsetMap[adset].spend+=cost;
       adsetMap[adset].displays+=parseFloat(r[iDisplays])||0;
       adsetMap[adset].clicks+=parseFloat(r[iClicks])||0;
       adsetMap[adset].revenue+=parseFloat(r[iRevenue])||0;
 
-      // Ad 明細（按 adset+ad key 加總）
       if(ad){
         const key=adset+'|||'+ad;
         if(!adMap[key])adMap[key]={adset,name:ad,spend:0,displays:0,clicks:0,revenue:0};
@@ -1650,7 +1698,6 @@ function parseCriteo(wb){
     }
   }
 
-  // 組合 Ad set 層結果，並掛上底下的 ads 陣列
   const adRows=Object.values(adMap).map(a=>({
     adset:a.adset,name:a.name,spend:a.spend,
     roas:a.spend>0&&a.revenue>0?a.revenue/a.spend:0,
@@ -1667,7 +1714,7 @@ function parseCriteo(wb){
       cpc:a.clicks>0?a.spend/a.clicks:0,
       ctr:a.displays>0?a.clicks/a.displays:0,
       displays:Math.round(a.displays),clicks:Math.round(a.clicks),
-      ads  // 素材明細
+      ads
     };
   }).filter(r=>r.spend>0).sort((a,b)=>b.spend-a.spend);
 
@@ -1688,7 +1735,13 @@ function parseCriteo(wb){
     }
   }
 
-  return {rows,findings};
+  // 將 Daily 總計注入 rows（作為第一筆用於 renderAdMetrics 計算）
+  // 用 _dailyTotal 標記，讓 renderAdMetrics 優先使用
+  return {rows, findings, _dailyTotal:{
+    spend:totalSpend, displays:Math.round(totalDisplays),
+    clicks:Math.round(totalClicks), cpc:totalCpc,
+    ctr:totalCtr, roas:totalRoas
+  }};
 }
 
 function parseGoogleCsv(text){
