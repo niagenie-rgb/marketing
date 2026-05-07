@@ -301,12 +301,14 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
         <input type="file" class="ufile" id="ga-acq-file" accept=".csv,.xlsx" onchange="handleGaFile(event,'acq')">
       </div>
     </div>
-    <div class="kgrid">
-      <div class="kc"><div class="kc-l">活躍使用者</div><div class="kc-v" id="gk-u">—</div><div class="kc-s" id="gk-u-s"></div></div>
-      <div class="kc"><div class="kc-l">新使用者</div><div class="kc-v" id="gk-n">—</div><div class="kc-s" id="gk-n-s"></div></div>
-      <div class="kc"><div class="kc-l">事件計數</div><div class="kc-v" id="gk-e">—</div><div class="kc-s" id="gk-e-s"></div></div>
-      <div class="kc"><div class="kc-l">平均參與時間</div><div class="kc-v" id="gk-t">—</div><div class="kc-s" id="gk-t-s"></div></div>
+    <div class="kgrid" id="ga-kgrid">
+      <div class="kc" id="gkc-u" onclick="toggleGaMetric('u')" style="cursor:pointer"><div class="kc-l">活躍使用者</div><div class="kc-v" id="gk-u">—</div><div class="kc-s" id="gk-u-s"></div></div>
+      <div class="kc" id="gkc-n" onclick="toggleGaMetric('n')" style="cursor:pointer"><div class="kc-l">新使用者</div><div class="kc-v" id="gk-n">—</div><div class="kc-s" id="gk-n-s"></div></div>
+      <div class="kc" id="gkc-e" onclick="toggleGaMetric('e')" style="cursor:pointer"><div class="kc-l">事件計數</div><div class="kc-v" id="gk-e">—</div><div class="kc-s" id="gk-e-s"></div></div>
+      <div class="kc" id="gkc-t" onclick="toggleGaMetric('t')" style="cursor:pointer"><div class="kc-l">平均參與時間</div><div class="kc-v" id="gk-t">—</div><div class="kc-s" id="gk-t-s"></div></div>
     </div>
+    <!-- GA4 跨月趨勢圖 -->
+    <div id="ga-kpi-trend-chart" style="display:none;height:220px;margin:0 0 12px"></div>
     <div class="sec">流量來源</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:1rem">
       <div class="ccrd"><div class="ctitle">來源 / 媒介（活躍使用者）</div><div class="cw-tall" id="ga-src-wrap"><div class="empty"><div class="ico">📡</div>上傳報表數據匯報後顯示</div></div></div>
@@ -945,7 +947,98 @@ async function renderGaMonth(){
   renderGaSources(d?.sources);renderGaPie(d?.sources);
   renderGaChannels(d?.sessions_channels);
   renderGaPages(d?.pages);renderGaAds(d?.gads);renderGaKeywords(d?.keywords);
+  updateGaKpiStyle();
+  renderGaKpiTrendChart();
 }
+
+let GA_METRIC_SELECTED=new Set(['u','n']);
+const GA_METRIC_CFG={
+  u:{l:'活躍使用者',color:'#3b82f6',get:d=>d?.users||0,fmt:v=>fmtN(v)+'人'},
+  n:{l:'新使用者',  color:'#22c55e',get:d=>d?.newUsers||0,fmt:v=>fmtN(v)+'人'},
+  e:{l:'事件計數',  color:'#f97316',get:d=>d?.events||0,fmt:v=>fmtN(v)},
+  t:{l:'參與時間',  color:'#8b5cf6',get:d=>d?.avgTime||0,fmt:v=>v>60?(Math.floor(v/60)+'分'+Math.round(v%60)+'秒'):Math.round(v)+'秒'},
+};
+
+function updateGaKpiStyle(){
+  Object.keys(GA_METRIC_CFG).forEach(key=>{
+    const card=document.getElementById(`gkc-${key}`);if(!card)return;
+    const on=GA_METRIC_SELECTED.has(key);
+    const color=GA_METRIC_CFG[key].color;
+    card.style.border=`2px solid ${on?color:'var(--bd)'}`;
+    card.style.background=on?color+'12':'var(--sf)';
+    card.style.position='relative';
+    // 頂部色條
+    let bar=card.querySelector('.kc-top-bar');
+    if(!bar){bar=document.createElement('div');bar.className='kc-top-bar';bar.style.cssText='position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--rl) var(--rl) 0 0';card.prepend(bar);}
+    bar.style.background=on?color:'transparent';
+    card.querySelector('.kc-l').style.color=on?color:'var(--tx3)';
+    card.querySelector('.kc-v').style.color=on?color:'var(--tx)';
+  });
+}
+
+window.toggleGaMetric=async function(key){
+  if(GA_METRIC_SELECTED.has(key)){
+    if(GA_METRIC_SELECTED.size<=1)return;
+    GA_METRIC_SELECTED.delete(key);
+  } else {
+    GA_METRIC_SELECTED.add(key);
+  }
+  updateGaKpiStyle();
+  await renderGaKpiTrendChart();
+};
+
+async function renderGaKpiTrendChart(){
+  const chartEl=document.getElementById('ga-kpi-trend-chart');
+  if(!chartEl)return;
+  // 撈全年 GA4 資料
+  let allData=[];
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/ga4_data?brand=eq.${BRAND}&year=eq.${CY}&order=month.asc`,{headers:SBR});
+    if(r.ok)allData=await r.json();
+  }catch(e){}
+  const months=allData.filter(r=>r.data);
+  if(months.length<2){chartEl.style.display='none';return;}
+  chartEl.style.display='block';
+
+  const labels=Array.from({length:12},(_,i)=>MZ[i]);
+  const selected=[...GA_METRIC_SELECTED];
+  const datasets=selected.map((key,idx)=>{
+    const cfg=GA_METRIC_CFG[key];
+    return {
+      label:cfg.l,
+      data:Array.from({length:12},(_,mi)=>{
+        const mo=months.find(r=>r.month===mi);
+        return mo?cfg.get(mo.data):null;
+      }),
+      borderColor:cfg.color,
+      backgroundColor:cfg.color+'18',
+      tension:.35,pointRadius:4,pointHoverRadius:6,
+      fill:selected.length===1,spanGaps:true,
+      yAxisID:idx===0?'y':'y2',
+      _fmt:cfg.fmt,
+    };
+  });
+
+  killChart('ga-kpi-trend');
+  chartEl.innerHTML='<canvas id="c-ga-kpi-trend"></canvas>';
+  CHARTS['ga-kpi-trend']=new Chart(document.getElementById('c-ga-kpi-trend'),{
+    type:'line',data:{labels,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{labels:{font:{size:11},boxWidth:12,padding:10,usePointStyle:true}},
+        tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.dataset._fmt?ctx.dataset._fmt(ctx.raw):ctx.raw)}}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11}}},
+        y:{position:'left',grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:10},callback:v=>GA_METRIC_CFG[selected[0]]?.fmt(v)||v}},
+        y2:{display:selected.length>1,position:'right',grid:{drawOnChartArea:false},ticks:{font:{size:10},callback:v=>GA_METRIC_CFG[selected[1]]?.fmt(v)||v}},
+      }
+    }
+  });
+}
+
 
 function mkBar(wrapId,cid,labels,vals,unit){
   document.getElementById(wrapId).innerHTML=`<canvas id="${cid}"></canvas>`;killChart(cid);
