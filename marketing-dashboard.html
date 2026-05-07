@@ -1101,8 +1101,13 @@ async function renderAd(){
   const row=await dbGet('ad_data',CY,CM,`&platform=eq.${AP}`);
   const d=row?row.data:null;
   const ua=document.getElementById('ad-uarea'),ub=document.getElementById('ad-ubadge'),un=document.getElementById('ad-uname');
-  if(d&&d.rows&&d.rows.length){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';renderAdMetrics(d.rows);renderAdCharts(d.rows);renderAdTable(d.rows,d);}
-  else{ua.classList.remove('loaded');ub.style.display='none';const L={meta:'支援 .xlsx',criteo:'支援 .xlsx',google:'支援 .csv/.xlsx'};un.textContent=L[AP];clearAd();}
+  if(d&&d.rows&&d.rows.length){
+    if(!IS_READONLY){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';}
+    renderAdMetrics(d.rows);renderAdCharts(d.rows);renderAdTable(d.rows,d);
+  } else {
+    if(!IS_READONLY){ua.classList.remove('loaded');ub.style.display='none';const L={meta:'支援 .xlsx',criteo:'支援 .xlsx',google:'支援 .csv/.xlsx'};un.textContent=L[AP];}
+    clearAd();
+  }
   renderAdTrendSection();
 }
 function clearAd(){
