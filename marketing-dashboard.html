@@ -681,7 +681,7 @@ if(IS_READONLY){
     #ad-file, .mm-del, .rmbtn, .addrow,
     [onclick="addNotesMonth()"], [onclick="delNotesMonth()"],
     [onclick="copyReadonlyLink()"],
-    #proj-modal, #adTrendRangeBtns,
+    #proj-modal,
     .ntool:not(.ntool-view)
     { display:none !important; }
     #notes-editor { pointer-events:none; user-select:text; }
@@ -1117,34 +1117,102 @@ function renderAdMetrics(rows){
   rows.forEach(r=>{
     sp+=r.spend||0;cart+=r.cart||0;co+=r.checkout||0;store+=r.store||0;
     if(r.roas>0&&r.spend>0)totalRevenue+=r.roas*r.spend;
-    totalClicks+=r.clicks||0;
-    totalImp+=r.impressions||0;
+    totalClicks+=r.clicks||0;totalImp+=r.impressions||0;
   });
   const roas=sp>0&&totalRevenue>0?totalRevenue/sp:0;
-  // CPC: 優先用 clicks 計算，沒有 clicks 則用各 row 存好的 cpc 加權平均
   let cpc=totalClicks>0?sp/totalClicks:0;
-  if(!cpc){
-    let cpcSum=0,cpcW=0;
-    rows.forEach(r=>{if(r.cpc>0&&r.spend>0){cpcSum+=r.cpc*r.spend;cpcW+=r.spend;}});
-    if(cpcW>0)cpc=cpcSum/cpcW;
-  }
-  // CTR: prefer impressions-based; fallback to weighted average of stored ctr per row
+  if(!cpc){let cpcSum=0,cpcW=0;rows.forEach(r=>{if(r.cpc>0&&r.spend>0){cpcSum+=r.cpc*r.spend;cpcW+=r.spend;}});if(cpcW>0)cpc=cpcSum/cpcW;}
   let ctr=totalImp>0?totalClicks/totalImp:0;
-  if(!ctr){
-    let ctrSum=0,ctrW=0;
-    rows.forEach(r=>{if(r.ctr>0&&r.spend>0){ctrSum+=r.ctr*r.spend;ctrW+=r.spend;}});
-    if(ctrW>0)ctr=ctrSum/ctrW;
-  }
-  document.getElementById('adMetrics').innerHTML=[
-    {l:'花費 (TWD)',v:'$'+Math.round(sp).toLocaleString()},
-    {l:'ROAS',v:roas>0?roas.toFixed(2)+'x':'—'},
-    {l:'CPC',v:cpc>0?'$'+cpc.toFixed(2):'—'},
-    {l:'CTR',v:ctr>0?(ctr*100).toFixed(2)+'%':'—'},
-    {l:'加到購物車',v:cart>0?Math.round(cart).toLocaleString():'—'},
-    {l:'開始結帳',v:co>0?Math.round(co).toLocaleString():'—'},
-    {l:'門市資訊',v:store>0?Math.round(store).toLocaleString():'—'},
-  ].map(m=>`<div class="mc"><div class="mc-l">${m.l}</div><div class="mc-v">${m.v}</div></div>`).join('');
-  if(AP!=='meta'){const els=document.getElementById('adMetrics').querySelectorAll('.mc');if(els.length>=7)els[6].style.display='none';}
+  if(!ctr){let ctrSum=0,ctrW=0;rows.forEach(r=>{if(r.ctr>0&&r.spend>0){ctrSum+=r.ctr*r.spend;ctrW+=r.spend;}});if(ctrW>0)ctr=ctrSum/ctrW;}
+
+  const metrics=[
+    {l:'花費 (TWD)',v:'$'+Math.round(sp).toLocaleString(),key:'spend',fmt:v=>'$'+Math.round(v).toLocaleString()},
+    {l:'ROAS',v:roas>0?roas.toFixed(2)+'x':'—',key:'roas',fmt:v=>v.toFixed(2)+'x'},
+    {l:'CPC',v:cpc>0?'$'+cpc.toFixed(2):'—',key:'cpc',fmt:v=>'$'+v.toFixed(2)},
+    {l:'CTR',v:ctr>0?(ctr*100).toFixed(2)+'%':'—',key:'ctr',fmt:v=>(v*100).toFixed(2)+'%'},
+    {l:'加到購物車',v:cart>0?Math.round(cart).toLocaleString():'—',key:'cart',fmt:v=>Math.round(v).toLocaleString()},
+    {l:'開始結帳',v:co>0?Math.round(co).toLocaleString():'—',key:'checkout',fmt:v=>Math.round(v).toLocaleString()},
+    {l:'門市資訊',v:store>0?Math.round(store).toLocaleString():'—',key:'store',fmt:v=>Math.round(v).toLocaleString(),metaOnly:true},
+  ];
+  document.getElementById('adMetrics').innerHTML=metrics
+    .filter(m=>AP==='meta'||!m.metaOnly)
+    .map(m=>`<div class="mc" style="cursor:pointer" onclick="toggleAdSparkline('${m.key}')" title="點擊查看跨月趨勢">
+      <div class="mc-l">${m.l}</div>
+      <div class="mc-v">${m.v}</div>
+      <canvas id="spark-${m.key}" style="display:none;width:100%;height:36px;margin-top:6px"></canvas>
+    </div>`).join('');
+  // 儲存 metrics 配置供 sparkline 用
+  document.getElementById('adMetrics').dataset.metrics=JSON.stringify(metrics.map(m=>({key:m.key,fmt:m.fmt.toString()})));
+}
+
+let SPARK_ACTIVE=null;
+async function toggleAdSparkline(key){
+  // 切換：點同一個關閉，點不同的切換
+  const prev=SPARK_ACTIVE;
+  // 關閉所有 sparkline
+  document.querySelectorAll('[id^="spark-"]').forEach(c=>{
+    c.style.display='none';
+    const mc=c.closest('.mc');if(mc)mc.style.background='';
+  });
+  if(prev===key){SPARK_ACTIVE=null;return;}
+  SPARK_ACTIVE=key;
+
+  // 撈全年資料
+  const allData=await (async()=>{
+    try{const r=await fetch(`${SB_URL}/rest/v1/ad_data?brand=eq.${BRAND}&year=eq.${CY}&platform=eq.${AP}&order=month.asc`,{headers:SBR});if(r.ok)return await r.json();return[];}catch(e){return[];}
+  })();
+
+  const months=allData.filter(r=>r.data&&r.data.rows&&r.data.rows.length);
+  if(!months.length){showStatus('沒有跨月資料');SPARK_ACTIVE=null;return;}
+
+  // 計算每月該指標的加總
+  const CALCS={
+    spend:rows=>rows.reduce((s,r)=>s+(r.spend||0),0),
+    roas:rows=>{let sp=0,rev=0;rows.forEach(r=>{sp+=r.spend||0;if(r.roas>0)rev+=r.roas*r.spend;});return sp>0?rev/sp:0;},
+    cpc:rows=>{let cks=0,sp=0,cs=0,cw=0;rows.forEach(r=>{cks+=r.clicks||0;sp+=r.spend||0;if(r.cpc>0&&r.spend>0){cs+=r.cpc*r.spend;cw+=r.spend;}});return cks>0?sp/cks:(cw>0?cs/cw:0);},
+    ctr:rows=>{let ci=0,ck=0,cs=0,cw=0;rows.forEach(r=>{ci+=r.impressions||0;ck+=r.clicks||0;if(r.ctr>0&&r.spend>0){cs+=r.ctr*r.spend;cw+=r.spend;}});return ci>0?ck/ci:(cw>0?cs/cw:0);},
+    cart:rows=>rows.reduce((s,r)=>s+(r.cart||0),0),
+    checkout:rows=>rows.reduce((s,r)=>s+(r.checkout||0),0),
+    store:rows=>rows.reduce((s,r)=>s+(r.store||0),0),
+  };
+  const fmts={spend:v=>'$'+Math.round(v).toLocaleString(),roas:v=>v.toFixed(2)+'x',cpc:v=>'$'+v.toFixed(2),ctr:v=>(v*100).toFixed(2)+'%',cart:v=>Math.round(v)+'',checkout:v=>Math.round(v)+'',store:v=>Math.round(v)+''};
+
+  const labels=Array.from({length:12},(_,i)=>MZ[i]);
+  const data=Array.from({length:12},(_,m)=>{
+    const mo=months.find(r=>r.month===m);
+    return mo?(CALCS[key]?.(mo.data.rows)||0):null;
+  });
+
+  const canvas=document.getElementById(`spark-${key}`);
+  if(!canvas)return;
+  canvas.style.display='block';
+  canvas.closest('.mc').style.background='var(--sf2)';
+
+  // 銷毀舊 chart
+  if(CHARTS[`spark-${key}`]){CHARTS[`spark-${key}`].destroy();delete CHARTS[`spark-${key}`];}
+  canvas.width=canvas.offsetWidth;canvas.height=36;
+
+  CHARTS[`spark-${key}`]=new Chart(canvas,{
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        data,
+        borderColor:'var(--ac)',
+        backgroundColor:'transparent',
+        tension:.35,pointRadius:2,pointHoverRadius:4,spanGaps:true,borderWidth:1.5,
+      }]
+    },
+    options:{
+      responsive:false,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>fmts[key]?.(ctx.raw||0)||'—'}}
+      },
+      scales:{x:{display:false},y:{display:false}}
+    }
+  });
 }
 let AD_CHART_ROWS=[];
 let AD_CHART_METRIC='roas';
