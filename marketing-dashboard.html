@@ -256,16 +256,6 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     </div>
   </div>
 
-  <!-- GA4 趨勢 -->
-  <div class="sec" style="margin-top:1.5rem">GA4 流量趨勢</div>
-  <div class="cgrid">
-    <div class="ccrd"><div class="ctitle">活躍使用者</div><div class="cw" id="ov-ga-users"><div class="empty"><div class="ico">📈</div>載入中…</div></div></div>
-    <div class="ccrd"><div class="ctitle">新使用者</div><div class="cw" id="ov-ga-new"><div class="empty"><div class="ico">📈</div>載入中…</div></div></div>
-  </div>
-  <div class="cgrid">
-    <div class="ccrd"><div class="ctitle">事件計數</div><div class="cw" id="ov-ga-events"><div class="empty"><div class="ico">📈</div>載入中…</div></div></div>
-    <div class="ccrd"><div class="ctitle">各來源趨勢</div><div class="cw" id="ov-ga-src"><div class="empty"><div class="ico">📈</div>載入中…</div></div></div>
-  </div>
 </div>
 
 <!-- GA4 -->
@@ -1192,8 +1182,13 @@ window.handleAdUpload=async function(e){
 };
 
 async function renderAd(){
-  const row=await dbGet('ad_data',CY,CM,`&platform=eq.${AP}`);
-  const d=row?row.data:null;
+  const cacheKey=`ad_${CY}_${CM}_${AP}`;
+  let d=CACHE[cacheKey]?CACHE[cacheKey]:null;
+  if(!d){
+    const row=await dbGet('ad_data',CY,CM,`&platform=eq.${AP}`);
+    d=row?row.data:null;
+    if(d)CACHE[cacheKey]=d;
+  }
   const ua=document.getElementById('ad-uarea'),ub=document.getElementById('ad-ubadge'),un=document.getElementById('ad-uname');
   if(d&&d.rows&&d.rows.length){
     if(!IS_READONLY){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';}
