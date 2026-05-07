@@ -1322,6 +1322,8 @@ async function renderAdMetricTrendChart(metrics){
     cart:rows=>rows.reduce((s,r)=>s+(r.cart||0),0),
     checkout:rows=>rows.reduce((s,r)=>s+(r.checkout||0),0),
     store:rows=>rows.reduce((s,r)=>s+(r.store||0),0),
+    displays:rows=>rows.reduce((s,r)=>s+(r.displays||0),0),
+    clicks:rows=>rows.reduce((s,r)=>s+(r.clicks||0),0),
   };
   const FMTS={spend:v=>'$'+Math.round(v).toLocaleString(),roas:v=>v.toFixed(2)+'x',cpc:v=>'$'+v.toFixed(2),ctr:v=>(v*100).toFixed(2)+'%',cart:v=>Math.round(v)+'',checkout:v=>Math.round(v)+'',store:v=>Math.round(v)+''};
 
@@ -1334,7 +1336,18 @@ async function renderAdMetricTrendChart(metrics){
       label:m?.l||key,
       data:Array.from({length:12},(_,mi)=>{
         const mo=months.find(r=>r.month===mi);
-        return mo?(CALCS[key]?.(mo.data.rows)??null):null;
+        if(!mo)return null;
+        // Criteo：從 _dailyTotal 讀取更準確的數值
+        if(AP==='criteo'&&mo.data._dailyTotal){
+          const dt=mo.data._dailyTotal;
+          if(key==='spend')return dt.spend||null;
+          if(key==='cpc')return dt.cpc||null;
+          if(key==='ctr')return dt.ctr||null;
+          if(key==='roas')return dt.roas||null;
+          if(key==='displays')return dt.displays||null;
+          if(key==='clicks')return dt.clicks||null;
+        }
+        return CALCS[key]?.(mo.data.rows)??null;
       }),
       borderColor:color,
       backgroundColor:color+'18',
