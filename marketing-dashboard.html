@@ -102,13 +102,20 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 .aname{font-weight:500;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rpill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;background:#fef9c3;color:#854d0e}
 .rgood{background:#dcfce7;color:#15803d}
-.uarea{border:1.5px dashed var(--bdm);border-radius:var(--rl);padding:1rem 1.25rem;background:var(--sf);display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;transition:all .2s;margin-bottom:10px}
+.uarea{border:1.5px dashed var(--bdm);border-radius:var(--rl);padding:1rem 1.25rem;background:var(--sf);display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;transition:all .2s;margin-bottom:10px;position:relative;overflow:hidden}
 .uarea:hover{border-color:#888;background:var(--sf2)}
 .uarea.loaded{border-style:solid;border-color:var(--up);background:#f0fdf4}
+.uarea.uploading{border-style:solid;border-color:#6366f1;cursor:not-allowed;pointer-events:none}
+.uarea.upload-ok{border-style:solid;border-color:var(--up);background:#f0fdf4}
+.uarea.upload-err{border-style:solid;border-color:#ef4444;background:#fef2f2}
+.uarea .upload-progress{position:absolute;bottom:0;left:0;height:3px;background:linear-gradient(90deg,#6366f1,#a78bfa);border-radius:2px;transition:width .3s;width:0}
+.uarea.uploading .upload-progress{animation:prog-anim 1.5s ease-in-out infinite}
+@keyframes prog-anim{0%{width:0;left:0}50%{width:60%;left:20%}100%{width:0;left:100%}}
 .uicon{font-size:20px;flex-shrink:0}
 .utxt strong{display:block;font-size:13px;font-weight:600}
 .utxt span{font-size:11px;color:var(--tx3)}
 .ubadge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:#dcfce7;color:#15803d;display:none}
+.ubadge.err{background:#fee2e2;color:#dc2626}
 .ufile{display:none}
 .gantt{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);overflow:hidden}
 .gh{display:flex;background:var(--sf2);border-bottom:1px solid var(--bd)}
@@ -146,6 +153,12 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 #notes-editor img::after{content:'點擊調整大小';}
 #notes-editor ul,#notes-editor ol{padding-left:1.5rem;margin:.5rem 0}
 #notes-editor blockquote{border-left:3px solid var(--bdm);padding-left:1rem;color:var(--tx2);margin:.5rem 0}
+[contenteditable] table{border-collapse:collapse;width:100%;margin:.75rem 0;font-size:13px}
+[contenteditable] th{border:1px solid #cbd5e1;padding:6px 10px;background:#f8fafc;font-weight:600;text-align:left;min-width:80px}
+[contenteditable] td{border:1px solid #cbd5e1;padding:6px 10px;min-width:80px}
+[contenteditable] td:focus,[contenteditable] th:focus{outline:2px solid #6366f1;outline-offset:-1px}
+.tgcell{width:20px;height:20px;border:1px solid var(--bdm);border-radius:2px;cursor:pointer;transition:background .1s,border-color .1s}
+.tgcell.sel{background:#6366f122;border-color:#6366f1}
 .cmb{padding:3px 10px;border-radius:20px;border:1px solid var(--bd);background:transparent;font-size:11px;font-weight:600;cursor:pointer;color:var(--tx2);font-family:inherit;transition:all .15s}
 .cmb.active{background:var(--ac);color:#fff;border-color:var(--ac)}
 .cmb:hover:not(.active){background:var(--sf2)}
@@ -378,6 +391,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     <div class="utxt"><strong id="ad-ulabel">上傳 Meta Excel 報表</strong><span id="ad-uname">支援 .xlsx 格式</span></div>
     <span class="ubadge" id="ad-ubadge">✓ 已載入</span>
     <input type="file" class="ufile" id="ad-file" accept=".xlsx,.csv" onchange="handleAdUpload(event)">
+    <div class="upload-progress"></div>
   </div>
   <div class="mgrid" id="adMetrics">
     <div class="mc"><div class="mc-l">花費 (TWD)</div><div class="mc-v">—</div></div>
@@ -1143,9 +1157,35 @@ window.delGaMonth=async function(y,m){
 };
 
 // ── Ad Section ────────────────────────────────────────────────
+function setUploadState(areaId,state,msg=''){
+  const area=document.getElementById(areaId);
+  const badge=area?area.querySelector('.ubadge'):null;
+  const icon=area?area.querySelector('.uicon'):null;
+  if(!area)return;
+  area.classList.remove('uploading','upload-ok','upload-err','loaded');
+  if(badge){badge.style.display='none';badge.classList.remove('err');}
+  if(state==='loading'){
+    area.classList.add('uploading');
+    if(icon)icon.textContent='⏳';
+    if(badge){badge.style.display='inline-block';badge.textContent='上傳中…';}
+  } else if(state==='ok'){
+    area.classList.add('upload-ok');
+    if(icon)icon.textContent='✅';
+    if(badge){badge.style.display='inline-block';badge.textContent=msg||'✓ 成功';}
+  } else if(state==='err'){
+    area.classList.add('upload-err');
+    if(icon)icon.textContent='❌';
+    if(badge){badge.style.display='inline-block';badge.classList.add('err');badge.textContent=msg||'❌ 失敗';}
+  } else {
+    if(icon)icon.textContent='📁';
+  }
+}
+
 window.handleAdUpload=async function(e){
   const f=e.target.files[0];if(!f)return;
-  showStatus('讀取中…',5000);setSyncStatus('syncing','上傳中…');
+  const areaId='ad-uarea';
+  setUploadState(areaId,'loading');
+  setSyncStatus('syncing','上傳中…');
   const reader=new FileReader();
   reader.onload=async ev=>{
     try{
@@ -1158,8 +1198,8 @@ window.handleAdUpload=async function(e){
         const result=parseCriteo(wb);
         rows=result.rows;
         const ok=await dbUpsert('ad_data',{year:CY,month:CM,platform:AP,data:{rows,findings:result.findings,_dailyTotal:result._dailyTotal,_fn:f.name}});
-        if(ok){setSyncStatus('ok','雲端已連線 ☁️');showStatus(`✓ 載入成功：${rows.length} 筆廣告`);}
-        else{setSyncStatus('err','儲存失敗');showStatus('❌ 儲存失敗',4000);}
+        if(ok){setSyncStatus('ok','雲端已連線 ☁️');setUploadState(areaId,'ok',`✓ ${rows.length} 筆廣告`);showStatus(`✓ 載入成功：${rows.length} 筆廣告`);}
+        else{setSyncStatus('err','儲存失敗');setUploadState(areaId,'err','❌ 儲存失敗');showStatus('❌ 儲存失敗',4000);}
         renderAd();
         return;
       } else {
@@ -1173,10 +1213,15 @@ window.handleAdUpload=async function(e){
         }
       }
       const ok=await dbUpsert('ad_data',{year:CY,month:CM,platform:AP,data:{rows,_fn:f.name}});
-      if(ok){setSyncStatus('ok','雲端已連線 ☁️');showStatus(`✓ 載入成功：${rows.length} 筆廣告`);}
-      else{setSyncStatus('err','儲存失敗');showStatus('❌ 儲存失敗',4000);}
+      if(ok){setSyncStatus('ok','雲端已連線 ☁️');setUploadState(areaId,'ok',`✓ ${rows.length} 筆廣告`);showStatus(`✓ 載入成功：${rows.length} 筆廣告`);}
+      else{setSyncStatus('err','儲存失敗');setUploadState(areaId,'err','❌ 儲存失敗');showStatus('❌ 儲存失敗',4000);}
       renderAd();
-    }catch(err){showStatus('❌ 解析失敗：'+err.message,5000);setSyncStatus('err','錯誤');console.error(err);}
+    }catch(err){
+      setSyncStatus('err','錯誤');
+      setUploadState(areaId,'err','❌ 解析失敗');
+      showStatus('❌ 解析失敗：'+err.message,6000);
+      console.error(err);
+    }
   };
   reader.readAsArrayBuffer(f);e.target.value='';
 };
@@ -2161,6 +2206,14 @@ function buildToolbar(editorId,saveCallback){
     <button class="ntool" onclick="insertMediaE('${editorId}')">▶ 影音</button>
     <button class="ntool" onclick="insertRawHtmlE('${editorId}')">⊞ 嵌入碼</button>
     <button class="ntool" onclick="insertLinkE('${editorId}')">🔗 連結</button>
+    <div style="position:relative;display:inline-flex">
+      <button class="ntool" onclick="togglePicker('tp-${editorId}')" title="插入表格">⊞ 表格</button>
+      <div id="tp-${editorId}" style="display:none;position:absolute;top:34px;left:0;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:10px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:200;min-width:160px">
+        <div style="font-size:10px;color:var(--tx3);margin-bottom:6px">拖曳選擇表格大小</div>
+        <div id="tg-${editorId}" style="display:grid;grid-template-columns:repeat(6,22px);gap:3px">${Array.from({length:36},(_,i)=>{const r=Math.floor(i/6)+1,c=(i%6)+1;return `<div class="tgcell" data-r="${r}" data-c="${c}" data-eid="${editorId}" onclick="insertTableE('${editorId}',${r},${c})"></div>`;}).join('')}</div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:7px;text-align:center" id="tlabel-${editorId}">— 列 × — 欄</div>
+      </div>
+    </div>
     <span style="flex:1"></span>
     <button class="ntool" onclick="${saveCallback}" style="background:var(--ac);color:#fff;border-color:var(--ac);padding:3px 14px">儲存</button>
   </div>`;
@@ -2171,12 +2224,33 @@ function nCmd(cmd,val){nCmdE('notes-editor-monthly',cmd,val);}
 
 function togglePicker(id){
   const el=document.getElementById(id);
-  document.querySelectorAll('[id^="cp-"],[id^="bp-"]').forEach(e=>{if(e.id!==id)e.style.display='none';});
+  document.querySelectorAll('[id^="cp-"],[id^="bp-"],[id^="tp-"]').forEach(e=>{if(e.id!==id)e.style.display='none';});
   el.style.display=el.style.display==='none'?'block':'none';
 }
+document.addEventListener('mouseover',e=>{
+  if(!e.target.classList.contains('tgcell'))return;
+  const r=parseInt(e.target.dataset.r),c=parseInt(e.target.dataset.c),eid=e.target.dataset.eid;
+  const grid=document.getElementById('tg-'+eid);
+  if(!grid)return;
+  grid.querySelectorAll('.tgcell').forEach(cell=>{
+    cell.classList.toggle('sel',parseInt(cell.dataset.r)<=r&&parseInt(cell.dataset.c)<=c);
+  });
+  const lbl=document.getElementById('tlabel-'+eid);
+  if(lbl)lbl.textContent=`${r} 列 × ${c} 欄`;
+});
+function insertTableE(eid,rows,cols){
+  const th=(i)=>`<th style="border:1px solid #cbd5e1;padding:6px 10px;background:#f8fafc;font-weight:600;text-align:left;min-width:80px">欄 ${i+1}</th>`;
+  const td=()=>`<td style="border:1px solid #cbd5e1;padding:6px 10px;min-width:80px">&nbsp;</td>`;
+  let html=`<table style="border-collapse:collapse;width:100%;margin:.75rem 0;font-size:13px"><thead><tr>${Array.from({length:cols},(_,i)=>th(i)).join('')}</tr></thead><tbody>`;
+  for(let r=1;r<rows;r++)html+=`<tr>${Array.from({length:cols},()=>td()).join('')}</tr>`;
+  html+=`</tbody></table><p></p>`;
+  document.getElementById(eid).focus();
+  document.execCommand('insertHTML',false,html);
+  togglePicker('tp-'+eid);
+}
 document.addEventListener('click',e=>{
-  if(!e.target.closest('[id^="cp-"],[id^="bp-"]')&&!e.target.closest('.ntool'))
-    document.querySelectorAll('[id^="cp-"],[id^="bp-"]').forEach(el=>el.style.display='none');
+  if(!e.target.closest('[id^="cp-"],[id^="bp-"],[id^="tp-"]')&&!e.target.closest('.ntool'))
+    document.querySelectorAll('[id^="cp-"],[id^="bp-"],[id^="tp-"]').forEach(el=>el.style.display='none');
   if(e.target.tagName==='IMG'&&e.target.closest('[contenteditable]')){
     const img=e.target,cur=img.style.width||'50%';
     const nw=prompt(`圖片寬度（目前：${cur}）`,cur);
