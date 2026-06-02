@@ -153,12 +153,19 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 #notes-editor img::after{content:'點擊調整大小';}
 #notes-editor ul,#notes-editor ol{padding-left:1.5rem;margin:.5rem 0}
 #notes-editor blockquote{border-left:3px solid var(--bdm);padding-left:1rem;color:var(--tx2);margin:.5rem 0}
-[contenteditable] table{border-collapse:collapse;width:100%;margin:.75rem 0;font-size:13px}
-[contenteditable] th{border:1px solid #cbd5e1;padding:6px 10px;background:#f8fafc;font-weight:600;text-align:left;min-width:80px}
-[contenteditable] td{border:1px solid #cbd5e1;padding:6px 10px;min-width:80px}
-[contenteditable] td:focus,[contenteditable] th:focus{outline:2px solid #6366f1;outline-offset:-1px}
+[contenteditable] table{border-collapse:collapse;width:100%;margin:.75rem 0;font-size:13px;table-layout:fixed}
+[contenteditable] th{border:1px solid #cbd5e1;padding:6px 10px;background:#f8fafc;font-weight:600;text-align:left;min-width:40px;position:relative;overflow:hidden}
+[contenteditable] td{border:1px solid #cbd5e1;padding:6px 10px;min-width:40px;position:relative;overflow:hidden}
+[contenteditable] td.tbl-active,[contenteditable] th.tbl-active{outline:2px solid #6366f1;outline-offset:-2px}
+[contenteditable] td.col-resize-hover,[contenteditable] th.col-resize-hover{cursor:col-resize}
 .tgcell{width:20px;height:20px;border:1px solid var(--bdm);border-radius:2px;cursor:pointer;transition:background .1s,border-color .1s}
 .tgcell.sel{background:#6366f122;border-color:#6366f1}
+#tbl-toolbar{position:fixed;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:4px 6px;display:none;gap:2px;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:9999;align-items:center;flex-wrap:wrap;max-width:320px}
+#tbl-toolbar button{font-size:11px;padding:3px 8px;border:1px solid var(--bdm);border-radius:5px;background:var(--sf2);color:var(--tx);cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s}
+#tbl-toolbar button:hover{background:var(--ac);color:#fff;border-color:var(--ac)}
+#tbl-toolbar button.del{border-color:#fca5a5;color:#dc2626}
+#tbl-toolbar button.del:hover{background:#ef4444;color:#fff;border-color:#ef4444}
+#tbl-toolbar .tsep2{width:1px;height:16px;background:var(--bdm);margin:0 2px}
 .cmb{padding:3px 10px;border-radius:20px;border:1px solid var(--bd);background:transparent;font-size:11px;font-weight:600;cursor:pointer;color:var(--tx2);font-family:inherit;transition:all .15s}
 .cmb.active{background:var(--ac);color:#fff;border-color:var(--ac)}
 .cmb:hover:not(.active){background:var(--sf2)}
@@ -2930,6 +2937,140 @@ async function renderAdTrendSection(){
   drawAdTrendChart(months);
 }
 
+
+// ── Table Edit: resize + floating toolbar ─────────────────────
+(function(){
+  // 建立浮動 toolbar DOM
+  const tb=document.createElement('div');
+  tb.id='tbl-toolbar';
+  document.body.appendChild(tb);
+
+  let activeCell=null;
+  let resizing=null;
+
+  // ── 顯示/隱藏 toolbar ──
+  function showTb(cell){
+    activeCell=cell;
+    cell.classList.add('tbl-active');
+    const row=cell.parentElement;
+    const table=cell.closest('table');
+    const isHeader=cell.tagName==='TH';
+    tb.innerHTML=`
+      <span style="font-size:10px;color:var(--tx3);padding:0 4px">列</span>
+      <button onclick="_tbl('insAbove')">↑ 上方插入</button>
+      <button onclick="_tbl('insBelow')">↓ 下方插入</button>
+      <button class="del" onclick="_tbl('delRow')">✕ 刪除列</button>
+      <div class="tsep2"></div>
+      <span style="font-size:10px;color:var(--tx3);padding:0 4px">欄</span>
+      <button onclick="_tbl('insLeft')">← 左側插入</button>
+      <button onclick="_tbl('insRight')">→ 右側插入</button>
+      <button class="del" onclick="_tbl('delCol')">✕ 刪除欄</button>
+      <div class="tsep2"></div>
+      <button class="del" onclick="_tbl('delTable')">🗑 刪除表格</button>`;
+    const rect=cell.getBoundingClientRect();
+    tb.style.display='flex';
+    const tbH=36;
+    const top=rect.top>tbH+8?rect.top-tbH-6:rect.bottom+6;
+    tb.style.top=top+'px';
+    tb.style.left=Math.min(rect.left,window.innerWidth-330)+'px';
+  }
+  function hideTb(){
+    tb.style.display='none';
+    if(activeCell){activeCell.classList.remove('tbl-active');activeCell=null;}
+  }
+
+  // ── toolbar 操作 ──
+  window._tbl=function(action){
+    if(!activeCell)return;
+    const cell=activeCell;
+    const row=cell.parentElement;
+    const table=cell.closest('table');
+    const cellIdx=Array.from(row.cells).indexOf(cell);
+    const colCount=row.cells.length;
+
+    if(action==='insAbove'||action==='insBelow'){
+      const newRow=row.cloneNode(true);
+      newRow.querySelectorAll('td,th').forEach(c=>{c.innerHTML='&nbsp;';});
+      if(action==='insAbove')row.parentElement.insertBefore(newRow,row);
+      else row.insertAdjacentElement('afterend',newRow);
+    } else if(action==='delRow'){
+      const tbody=row.parentElement;
+      if(tbody.rows.length<=1&&table.querySelectorAll('tr').length<=1){hideTb();table.remove();return;}
+      row.remove();
+    } else if(action==='insLeft'||action==='insRight'){
+      table.querySelectorAll('tr').forEach(r=>{
+        const ref=r.cells[cellIdx];
+        if(!ref)return;
+        const isH=ref.tagName==='TH';
+        const nc=document.createElement(isH?'th':'td');
+        nc.style.cssText=ref.style.cssText;
+        nc.innerHTML='&nbsp;';
+        if(action==='insLeft')r.insertBefore(nc,ref);
+        else ref.insertAdjacentElement('afterend',nc);
+      });
+    } else if(action==='delCol'){
+      if(colCount<=1){hideTb();table.remove();return;}
+      table.querySelectorAll('tr').forEach(r=>{if(r.cells[cellIdx])r.cells[cellIdx].remove();});
+    } else if(action==='delTable'){
+      hideTb();table.remove();return;
+    }
+    hideTb();
+  };
+
+  // ── 點擊 cell 顯示 toolbar ──
+  document.addEventListener('click',e=>{
+    const cell=e.target.closest('td,th');
+    if(cell&&cell.closest('[contenteditable]')){
+      // 如果是 resize 剛結束，不開 toolbar
+      if(resizing){return;}
+      showTb(cell);
+    } else if(!e.target.closest('#tbl-toolbar')){
+      hideTb();
+    }
+  });
+
+  // ── 欄寬拖曳 ──
+  document.addEventListener('mousemove',e=>{
+    if(resizing){
+      const dx=e.clientX-resizing.startX;
+      const nw=Math.max(40,resizing.startW+dx);
+      resizing.cell.style.width=nw+'px';
+      resizing.cell.style.minWidth=nw+'px';
+      // 同步同欄所有 cell 的寬度
+      const table=resizing.cell.closest('table');
+      const idx=Array.from(resizing.cell.parentElement.cells).indexOf(resizing.cell);
+      if(table)table.querySelectorAll('tr').forEach(r=>{if(r.cells[idx]&&r.cells[idx]!==resizing.cell){r.cells[idx].style.width=nw+'px';r.cells[idx].style.minWidth=nw+'px';}});
+      e.preventDefault();
+      return;
+    }
+    const cell=e.target.closest('td,th');
+    if(cell&&cell.closest('[contenteditable]')){
+      const rect=cell.getBoundingClientRect();
+      const nearRight=rect.right-e.clientX<6;
+      cell.classList.toggle('col-resize-hover',nearRight);
+      cell.style.cursor=nearRight?'col-resize':'';
+    }
+  });
+
+  document.addEventListener('mousedown',e=>{
+    const cell=e.target.closest('td,th');
+    if(cell&&cell.closest('[contenteditable]')){
+      const rect=cell.getBoundingClientRect();
+      if(rect.right-e.clientX<6){
+        resizing={cell,startX:e.clientX,startW:cell.offsetWidth};
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+  });
+
+  document.addEventListener('mouseup',()=>{
+    if(resizing){setTimeout(()=>{resizing=null;},50);}
+  });
+
+  // toolbar 本身點擊不關閉
+  tb.addEventListener('click',e=>e.stopPropagation());
+})();
 
 function drawAdTrendChart(months){
   const CFG={
