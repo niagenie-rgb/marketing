@@ -1765,15 +1765,33 @@ function parseGoogleCsv(text){
   const iSp=hdrs.findIndex(h=>h==='費用'||h==='費用 (TWD)');
   const iIm=hdrs.findIndex(h=>h==='曝光');
   const iCl=hdrs.findIndex(h=>h==='點擊');
-  const iR=hdrs.findIndex(h=>h==='轉換價值/費用');
+  const iCpc=hdrs.findIndex(h=>h==='平均單次點擊出價');
+  const iCtr=hdrs.findIndex(h=>h==='點閱率');
+  const iR=hdrs.findIndex(h=>h==='轉換價值/費用'&&!h.includes('平台'));
+  const iCart=hdrs.findIndex(h=>h==='加入購物車');
+  const iCheckout=hdrs.findIndex(h=>h==='開始結帳');
+  const iStore=hdrs.findIndex(h=>h==='光顧門市');
   const iT=hdrs.findIndex(h=>h.includes('廣告活動類型'));
+  const pct=s=>{s=String(s||'').trim().replace(/"/g,'').replace(/,/g,'');return s.endsWith('%')?parseFloat(s)/100:parseFloat(s)||0;};
   const rows=[];
   for(let i=hIdx+1;i<lines.length;i++){
     const cols=lines[i].split(sep).map(v=>v.trim().replace(/"/g,'').replace(/,/g,''));
     const name=(cols[iN]||'').trim();
     if(!name||name==='廣告活動'||name==='--'||name.startsWith('總計'))continue;
     const spend=parseFloat(cols[iSp])||0;if(!spend)continue;
-    rows.push({name,spend,roas:parseFloat(cols[iR])||0,impressions:parseFloat(cols[iIm])||0,clicks:parseFloat(cols[iCl])||0,type:(cols[iT]||'').trim()});
+    const clicks=parseFloat(cols[iCl])||0;
+    const impressions=parseFloat(cols[iIm])||0;
+    const cpc=iCpc>=0?parseFloat(cols[iCpc])||0:(clicks>0?spend/clicks:0);
+    const ctr=iCtr>=0?pct(cols[iCtr]):(impressions>0?clicks/impressions:0);
+    rows.push({
+      name,spend,
+      roas:parseFloat(cols[iR])||0,
+      impressions,clicks,cpc,ctr,
+      cart:iCart>=0?parseFloat(cols[iCart])||0:0,
+      checkout:iCheckout>=0?parseFloat(cols[iCheckout])||0:0,
+      store:iStore>=0?parseFloat(cols[iStore])||0:0,
+      type:(cols[iT]||'').trim()
+    });
   }
   return rows;
 }
