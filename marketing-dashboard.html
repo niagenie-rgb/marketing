@@ -2966,6 +2966,10 @@ async function renderAdTrendSection(){
       <button onclick="_tbl('insRight')">→ 右側插入</button>
       <button class="del" onclick="_tbl('delCol')">✕ 刪除欄</button>
       <div class="tsep2"></div>
+      <span style="font-size:10px;color:var(--tx3);padding:0 4px">表格</span>
+      <button onclick="_tbl('scaleDown')">− 縮小</button>
+      <button onclick="_tbl('scaleUp')">+ 放大</button>
+      <div class="tsep2"></div>
       <button class="del" onclick="_tbl('delTable')">🗑 刪除表格</button>`;
     const rect=cell.getBoundingClientRect();
     tb.style.display='flex';
@@ -3013,6 +3017,19 @@ async function renderAdTrendSection(){
       table.querySelectorAll('tr').forEach(r=>{if(r.cells[cellIdx])r.cells[cellIdx].remove();});
     } else if(action==='delTable'){
       hideTb();table.remove();return;
+    } else if(action==='scaleDown'||action==='scaleUp'){
+      let s=parseFloat(table.dataset.scale||'1');
+      s=action==='scaleDown'?Math.max(0.4,Math.round((s-0.1)*10)/10):Math.min(1.5,Math.round((s+0.1)*10)/10);
+      table.dataset.scale=s;
+      table.style.width=(s*100)+'%';
+      table.style.fontSize=(13*s).toFixed(1)+'px';
+      // 等比例縮放已設定的欄寬（px）
+      table.querySelectorAll('td,th').forEach(c=>{
+        if(!c.dataset.baseW&&c.style.width)c.dataset.baseW=parseFloat(c.style.width);
+        if(c.dataset.baseW){const nw=(parseFloat(c.dataset.baseW)*s);c.style.width=nw+'px';c.style.minWidth=nw+'px';}
+        c.style.padding=(6*s).toFixed(1)+'px '+(10*s).toFixed(1)+'px';
+      });
+      showTb(cell);return;
     }
     hideTb();
   };
