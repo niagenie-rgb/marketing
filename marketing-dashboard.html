@@ -160,7 +160,9 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 [contenteditable] td.col-resize-hover,[contenteditable] th.col-resize-hover{cursor:col-resize}
 .tgcell{width:20px;height:20px;border:1px solid var(--bdm);border-radius:2px;cursor:pointer;transition:background .1s,border-color .1s}
 .tgcell.sel{background:#6366f122;border-color:#6366f1}
-#tbl-toolbar{position:fixed;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:4px 6px;display:none;gap:2px;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:9999;align-items:center;flex-wrap:wrap;max-width:320px}
+#tbl-toolbar{position:fixed;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:5px 7px;display:none;flex-direction:column;gap:4px;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:9999;max-width:320px}
+#tbl-toolbar .trow{display:flex;align-items:center;gap:3px}
+#tbl-toolbar .tlbl{font-size:10px;color:var(--tx3);width:26px;flex:0 0 26px;text-align:center}
 #tbl-toolbar button{font-size:11px;padding:3px 8px;border:1px solid var(--bdm);border-radius:5px;background:var(--sf2);color:var(--tx);cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s}
 #tbl-toolbar button:hover{background:var(--ac);color:#fff;border-color:var(--ac)}
 #tbl-toolbar button.del{border-color:#fca5a5;color:#dc2626}
@@ -2956,21 +2958,24 @@ async function renderAdTrendSection(){
     const table=cell.closest('table');
     const isHeader=cell.tagName==='TH';
     tb.innerHTML=`
-      <span style="font-size:10px;color:var(--tx3);padding:0 4px">列</span>
-      <button onclick="_tbl('insAbove')">↑ 上方插入</button>
-      <button onclick="_tbl('insBelow')">↓ 下方插入</button>
-      <button class="del" onclick="_tbl('delRow')">✕ 刪除列</button>
-      <div class="tsep2"></div>
-      <span style="font-size:10px;color:var(--tx3);padding:0 4px">欄</span>
-      <button onclick="_tbl('insLeft')">← 左側插入</button>
-      <button onclick="_tbl('insRight')">→ 右側插入</button>
-      <button class="del" onclick="_tbl('delCol')">✕ 刪除欄</button>
-      <div class="tsep2"></div>
-      <span style="font-size:10px;color:var(--tx3);padding:0 4px">表格</span>
-      <button onclick="_tbl('scaleDown')">− 縮小</button>
-      <button onclick="_tbl('scaleUp')">+ 放大</button>
-      <div class="tsep2"></div>
-      <button class="del" onclick="_tbl('delTable')">🗑 刪除表格</button>`;
+      <div class="trow">
+        <span class="tlbl">列</span>
+        <button onclick="_tbl('insAbove')">↑ 上方插入</button>
+        <button onclick="_tbl('insBelow')">↓ 下方插入</button>
+        <button class="del" onclick="_tbl('delRow')">✕ 刪除列</button>
+      </div>
+      <div class="trow">
+        <span class="tlbl">欄</span>
+        <button onclick="_tbl('insLeft')">← 左側插入</button>
+        <button onclick="_tbl('insRight')">→ 右側插入</button>
+        <button class="del" onclick="_tbl('delCol')">✕ 刪除欄</button>
+      </div>
+      <div class="trow">
+        <span class="tlbl">表格</span>
+        <button onclick="_tbl('scaleDown')">− 縮小</button>
+        <button onclick="_tbl('scaleUp')">+ 放大</button>
+        <button class="del" onclick="_tbl('delTable')">🗑 刪除表格</button>
+      </div>`;
     const rect=cell.getBoundingClientRect();
     tb.style.display='flex';
     const tbH=36;
