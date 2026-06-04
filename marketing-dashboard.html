@@ -161,6 +161,23 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 .tgcell{width:20px;height:20px;border:1px solid var(--bdm);border-radius:2px;cursor:pointer;transition:background .1s,border-color .1s}
 .tgcell.sel{background:#6366f122;border-color:#6366f1}
 #tbl-toolbar{position:fixed;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:5px 7px;display:none;flex-direction:column;gap:4px;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:9999;max-width:320px}
+.bg-kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem}
+.bg-kpis .kc{flex:1;min-width:140px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:10px 14px}
+.bg-kpis .kc-l{font-size:11px;color:var(--tx3)}
+.bg-kpis .kc-v{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-top:2px}
+.bgtbl{border-collapse:collapse;font-size:12px;white-space:nowrap;min-width:100%}
+.bgtbl th,.bgtbl td{border:1px solid var(--bd);padding:4px 7px;text-align:right}
+.bgtbl th{background:var(--sf2);font-weight:600;color:var(--tx2);position:sticky;top:0;z-index:1}
+.bgtbl th.lft,.bgtbl td.lft{text-align:left}
+.bgtbl tfoot td{font-weight:700;background:var(--sf2)}
+.bgtbl input,.bgtbl select{width:100%;border:none;background:transparent;font-family:inherit;font-size:12px;color:var(--tx);outline:none;text-align:right;padding:2px}
+.bgtbl td.lft input{text-align:left}
+.bgtbl input:focus,.bgtbl select:focus{background:var(--sf2);border-radius:3px}
+.bgtbl input[readonly]{color:var(--tx3)}
+.bgtbl .mcell{min-width:62px}
+.bgtbl .delx{color:var(--dn);cursor:pointer;font-weight:700;text-align:center}
+.bgbar{height:5px;border-radius:3px;background:var(--bd);overflow:hidden;margin-top:3px}
+.bgbar>span{display:block;height:100%}
 #tbl-toolbar .trow{display:flex;align-items:center;gap:3px}
 #tbl-toolbar .tlbl{font-size:10px;color:var(--tx3);width:26px;flex:0 0 26px;text-align:center}
 #tbl-toolbar button{font-size:11px;padding:3px 8px;border:1px solid var(--bdm);border-radius:5px;background:var(--sf2);color:var(--tx);cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s}
@@ -232,6 +249,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
   <button class="mtab active" data-tab="ga4">GA4 流量</button>
   <button class="mtab" data-tab="ad">廣告成效</button>
   <button class="mtab" data-tab="proj">專案時程</button>
+  <button class="mtab" data-tab="budget">預算管理</button>
   <button class="mtab" data-tab="notes">備注</button>
 </div>
 
@@ -599,7 +617,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
       </div>
 
       <!-- 右側編輯器 -->
-      <div id="prop-editor-wrap" style="display:flex;flex-direction:column;border:1px solid var(--bd);border-radius:var(--rl);overflow:hidden">
+      <div id="prop-editor-wrap" style="display:flex;flex-direction:column;border:1px solid var(--bd);border-radius:var(--rl)">
         <!-- 提案 header -->
         <div style="padding:12px 16px;border-bottom:1px solid var(--bd);background:var(--sf2)" id="prop-header">
           <div style="color:var(--tx3);font-size:13px;text-align:center">選擇或新增提案</div>
@@ -617,6 +635,26 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- 預算管理 -->
+<div class="tab-panel" id="panel-budget">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap">
+    <button class="rbtn" id="bgPrevYear">‹</button>
+    <strong id="bg-year-label" style="font-size:15px;min-width:64px;text-align:center">—</strong>
+    <button class="rbtn" id="bgNextYear">›</button>
+    <span style="color:var(--tx3);font-size:12px">年度行銷預算與支出控管</span>
+    <div style="flex:1"></div>
+    <button class="btn-p" onclick="addBudgetRow()" style="padding:6px 14px;font-size:13px">＋ 新增項目</button>
+    <button class="btn-p" onclick="saveBudget()" id="bg-save-btn" style="padding:6px 16px;font-size:13px">儲存</button>
+  </div>
+  <div id="bg-kpis" class="bg-kpis"></div>
+  <div style="overflow-x:auto;border:1px solid var(--bd);border-radius:var(--rl);background:var(--sf)">
+    <table class="bgtbl" id="bg-table"></table>
+  </div>
+  <div style="font-size:11px;color:var(--tx3);margin-top:8px" id="bg-hint">
+    💡 「自動帶入」選 Meta / Criteo / Google 時，該列 12 個月會自動抓對應平台的廣告花費（唯讀）；選「手動」可自行輸入金額。
   </div>
 </div>
 
@@ -795,6 +833,7 @@ document.querySelectorAll('.mtab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');document.getElementById('panel-'+t.dataset.tab).classList.add('active');
   if(t.dataset.tab==='overview')renderOverview();
+  if(t.dataset.tab==='budget')renderBudgetTab();
 }));
 document.getElementById('prevBtn').onclick=()=>{CM--;if(CM<0){CM=11;CY--;}renderAll()};
 document.getElementById('nextBtn').onclick=()=>{CM++;if(CM>11){CM=0;CY++;}renderAll()};
@@ -2178,7 +2217,7 @@ let PROP_ID=null,propChanged=false,PROP_ALL=[],PROP_CAT_FILTER='all';
 function buildToolbar(editorId,saveCallback){
   const COLORS=['#000000','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#6b7280','#92400e','#1e40af','#ffffff'];
   const BGHLS=['#fef9c3','#dcfce7','#dbeafe','#fce7f3','#ede9fe','#fee2e2','#ffedd5','transparent'];
-  return `<div style="background:var(--sf);padding:6px 10px;display:flex;gap:2px;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:200;border-bottom:1px solid var(--bd);box-shadow:0 2px 6px rgba(0,0,0,.07)">
+  return `<div style="background:var(--sf);padding:6px 10px;display:flex;gap:2px;flex-wrap:wrap;align-items:center;position:-webkit-sticky;position:sticky;top:0;z-index:400;border-bottom:1px solid var(--bd);box-shadow:0 2px 6px rgba(0,0,0,.07)">
     <button class="ntool" onclick="nCmdE('${editorId}','bold')" title="粗體"><b>B</b></button>
     <button class="ntool" onclick="nCmdE('${editorId}','italic')" title="斜體"><i>I</i></button>
     <button class="ntool" onclick="nCmdE('${editorId}','underline')" title="底線"><u>U</u></button>
@@ -3223,6 +3262,116 @@ async function renderAll(){
   document.getElementById('ga-m-sel').value=CM;
   renderGaMonth();renderAd();renderGantt();renderNotes();
 }
+
+// ── 預算管理 ──────────────────────────────────────────────────
+let BG_YEAR=new Date().getFullYear();
+let BG_ITEMS=[];               // {id,cat,content,link,annual,manual:[12]}
+let BG_PLAT={meta:[],criteo:[],google:[]};  // 每平台 12 個月自動花費
+let BG_LOADED_YEAR=null;
+const BG_PLAT_LABEL={'':'手動',meta:'Meta',criteo:'Criteo',google:'Google'};
+const fmtMoney=n=>'$'+Math.round(n||0).toLocaleString();
+
+function bgNewId(){return 'b'+Date.now()+Math.random().toString(36).slice(2,6);}
+
+async function renderBudgetTab(){
+  document.getElementById('bg-year-label').textContent=BG_YEAR;
+  // 撈該年度全部廣告資料，整理各平台 12 個月花費
+  BG_PLAT={meta:Array(12).fill(0),criteo:Array(12).fill(0),google:Array(12).fill(0)};
+  const all=await dbGetAll('ad_data',BG_YEAR);
+  (all||[]).forEach(rec=>{
+    const p=rec.platform,m=rec.month;
+    if(BG_PLAT[p]&&m>=0&&m<12){BG_PLAT[p][m]=ovSumRows(rec?.data?.rows).spend||0;}
+  });
+  // 撈預算項目（同年度只撈一次）
+  if(BG_LOADED_YEAR!==BG_YEAR){
+    const rec=await dbGet('budget',BG_YEAR,0);
+    BG_ITEMS=(rec&&rec.data&&Array.isArray(rec.data.items))?rec.data.items:[];
+    BG_ITEMS.forEach(it=>{if(!Array.isArray(it.manual))it.manual=Array(12).fill(0);while(it.manual.length<12)it.manual.push(0);});
+    BG_LOADED_YEAR=BG_YEAR;
+  }
+  renderBudgetTable();
+}
+
+function bgRowMonthly(it){
+  return it.link?BG_PLAT[it.link]:it.manual;
+}
+
+function renderBudgetTable(){
+  const ro=typeof IS_READONLY!=='undefined'&&IS_READONLY;
+  const t=document.getElementById('bg-table');
+  let h='<thead><tr>'
+    +'<th class="lft">分類</th><th class="lft">行銷內容</th><th>自動帶入</th><th>年度預算</th>'
+    +MZ.map(m=>`<th>${m}</th>`).join('')
+    +'<th>已用</th><th>剩餘</th><th>已用%</th>'+(ro?'':'<th></th>')+'</tr></thead><tbody>';
+  let colTotals=Array(12).fill(0),sumAnnual=0,sumUsed=0;
+  if(!BG_ITEMS.length){
+    h+=`<tr><td class="lft" colspan="${ro?19:20}" style="text-align:center;color:var(--tx3);padding:14px">尚無項目，點右上「＋ 新增項目」開始</td></tr>`;
+  }
+  BG_ITEMS.forEach((it,ri)=>{
+    const mon=bgRowMonthly(it);
+    const used=mon.reduce((a,b)=>a+(+b||0),0);
+    const remain=(+it.annual||0)-used;
+    const pct=it.annual>0?used/it.annual*100:0;
+    sumAnnual+=(+it.annual||0);sumUsed+=used;
+    mon.forEach((v,i)=>colTotals[i]+=(+v||0));
+    const auto=!!it.link;
+    const pctColor=pct>100?'var(--dn)':pct>=80?'#f59e0b':'#22c55e';
+    h+=`<tr data-ri="${ri}">`
+      +`<td class="lft"><input value="${(it.cat||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="bgEdit(${ri},'cat',this.value)" placeholder="分類"></td>`
+      +`<td class="lft"><input value="${(it.content||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="bgEdit(${ri},'content',this.value)" placeholder="行銷內容"></td>`
+      +`<td>${ro?BG_PLAT_LABEL[it.link||'']:`<select onchange="bgEdit(${ri},'link',this.value)"><option value=""${!auto?' selected':''}>手動</option><option value="meta"${it.link==='meta'?' selected':''}>Meta</option><option value="criteo"${it.link==='criteo'?' selected':''}>Criteo</option><option value="google"${it.link==='google'?' selected':''}>Google</option></select>`}</td>`
+      +`<td><input type="number" value="${it.annual||''}" ${ro?'readonly':''} onchange="bgEdit(${ri},'annual',this.value)" placeholder="0"></td>`
+      +mon.map((v,i)=>`<td class="mcell"><input type="number" value="${v||''}" ${(auto||ro)?'readonly':''} ${auto?'title="自動帶入 '+BG_PLAT_LABEL[it.link]+' 花費"':''} onchange="bgEditMonth(${ri},${i},this.value)" placeholder="0"></td>`).join('')
+      +`<td>${fmtMoney(used)}</td>`
+      +`<td style="color:${remain<0?'var(--dn)':'inherit'}">${fmtMoney(remain)}</td>`
+      +`<td style="color:${pctColor};font-weight:600">${it.annual>0?pct.toFixed(0)+'%':'—'}<div class="bgbar"><span style="width:${Math.min(100,pct)}%;background:${pctColor}"></span></div></td>`
+      +(ro?'':`<td class="delx" onclick="bgDelRow(${ri})" title="刪除">✕</td>`)
+      +`</tr>`;
+  });
+  h+='</tbody><tfoot><tr><td class="lft">合計</td><td class="lft"></td><td></td><td>'+fmtMoney(sumAnnual)+'</td>'
+    +colTotals.map(v=>`<td>${fmtMoney(v)}</td>`).join('')
+    +'<td>'+fmtMoney(sumUsed)+'</td><td>'+fmtMoney(sumAnnual-sumUsed)+'</td><td>'+(sumAnnual>0?(sumUsed/sumAnnual*100).toFixed(0)+'%':'—')+'</td>'+(ro?'':'<td></td>')+'</tr></tfoot>';
+  t.innerHTML=h;
+  // KPI
+  const autoTotal=BG_ITEMS.filter(i=>i.link).reduce((a,it)=>a+bgRowMonthly(it).reduce((x,y)=>x+(+y||0),0),0);
+  document.getElementById('bg-kpis').innerHTML=
+    `<div class="kc"><div class="kc-l">年度總預算</div><div class="kc-v">${fmtMoney(sumAnnual)}</div></div>`
+   +`<div class="kc"><div class="kc-l">已用支出</div><div class="kc-v">${fmtMoney(sumUsed)}</div></div>`
+   +`<div class="kc"><div class="kc-l">剩餘預算</div><div class="kc-v" style="color:${sumAnnual-sumUsed<0?'var(--dn)':'inherit'}">${fmtMoney(sumAnnual-sumUsed)}</div></div>`
+   +`<div class="kc"><div class="kc-l">整體已用比例</div><div class="kc-v">${sumAnnual>0?(sumUsed/sumAnnual*100).toFixed(0)+'%':'—'}</div></div>`
+   +`<div class="kc"><div class="kc-l">廣告自動帶入</div><div class="kc-v">${fmtMoney(autoTotal)}</div></div>`;
+}
+
+function bgEdit(ri,key,val){
+  const it=BG_ITEMS[ri];if(!it)return;
+  if(key==='annual')it.annual=+val||0;
+  else it[key]=val;
+  if(key==='link')renderBudgetTable();      // 切換手動/自動需重繪整列
+  else renderBudgetTable();
+}
+function bgEditMonth(ri,mi,val){
+  const it=BG_ITEMS[ri];if(!it||it.link)return;
+  it.manual[mi]=+val||0;
+  renderBudgetTable();
+}
+function addBudgetRow(){
+  BG_ITEMS.push({id:bgNewId(),cat:'',content:'',link:'',annual:0,manual:Array(12).fill(0)});
+  renderBudgetTable();
+}
+function bgDelRow(ri){
+  if(!confirm('刪除這個項目？'))return;
+  BG_ITEMS.splice(ri,1);renderBudgetTable();
+}
+async function saveBudget(){
+  const btn=document.getElementById('bg-save-btn');
+  const old=btn.textContent;btn.textContent='儲存中…';btn.disabled=true;
+  const ok=await dbUpsert('budget',{year:BG_YEAR,month:0,data:{items:BG_ITEMS}});
+  btn.disabled=false;
+  if(ok){btn.textContent='✓ 已儲存';setTimeout(()=>btn.textContent=old,1500);}
+  else{btn.textContent='✕ 儲存失敗';alert('儲存失敗，請確認 Supabase 已建立 budget 資料表。');setTimeout(()=>btn.textContent=old,2000);}
+}
+document.getElementById('bgPrevYear').onclick=()=>{BG_YEAR--;BG_LOADED_YEAR=null;renderBudgetTab();};
+document.getElementById('bgNextYear').onclick=()=>{BG_YEAR++;BG_LOADED_YEAR=null;renderBudgetTab();};
 </script>
 </body>
 </html>
