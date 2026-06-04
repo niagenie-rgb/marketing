@@ -161,11 +161,22 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 .tgcell{width:20px;height:20px;border:1px solid var(--bdm);border-radius:2px;cursor:pointer;transition:background .1s,border-color .1s}
 .tgcell.sel{background:#6366f122;border-color:#6366f1}
 #tbl-toolbar{position:fixed;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:5px 7px;display:none;flex-direction:column;gap:4px;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:9999;max-width:320px}
+.bg-charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1rem}
+@media(max-width:760px){.bg-charts{grid-template-columns:1fr}}
+.bg-ccard{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:12px 14px}
+.bg-ctitle{font-size:13px;font-weight:600;color:var(--tx2);margin-bottom:8px}
+.bg-ub-row{display:flex;flex-direction:column;gap:3px}
+.bg-ub-top{display:flex;justify-content:space-between;font-size:12px}
+.bg-ub-bar{height:9px;border-radius:5px;background:var(--bd);overflow:hidden}
+.bg-ub-bar>span{display:block;height:100%;border-radius:5px}
+.bg-tlog-item{display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 10px;border:1px solid var(--bd);border-radius:var(--r);background:var(--sf);margin-bottom:5px}
 .bg-kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem}
 .bg-kpis .kc{flex:1;min-width:140px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:10px 14px}
 .bg-kpis .kc-l{font-size:11px;color:var(--tx3)}
 .bg-kpis .kc-v{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-top:2px}
 .bgtbl{border-collapse:collapse;font-size:12px;white-space:nowrap;min-width:100%}
+.bgtbl.bgfixed{table-layout:fixed;width:100%}
+.bgtbl.bgfixed td,.bgtbl.bgfixed th{overflow:hidden;text-overflow:ellipsis}
 .bgtbl th,.bgtbl td{border:1px solid var(--bd);padding:4px 7px;text-align:right}
 .bgtbl th{background:var(--sf2);font-weight:600;color:var(--tx2);position:sticky;top:0;z-index:1}
 .bgtbl th.lft,.bgtbl td.lft{text-align:left}
@@ -646,15 +657,53 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     <button class="rbtn" id="bgNextYear">›</button>
     <span style="color:var(--tx3);font-size:12px">年度行銷預算與支出控管</span>
     <div style="flex:1"></div>
+    <button class="btn-p" onclick="openTransfer()" id="bg-transfer-btn" style="padding:6px 14px;font-size:13px">⇄ 撥款</button>
     <button class="btn-p" onclick="addBudgetRow()" style="padding:6px 14px;font-size:13px">＋ 新增項目</button>
     <button class="btn-p" onclick="saveBudget()" id="bg-save-btn" style="padding:6px 16px;font-size:13px">儲存</button>
   </div>
   <div id="bg-kpis" class="bg-kpis"></div>
+
+  <!-- 圖表區 -->
+  <div class="bg-charts">
+    <div class="bg-ccard">
+      <div class="bg-ctitle">預算占比（依可用預算）</div>
+      <div style="height:240px" id="bg-pie-wrap"><canvas id="bg-pie"></canvas></div>
+    </div>
+    <div class="bg-ccard">
+      <div class="bg-ctitle">各分類用量</div>
+      <div id="bg-usage" style="display:flex;flex-direction:column;gap:11px;padding-top:4px"></div>
+    </div>
+  </div>
+
   <div style="overflow-x:auto;border:1px solid var(--bd);border-radius:var(--rl);background:var(--sf)">
     <table class="bgtbl" id="bg-table"></table>
   </div>
   <div style="font-size:11px;color:var(--tx3);margin-top:8px" id="bg-hint">
-    💡 「自動帶入」選 Meta / Criteo / Google 時，該列 12 個月會自動抓對應平台的廣告花費（唯讀）；選「手動」可自行輸入金額。
+    💡 「自動帶入」選 Meta / Criteo / Google 時，該列 12 個月會自動抓對應平台的廣告花費（唯讀）；選「手動」可自行輸入金額。可用預算 ＝ 原始預算 ＋ 撥款調整。
+  </div>
+
+  <!-- 撥款紀錄 -->
+  <div id="bg-tlog-wrap" style="margin-top:1rem;display:none">
+    <div class="bg-ctitle" style="margin-bottom:6px">撥款紀錄</div>
+    <div id="bg-tlog"></div>
+  </div>
+
+  <!-- 撥款對話框 -->
+  <div id="bg-transfer-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:600;align-items:center;justify-content:center">
+    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:1.4rem 1.5rem;width:340px;max-width:92vw;box-shadow:0 12px 40px rgba(0,0,0,.3)">
+      <div style="font-size:15px;font-weight:700;margin-bottom:14px">⇄ 預算撥款</div>
+      <label style="font-size:12px;color:var(--tx3)">從（減少）</label>
+      <select id="bg-tf-from" style="width:100%;margin:4px 0 12px;padding:7px 9px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit;font-size:13px"></select>
+      <label style="font-size:12px;color:var(--tx3)">撥到（增加）</label>
+      <select id="bg-tf-to" style="width:100%;margin:4px 0 12px;padding:7px 9px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit;font-size:13px"></select>
+      <label style="font-size:12px;color:var(--tx3)">金額</label>
+      <input id="bg-tf-amt" type="number" placeholder="例如 100000" style="width:100%;margin:4px 0 4px;padding:7px 9px;border:1px solid var(--bdm);border-radius:var(--r);background:var(--sf2);color:var(--tx);font-family:inherit;font-size:13px">
+      <div id="bg-tf-err" style="font-size:11px;color:var(--dn);min-height:16px;margin-bottom:6px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="rbtn" onclick="closeTransfer()" style="font-size:13px;padding:7px 14px">取消</button>
+        <button class="btn-p" onclick="applyTransfer()" style="font-size:13px;padding:7px 16px">確認撥款</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3265,13 +3314,42 @@ async function renderAll(){
 
 // ── 預算管理 ──────────────────────────────────────────────────
 let BG_YEAR=new Date().getFullYear();
-let BG_ITEMS=[];               // {id,cat,content,link,annual,manual:[12]}
+let BG_ITEMS=[];               // {id,cat,content,link,annual,adjust,manual:[12]}
+let BG_TRANSFERS=[];           // {fromId,toId,amount,ts}
 let BG_PLAT={meta:[],criteo:[],google:[]};  // 每平台 12 個月自動花費
 let BG_LOADED_YEAR=null;
 const BG_PLAT_LABEL={'':'手動',meta:'Meta',criteo:'Criteo',google:'Google'};
 const fmtMoney=n=>'$'+Math.round(n||0).toLocaleString();
+const BG_CC=(typeof CC!=='undefined'&&CC)||['#4f86f7','#f4845f','#58c49a','#f7c94f','#a78bfa','#f472b6','#34d399','#fb923c','#60a5fa','#e879f9'];
+let BG_MONTHS_COLLAPSED=false;
+// 同分類交替的淡底色
+const BG_GROUP_TINT=['transparent','rgba(99,102,241,.06)'];
 
 function bgNewId(){return 'b'+Date.now()+Math.random().toString(36).slice(2,6);}
+function bgAvail(it){return (+it.annual||0)+(+it.adjust||0);}        // 可用預算
+function bgName(it){return (it.cat||'')+(it.content?(' · '+it.content):'')||'未命名';}
+function bgById(id){return BG_ITEMS.find(x=>x.id===id);}
+const bgFmt=n=>(+n||0).toLocaleString('en-US');                       // 千分位
+function bgParseNum(v){return +String(v==null?'':v).replace(/,/g,'').replace(/[^0-9.\-]/g,'')||0;}
+// 依分類分組（保留首次出現順序），回傳 [{cat,indices,avail,used}]
+function bgGroups(){
+  const order=[],map={};
+  BG_ITEMS.forEach((it,idx)=>{
+    const c=it.cat||'未分類';
+    if(!map[c]){map[c]={cat:c,indices:[],avail:0,used:0};order.push(map[c]);}
+    const used=bgRowMonthly(it).reduce((a,b)=>a+(+b||0),0);
+    map[c].indices.push(idx);
+    map[c].avail+=bgAvail(it);
+    map[c].used+=used;
+  });
+  return order;
+}
+function bgToggleMonths(){
+  BG_MONTHS_COLLAPSED=!BG_MONTHS_COLLAPSED;
+  const b=document.getElementById('bg-toggle-months');
+  if(b)b.textContent=BG_MONTHS_COLLAPSED?'展開月份':'收合月份';
+  renderBudgetTable();
+}
 
 async function renderBudgetTab(){
   document.getElementById('bg-year-label').textContent=BG_YEAR;
@@ -3286,7 +3364,13 @@ async function renderBudgetTab(){
   if(BG_LOADED_YEAR!==BG_YEAR){
     const rec=await dbGet('budget',BG_YEAR,0);
     BG_ITEMS=(rec&&rec.data&&Array.isArray(rec.data.items))?rec.data.items:[];
-    BG_ITEMS.forEach(it=>{if(!Array.isArray(it.manual))it.manual=Array(12).fill(0);while(it.manual.length<12)it.manual.push(0);});
+    BG_TRANSFERS=(rec&&rec.data&&Array.isArray(rec.data.transfers))?rec.data.transfers:[];
+    BG_ITEMS.forEach(it=>{
+      if(!it.id)it.id=bgNewId();
+      if(typeof it.adjust!=='number')it.adjust=0;
+      if(!Array.isArray(it.manual))it.manual=Array(12).fill(0);
+      while(it.manual.length<12)it.manual.push(0);
+    });
     BG_LOADED_YEAR=BG_YEAR;
   }
   renderBudgetTable();
@@ -3298,74 +3382,187 @@ function bgRowMonthly(it){
 
 function renderBudgetTable(){
   const ro=typeof IS_READONLY!=='undefined'&&IS_READONLY;
+  const col=BG_MONTHS_COLLAPSED;
   const t=document.getElementById('bg-table');
-  let h='<thead><tr>'
-    +'<th class="lft">分類</th><th class="lft">行銷內容</th><th>自動帶入</th><th>年度預算</th>'
-    +MZ.map(m=>`<th>${m}</th>`).join('')
+  // 收合時固定均分欄寬（順序：分類,行銷內容,自動帶入,原始預算,調整,可用預算,月份明細,已用,剩餘,已用%,刪除）
+  const CW=[11,17,10,11,7,11,6,9,9,6,3];
+  t.className='bgtbl'+(col?' bgfixed':'');
+  let h=(col?('<colgroup>'+CW.slice(0,ro?10:11).map(w=>`<col style="width:${w}%">`).join('')+'</colgroup>'):'')
+    +'<thead><tr>'
+    +'<th class="lft">分類</th><th class="lft">行銷內容</th><th>自動帶入</th><th>原始預算</th><th>調整</th><th>可用預算</th>'
+    +(col?'<th class="lft" style="cursor:pointer" onclick="bgToggleMonths()" title="展開月份明細">▸ 月份明細</th>'
+         :MZ.map((m,i)=>i===0?`<th style="cursor:pointer" onclick="bgToggleMonths()" title="收合月份">◂ ${m}</th>`:`<th>${m}</th>`).join(''))
     +'<th>已用</th><th>剩餘</th><th>已用%</th>'+(ro?'':'<th></th>')+'</tr></thead><tbody>';
-  let colTotals=Array(12).fill(0),sumAnnual=0,sumUsed=0;
+  const baseCols=col?10:21;            // 不含刪除欄
+  const fullSpan=ro?baseCols:baseCols+1;
+  let colTotals=Array(12).fill(0),sumAnnual=0,sumAdj=0,sumAvail=0,sumUsed=0;
+  const groups=bgGroups();
   if(!BG_ITEMS.length){
-    h+=`<tr><td class="lft" colspan="${ro?19:20}" style="text-align:center;color:var(--tx3);padding:14px">尚無項目，點右上「＋ 新增項目」開始</td></tr>`;
+    h+=`<tr><td class="lft" colspan="${fullSpan}" style="text-align:center;color:var(--tx3);padding:14px">尚無項目，點右上「＋ 新增項目」開始</td></tr>`;
   }
-  BG_ITEMS.forEach((it,ri)=>{
-    const mon=bgRowMonthly(it);
-    const used=mon.reduce((a,b)=>a+(+b||0),0);
-    const remain=(+it.annual||0)-used;
-    const pct=it.annual>0?used/it.annual*100:0;
-    sumAnnual+=(+it.annual||0);sumUsed+=used;
-    mon.forEach((v,i)=>colTotals[i]+=(+v||0));
-    const auto=!!it.link;
-    const pctColor=pct>100?'var(--dn)':pct>=80?'#f59e0b':'#22c55e';
-    h+=`<tr data-ri="${ri}">`
-      +`<td class="lft"><input value="${(it.cat||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="bgEdit(${ri},'cat',this.value)" placeholder="分類"></td>`
-      +`<td class="lft"><input value="${(it.content||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="bgEdit(${ri},'content',this.value)" placeholder="行銷內容"></td>`
-      +`<td>${ro?BG_PLAT_LABEL[it.link||'']:`<select onchange="bgEdit(${ri},'link',this.value)"><option value=""${!auto?' selected':''}>手動</option><option value="meta"${it.link==='meta'?' selected':''}>Meta</option><option value="criteo"${it.link==='criteo'?' selected':''}>Criteo</option><option value="google"${it.link==='google'?' selected':''}>Google</option></select>`}</td>`
-      +`<td><input type="number" value="${it.annual||''}" ${ro?'readonly':''} onchange="bgEdit(${ri},'annual',this.value)" placeholder="0"></td>`
-      +mon.map((v,i)=>`<td class="mcell"><input type="number" value="${v||''}" ${(auto||ro)?'readonly':''} ${auto?'title="自動帶入 '+BG_PLAT_LABEL[it.link]+' 花費"':''} onchange="bgEditMonth(${ri},${i},this.value)" placeholder="0"></td>`).join('')
-      +`<td>${fmtMoney(used)}</td>`
-      +`<td style="color:${remain<0?'var(--dn)':'inherit'}">${fmtMoney(remain)}</td>`
-      +`<td style="color:${pctColor};font-weight:600">${it.annual>0?pct.toFixed(0)+'%':'—'}<div class="bgbar"><span style="width:${Math.min(100,pct)}%;background:${pctColor}"></span></div></td>`
-      +(ro?'':`<td class="delx" onclick="bgDelRow(${ri})" title="刪除">✕</td>`)
-      +`</tr>`;
+  groups.forEach((g,gi)=>{
+    const tint=BG_GROUP_TINT[gi%BG_GROUP_TINT.length];
+    g.indices.forEach((ri,within)=>{
+      const it=BG_ITEMS[ri];
+      const mon=bgRowMonthly(it);
+      const used=mon.reduce((a,b)=>a+(+b||0),0);
+      const avail=bgAvail(it);
+      const remain=avail-used;
+      const pct=avail>0?used/avail*100:0;
+      sumAnnual+=(+it.annual||0);sumAdj+=(+it.adjust||0);sumAvail+=avail;sumUsed+=used;
+      mon.forEach((v,i)=>colTotals[i]+=(+v||0));
+      const auto=!!it.link;
+      const pctColor=pct>100?'var(--dn)':pct>=80?'#f59e0b':'#22c55e';
+      const adj=+it.adjust||0;
+      const adjTxt=adj===0?'—':(adj>0?'+':'')+bgFmt(Math.round(adj));
+      h+=`<tr data-ri="${ri}" style="background:${tint}">`
+        +`<td class="lft"><input value="${(it.cat||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="bgEdit(${ri},'cat',this.value)" placeholder="分類"></td>`
+        +`<td class="lft"><input value="${(it.content||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="bgEdit(${ri},'content',this.value)" placeholder="行銷內容"></td>`
+        +`<td>${ro?BG_PLAT_LABEL[it.link||'']:`<select onchange="bgEdit(${ri},'link',this.value)"><option value=""${!auto?' selected':''}>手動</option><option value="meta"${it.link==='meta'?' selected':''}>Meta</option><option value="criteo"${it.link==='criteo'?' selected':''}>Criteo</option><option value="google"${it.link==='google'?' selected':''}>Google</option></select>`}</td>`
+        +`<td><input inputmode="numeric" value="${it.annual?bgFmt(it.annual):''}" ${ro?'readonly':''} onchange="bgEdit(${ri},'annual',this.value)" placeholder="0"></td>`
+        +`<td style="color:${adj<0?'var(--dn)':adj>0?'#16a34a':'var(--tx3)'}" title="由撥款產生">${adjTxt}</td>`
+        +`<td style="font-weight:600">${fmtMoney(avail)}</td>`
+        +(col?'<td style="text-align:center;color:var(--tx3)" title="展開月份查看明細">⋯</td>':mon.map((v,i)=>`<td class="mcell"><input inputmode="numeric" value="${v?bgFmt(v):''}" ${(auto||ro)?'readonly':''} ${auto?'title="自動帶入 '+BG_PLAT_LABEL[it.link]+' 花費"':''} onchange="bgEditMonth(${ri},${i},this.value)" placeholder="0"></td>`).join(''))
+        +`<td>${fmtMoney(used)}</td>`
+        +`<td style="color:${remain<0?'var(--dn)':'inherit'}">${fmtMoney(remain)}</td>`
+        +`<td style="color:${pctColor};font-weight:600">${avail>0?pct.toFixed(0)+'%':'—'}<div class="bgbar"><span style="width:${Math.min(100,pct)}%;background:${pctColor}"></span></div></td>`
+        +(ro?'':`<td class="delx" onclick="bgDelRow(${ri})" title="刪除">✕</td>`)
+        +`</tr>`;
+    });
   });
-  h+='</tbody><tfoot><tr><td class="lft">合計</td><td class="lft"></td><td></td><td>'+fmtMoney(sumAnnual)+'</td>'
-    +colTotals.map(v=>`<td>${fmtMoney(v)}</td>`).join('')
-    +'<td>'+fmtMoney(sumUsed)+'</td><td>'+fmtMoney(sumAnnual-sumUsed)+'</td><td>'+(sumAnnual>0?(sumUsed/sumAnnual*100).toFixed(0)+'%':'—')+'</td>'+(ro?'':'<td></td>')+'</tr></tfoot>';
+  h+='</tbody><tfoot><tr><td class="lft">合計</td><td class="lft"></td><td></td><td>'+fmtMoney(sumAnnual)+'</td><td>'+(sumAdj===0?'—':(sumAdj>0?'+':'')+bgFmt(Math.round(sumAdj)))+'</td><td>'+fmtMoney(sumAvail)+'</td>'
+    +(col?'<td></td>':colTotals.map(v=>`<td>${fmtMoney(v)}</td>`).join(''))
+    +'<td>'+fmtMoney(sumUsed)+'</td><td>'+fmtMoney(sumAvail-sumUsed)+'</td><td>'+(sumAvail>0?(sumUsed/sumAvail*100).toFixed(0)+'%':'—')+'</td>'+(ro?'':'<td></td>')+'</tr></tfoot>';
   t.innerHTML=h;
   // KPI
   const autoTotal=BG_ITEMS.filter(i=>i.link).reduce((a,it)=>a+bgRowMonthly(it).reduce((x,y)=>x+(+y||0),0),0);
   document.getElementById('bg-kpis').innerHTML=
-    `<div class="kc"><div class="kc-l">年度總預算</div><div class="kc-v">${fmtMoney(sumAnnual)}</div></div>`
+    `<div class="kc"><div class="kc-l">可用總預算</div><div class="kc-v">${fmtMoney(sumAvail)}</div></div>`
    +`<div class="kc"><div class="kc-l">已用支出</div><div class="kc-v">${fmtMoney(sumUsed)}</div></div>`
-   +`<div class="kc"><div class="kc-l">剩餘預算</div><div class="kc-v" style="color:${sumAnnual-sumUsed<0?'var(--dn)':'inherit'}">${fmtMoney(sumAnnual-sumUsed)}</div></div>`
-   +`<div class="kc"><div class="kc-l">整體已用比例</div><div class="kc-v">${sumAnnual>0?(sumUsed/sumAnnual*100).toFixed(0)+'%':'—'}</div></div>`
+   +`<div class="kc"><div class="kc-l">剩餘預算</div><div class="kc-v" style="color:${sumAvail-sumUsed<0?'var(--dn)':'inherit'}">${fmtMoney(sumAvail-sumUsed)}</div></div>`
+   +`<div class="kc"><div class="kc-l">整體已用比例</div><div class="kc-v">${sumAvail>0?(sumUsed/sumAvail*100).toFixed(0)+'%':'—'}</div></div>`
    +`<div class="kc"><div class="kc-l">廣告自動帶入</div><div class="kc-v">${fmtMoney(autoTotal)}</div></div>`;
+  renderBudgetCharts();
+  renderTransferLog();
+}
+
+// 圓餅圖（可用預算占比）＋ 各分類用量橫條
+function renderBudgetCharts(){
+  // 以「分類」為單位彙總
+  const rows=bgGroups().map(g=>({name:g.cat,avail:g.avail,used:g.used})).filter(r=>r.avail>0||r.used>0);
+  // 圓餅
+  killChart('bg-pie');
+  const pieRows=rows.filter(r=>r.avail>0);
+  const wrap=document.getElementById('bg-pie-wrap');
+  if(typeof Chart!=='undefined'&&pieRows.length){
+    wrap.innerHTML='<canvas id="bg-pie"></canvas>';
+    const total=pieRows.reduce((a,r)=>a+r.avail,0);
+    CHARTS['bg-pie']=new Chart(document.getElementById('bg-pie'),{
+      type:'doughnut',
+      data:{labels:pieRows.map(r=>r.name),datasets:[{data:pieRows.map(r=>r.avail),backgroundColor:pieRows.map((_,i)=>BG_CC[i%BG_CC.length]),borderWidth:2,borderColor:'#fff'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{
+        legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:7}},
+        tooltip:{callbacks:{label:ctx=>{const p=((ctx.raw/total)*100).toFixed(1);return `${ctx.label}: ${fmtMoney(ctx.raw)} (${p}%)`;}}}
+      }}
+    });
+  } else {
+    wrap.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:13px">尚無預算資料</div>';
+  }
+  // 用量橫條
+  const uw=document.getElementById('bg-usage');
+  if(!rows.length){uw.innerHTML='<div style="color:var(--tx3);font-size:13px;padding:20px 0;text-align:center">尚無資料</div>';return;}
+  uw.innerHTML=rows.map(r=>{
+    const pct=r.avail>0?r.used/r.avail*100:0;
+    const c=pct>100?'var(--dn)':pct>=80?'#f59e0b':'#22c55e';
+    return `<div class="bg-ub-row">
+      <div class="bg-ub-top"><span>${r.name}</span><span style="color:${c};font-weight:600">${r.avail>0?pct.toFixed(0)+'%':'—'}</span></div>
+      <div class="bg-ub-bar"><span style="width:${Math.min(100,pct)}%;background:${c}"></span></div>
+      <div style="font-size:10px;color:var(--tx3)">${fmtMoney(r.used)} / ${fmtMoney(r.avail)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTransferLog(){
+  const wrap=document.getElementById('bg-tlog-wrap');
+  const ro=typeof IS_READONLY!=='undefined'&&IS_READONLY;
+  if(!BG_TRANSFERS.length){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  document.getElementById('bg-tlog').innerHTML=BG_TRANSFERS.map((tf,i)=>{
+    const f=bgById(tf.fromId),t=bgById(tf.toId);
+    const d=tf.ts?new Date(tf.ts):null;
+    const ds=d?`${d.getMonth()+1}/${d.getDate()}`:'';
+    return `<div class="bg-tlog-item">
+      <span style="color:var(--tx3);min-width:34px">${ds}</span>
+      <span>${f?bgName(f):'(已刪除)'}</span>
+      <span style="color:var(--ac)">→</span>
+      <span>${t?bgName(t):'(已刪除)'}</span>
+      <strong style="margin-left:auto">${fmtMoney(tf.amount)}</strong>
+      ${ro?'':`<span class="delx" style="cursor:pointer" onclick="undoTransfer(${i})" title="撤銷這筆撥款">↩</span>`}
+    </div>`;
+  }).join('');
 }
 
 function bgEdit(ri,key,val){
   const it=BG_ITEMS[ri];if(!it)return;
-  if(key==='annual')it.annual=+val||0;
+  if(key==='annual')it.annual=bgParseNum(val);
   else it[key]=val;
-  if(key==='link')renderBudgetTable();      // 切換手動/自動需重繪整列
-  else renderBudgetTable();
+  renderBudgetTable();
 }
 function bgEditMonth(ri,mi,val){
   const it=BG_ITEMS[ri];if(!it||it.link)return;
-  it.manual[mi]=+val||0;
+  it.manual[mi]=bgParseNum(val);
   renderBudgetTable();
 }
 function addBudgetRow(){
-  BG_ITEMS.push({id:bgNewId(),cat:'',content:'',link:'',annual:0,manual:Array(12).fill(0)});
+  BG_ITEMS.push({id:bgNewId(),cat:'',content:'',link:'',annual:0,adjust:0,manual:Array(12).fill(0)});
   renderBudgetTable();
 }
 function bgDelRow(ri){
   if(!confirm('刪除這個項目？'))return;
   BG_ITEMS.splice(ri,1);renderBudgetTable();
 }
+
+// ── 撥款 ──
+function openTransfer(){
+  if(BG_ITEMS.length<2){alert('至少要有兩個項目才能撥款。');return;}
+  const opts=BG_ITEMS.map(it=>`<option value="${it.id}">${bgName(it)}（可用 ${fmtMoney(bgAvail(it))}）</option>`).join('');
+  document.getElementById('bg-tf-from').innerHTML=opts;
+  document.getElementById('bg-tf-to').innerHTML=opts;
+  document.getElementById('bg-tf-to').selectedIndex=1;
+  document.getElementById('bg-tf-amt').value='';
+  document.getElementById('bg-tf-err').textContent='';
+  document.getElementById('bg-transfer-modal').style.display='flex';
+}
+function closeTransfer(){document.getElementById('bg-transfer-modal').style.display='none';}
+function applyTransfer(){
+  const fromId=document.getElementById('bg-tf-from').value;
+  const toId=document.getElementById('bg-tf-to').value;
+  const amt=+document.getElementById('bg-tf-amt').value||0;
+  const err=document.getElementById('bg-tf-err');
+  if(fromId===toId){err.textContent='來源和目標不能是同一個項目。';return;}
+  if(amt<=0){err.textContent='請輸入大於 0 的金額。';return;}
+  const f=bgById(fromId),t=bgById(toId);
+  if(!f||!t){err.textContent='項目不存在。';return;}
+  f.adjust=(+f.adjust||0)-amt;
+  t.adjust=(+t.adjust||0)+amt;
+  BG_TRANSFERS.push({fromId,toId,amount:amt,ts:Date.now()});
+  closeTransfer();
+  renderBudgetTable();
+}
+function undoTransfer(i){
+  const tf=BG_TRANSFERS[i];if(!tf)return;
+  if(!confirm('撤銷這筆撥款？金額會原路退回。'))return;
+  const f=bgById(tf.fromId),t=bgById(tf.toId);
+  if(f)f.adjust=(+f.adjust||0)+tf.amount;
+  if(t)t.adjust=(+t.adjust||0)-tf.amount;
+  BG_TRANSFERS.splice(i,1);
+  renderBudgetTable();
+}
+
 async function saveBudget(){
   const btn=document.getElementById('bg-save-btn');
   const old=btn.textContent;btn.textContent='儲存中…';btn.disabled=true;
-  const payload={brand:BRAND,year:BG_YEAR,month:0,data:{items:BG_ITEMS}};
+  const payload={brand:BRAND,year:BG_YEAR,month:0,data:{items:BG_ITEMS,transfers:BG_TRANSFERS}};
   let ok=false,msg='';
   try{
     // 先嘗試 upsert（POST + merge-duplicates）
