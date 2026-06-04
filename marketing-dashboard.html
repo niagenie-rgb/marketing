@@ -3365,10 +3365,24 @@ function bgDelRow(ri){
 async function saveBudget(){
   const btn=document.getElementById('bg-save-btn');
   const old=btn.textContent;btn.textContent='儲存中…';btn.disabled=true;
-  const ok=await dbUpsert('budget',{year:BG_YEAR,month:0,data:{items:BG_ITEMS}});
+  const payload={brand:BRAND,year:BG_YEAR,month:0,data:{items:BG_ITEMS}};
+  let ok=false,msg='';
+  try{
+    // 先嘗試 upsert（POST + merge-duplicates）
+    let r=await fetch(`${SB_URL}/rest/v1/budget`,{method:'POST',headers:SBH,body:JSON.stringify(payload)});
+    if(r.ok||r.status===201){ok=true;}
+    else if(r.status===409){
+      const r2=await fetch(`${SB_URL}/rest/v1/budget?brand=eq.${BRAND}&year=eq.${BG_YEAR}&month=eq.0`,
+        {method:'PATCH',headers:{...SBR,'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      ok=r2.ok||r2.status===204||r2.status===200;
+      if(!ok)msg=`PATCH ${r2.status}: ${await r2.text()}`;
+    } else {
+      msg=`POST ${r.status}: ${await r.text()}`;
+    }
+  }catch(e){msg='連線錯誤：'+e.message;}
   btn.disabled=false;
   if(ok){btn.textContent='✓ 已儲存';setTimeout(()=>btn.textContent=old,1500);}
-  else{btn.textContent='✕ 儲存失敗';alert('儲存失敗，請確認 Supabase 已建立 budget 資料表。');setTimeout(()=>btn.textContent=old,2000);}
+  else{btn.textContent='✕ 儲存失敗';alert('儲存失敗\n\n'+(msg||'未知錯誤'));setTimeout(()=>btn.textContent=old,2500);}
 }
 document.getElementById('bgPrevYear').onclick=()=>{BG_YEAR--;BG_LOADED_YEAR=null;renderBudgetTab();};
 document.getElementById('bgNextYear').onclick=()=>{BG_YEAR++;BG_LOADED_YEAR=null;renderBudgetTab();};

@@ -19,3 +19,7 @@ create policy "budget anon all" on public.budget
   to anon
   using (true)
   with check (true);
+
+-- ⭐ 關鍵：把表的讀寫權限授予 anon / authenticated 角色
+-- （只有 RLS 政策還不夠，少了 GRANT 會出現「儲存失敗」）
+grant select, insert, update, delete on public.budget to anon, authenticated;
