@@ -174,6 +174,9 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 .bg-kpis .kc{flex:1;min-width:140px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--rl);padding:10px 14px}
 .bg-kpis .kc-l{font-size:11px;color:var(--tx3)}
 .bg-kpis .kc-v{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-top:2px}
+.bg-kpis .kc-in{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-top:2px;width:100%;border:none;border-bottom:1px dashed var(--bdm);background:transparent;color:var(--tx);font-family:inherit;outline:none;padding:0 0 1px}
+.bg-kpis .kc-in:focus{border-bottom-color:var(--ac)}
+.bg-kpis .kc-s{font-size:10px;color:var(--tx3);margin-top:2px}
 .bgtbl{border-collapse:collapse;font-size:12px;white-space:nowrap;min-width:100%}
 .bgtbl.bgfixed{table-layout:fixed;width:100%}
 .bgtbl.bgfixed td,.bgtbl.bgfixed th{overflow:hidden;text-overflow:ellipsis}
@@ -659,8 +662,10 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     <div style="flex:1"></div>
     <button class="btn-p" onclick="openTransfer()" id="bg-transfer-btn" style="padding:6px 14px;font-size:13px">⇄ 撥款</button>
     <button class="btn-p" onclick="addBudgetRow()" style="padding:6px 14px;font-size:13px">＋ 新增項目</button>
-    <button class="btn-p" onclick="saveBudget()" id="bg-save-btn" style="padding:6px 16px;font-size:13px">儲存</button>
+    <span id="bg-save-status" style="font-size:12px;color:var(--tx3);min-width:64px;text-align:right"></span>
+    <button class="btn-p" onclick="saveBudget()" id="bg-save-btn" style="padding:6px 16px;font-size:13px">立即儲存</button>
   </div>
+  <div id="bg-perf" class="bg-kpis"></div>
   <div id="bg-kpis" class="bg-kpis"></div>
 
   <!-- 圖表區 -->
@@ -3316,14 +3321,18 @@ async function renderAll(){
 let BG_YEAR=new Date().getFullYear();
 let BG_ITEMS=[];               // {id,cat,content,link,annual,adjust,manual:[12]}
 let BG_TRANSFERS=[];           // {fromId,toId,amount,ts}
+let BG_TARGET=0;               // 業績目標
+let BG_CURRENT=0;              // 目前業績
 let BG_PLAT={meta:[],criteo:[],google:[]};  // 每平台 12 個月自動花費
 let BG_LOADED_YEAR=null;
 const BG_PLAT_LABEL={'':'手動',meta:'Meta',criteo:'Criteo',google:'Google'};
 const fmtMoney=n=>'$'+Math.round(n||0).toLocaleString();
 const BG_CC=(typeof CC!=='undefined'&&CC)||['#4f86f7','#f4845f','#58c49a','#f7c94f','#a78bfa','#f472b6','#34d399','#fb923c','#60a5fa','#e879f9'];
 let BG_MONTHS_COLLAPSED=false;
+const BG_USAGE_OPEN=new Set();   // 用量圖中展開的分類
 // 同分類交替的淡底色
 const BG_GROUP_TINT=['transparent','rgba(99,102,241,.06)'];
+function bgToggleUsage(enc){const c=decodeURIComponent(enc);if(BG_USAGE_OPEN.has(c))BG_USAGE_OPEN.delete(c);else BG_USAGE_OPEN.add(c);renderBudgetCharts();}
 
 function bgNewId(){return 'b'+Date.now()+Math.random().toString(36).slice(2,6);}
 function bgAvail(it){return (+it.annual||0)+(+it.adjust||0);}        // 可用預算
@@ -3365,6 +3374,8 @@ async function renderBudgetTab(){
     const rec=await dbGet('budget',BG_YEAR,0);
     BG_ITEMS=(rec&&rec.data&&Array.isArray(rec.data.items))?rec.data.items:[];
     BG_TRANSFERS=(rec&&rec.data&&Array.isArray(rec.data.transfers))?rec.data.transfers:[];
+    BG_TARGET=(rec&&rec.data&&+rec.data.targetRevenue)||0;
+    BG_CURRENT=(rec&&rec.data&&+rec.data.currentRevenue)||0;
     BG_ITEMS.forEach(it=>{
       if(!it.id)it.id=bgNewId();
       if(typeof it.adjust!=='number')it.adjust=0;
@@ -3440,16 +3451,27 @@ function renderBudgetTable(){
     `<div class="kc"><div class="kc-l">可用總預算</div><div class="kc-v">${fmtMoney(sumAvail)}</div></div>`
    +`<div class="kc"><div class="kc-l">已用支出</div><div class="kc-v">${fmtMoney(sumUsed)}</div></div>`
    +`<div class="kc"><div class="kc-l">剩餘預算</div><div class="kc-v" style="color:${sumAvail-sumUsed<0?'var(--dn)':'inherit'}">${fmtMoney(sumAvail-sumUsed)}</div></div>`
-   +`<div class="kc"><div class="kc-l">整體已用比例</div><div class="kc-v">${sumAvail>0?(sumUsed/sumAvail*100).toFixed(0)+'%':'—'}</div></div>`
-   +`<div class="kc"><div class="kc-l">廣告自動帶入</div><div class="kc-v">${fmtMoney(autoTotal)}</div></div>`;
+   +`<div class="kc"><div class="kc-l">整體已用比例</div><div class="kc-v">${sumAvail>0?(sumUsed/sumAvail*100).toFixed(0)+'%':'—'}</div></div>`;
+  // 業績與行銷費用率
+  const ro2=typeof IS_READONLY!=='undefined'&&IS_READONLY;
+  const budgetRatio=BG_TARGET>0?sumAvail/BG_TARGET*100:null;
+  const spendRatio=BG_CURRENT>0?sumUsed/BG_CURRENT*100:null;
+  document.getElementById('bg-perf').innerHTML=
+    `<div class="kc"><div class="kc-l">業績目標</div>${ro2?`<div class="kc-v">$${bgFmt(BG_TARGET)}</div>`:`<input class="kc-in" inputmode="numeric" value="${BG_TARGET?bgFmt(BG_TARGET):''}" placeholder="輸入目標營收" onchange="bgSetTarget(this.value)">`}</div>`
+   +`<div class="kc"><div class="kc-l">總行銷預算占比</div><div class="kc-v">${budgetRatio==null?'—':budgetRatio.toFixed(1)+'%'}</div><div class="kc-s">可用預算 ÷ 業績目標</div></div>`
+   +`<div class="kc"><div class="kc-l">目前業績</div>${ro2?`<div class="kc-v">$${bgFmt(BG_CURRENT)}</div>`:`<input class="kc-in" inputmode="numeric" value="${BG_CURRENT?bgFmt(BG_CURRENT):''}" placeholder="輸入目前營收" onchange="bgSetCurrent(this.value)">`}</div>`
+   +`<div class="kc"><div class="kc-l">目前行銷金額占比</div><div class="kc-v">${spendRatio==null?'—':spendRatio.toFixed(1)+'%'}</div><div class="kc-s">已用支出 ÷ 目前業績</div></div>`;
   renderBudgetCharts();
   renderTransferLog();
 }
+function bgSetTarget(v){BG_TARGET=bgParseNum(v);renderBudgetTable();bgAutoSave();}
+function bgSetCurrent(v){BG_CURRENT=bgParseNum(v);renderBudgetTable();bgAutoSave();}
 
 // 圓餅圖（可用預算占比）＋ 各分類用量橫條
 function renderBudgetCharts(){
   // 以「分類」為單位彙總
-  const rows=bgGroups().map(g=>({name:g.cat,avail:g.avail,used:g.used})).filter(r=>r.avail>0||r.used>0);
+  const groups=bgGroups();
+  const rows=groups.map(g=>({name:g.cat,avail:g.avail,used:g.used})).filter(r=>r.avail>0||r.used>0);
   // 圓餅
   killChart('bg-pie');
   const pieRows=rows.filter(r=>r.avail>0);
@@ -3468,17 +3490,39 @@ function renderBudgetCharts(){
   } else {
     wrap.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:13px">尚無預算資料</div>';
   }
-  // 用量橫條
+  // 用量橫條（依分類，可展開看細項）
   const uw=document.getElementById('bg-usage');
-  if(!rows.length){uw.innerHTML='<div style="color:var(--tx3);font-size:13px;padding:20px 0;text-align:center">尚無資料</div>';return;}
-  uw.innerHTML=rows.map(r=>{
-    const pct=r.avail>0?r.used/r.avail*100:0;
-    const c=pct>100?'var(--dn)':pct>=80?'#f59e0b':'#22c55e';
-    return `<div class="bg-ub-row">
-      <div class="bg-ub-top"><span>${r.name}</span><span style="color:${c};font-weight:600">${r.avail>0?pct.toFixed(0)+'%':'—'}</span></div>
+  const vis=groups.filter(g=>g.avail>0||g.used>0);
+  if(!vis.length){uw.innerHTML='<div style="color:var(--tx3);font-size:13px;padding:20px 0;text-align:center">尚無資料</div>';return;}
+  const barColor=p=>p>100?'var(--dn)':p>=80?'#f59e0b':'#22c55e';
+  uw.innerHTML=vis.map(g=>{
+    const pct=g.avail>0?g.used/g.avail*100:0;
+    const c=barColor(pct);
+    const multi=g.indices.length>1;
+    const open=BG_USAGE_OPEN.has(g.cat);
+    const arrow=multi?`<span style="cursor:pointer;color:var(--tx3);user-select:none" onclick="bgToggleUsage('${encodeURIComponent(g.cat)}')">${open?'▾':'▸'}</span> `:'';
+    let html=`<div class="bg-ub-row">
+      <div class="bg-ub-top"><span style="font-weight:600">${arrow}${g.cat}</span><span style="color:${c};font-weight:600">${g.avail>0?pct.toFixed(0)+'%':'—'}</span></div>
       <div class="bg-ub-bar"><span style="width:${Math.min(100,pct)}%;background:${c}"></span></div>
-      <div style="font-size:10px;color:var(--tx3)">${fmtMoney(r.used)} / ${fmtMoney(r.avail)}</div>
+      <div style="font-size:10px;color:var(--tx3)">${fmtMoney(g.used)} / ${fmtMoney(g.avail)}</div>
     </div>`;
+    if(multi&&open){
+      html+='<div style="margin-left:18px;display:flex;flex-direction:column;gap:8px;margin-top:2px;border-left:2px solid var(--bd);padding-left:10px">'
+        +g.indices.map(ri=>{
+          const it=BG_ITEMS[ri];
+          const used=bgRowMonthly(it).reduce((a,b)=>a+(+b||0),0);
+          const avail=bgAvail(it);
+          const p=avail>0?used/avail*100:0;
+          const cc=barColor(p);
+          return `<div class="bg-ub-row">
+            <div class="bg-ub-top"><span style="color:var(--tx2)">${it.content||it.cat||'未命名'}</span><span style="color:${cc};font-weight:600">${avail>0?p.toFixed(0)+'%':'—'}</span></div>
+            <div class="bg-ub-bar" style="height:7px"><span style="width:${Math.min(100,p)}%;background:${cc}"></span></div>
+            <div style="font-size:10px;color:var(--tx3)">${fmtMoney(used)} / ${fmtMoney(avail)}</div>
+          </div>`;
+        }).join('')
+        +'</div>';
+    }
+    return html;
   }).join('');
 }
 
@@ -3506,20 +3550,20 @@ function bgEdit(ri,key,val){
   const it=BG_ITEMS[ri];if(!it)return;
   if(key==='annual')it.annual=bgParseNum(val);
   else it[key]=val;
-  renderBudgetTable();
+  renderBudgetTable();bgAutoSave();
 }
 function bgEditMonth(ri,mi,val){
   const it=BG_ITEMS[ri];if(!it||it.link)return;
   it.manual[mi]=bgParseNum(val);
-  renderBudgetTable();
+  renderBudgetTable();bgAutoSave();
 }
 function addBudgetRow(){
   BG_ITEMS.push({id:bgNewId(),cat:'',content:'',link:'',annual:0,adjust:0,manual:Array(12).fill(0)});
-  renderBudgetTable();
+  renderBudgetTable();bgAutoSave();
 }
 function bgDelRow(ri){
   if(!confirm('刪除這個項目？'))return;
-  BG_ITEMS.splice(ri,1);renderBudgetTable();
+  BG_ITEMS.splice(ri,1);renderBudgetTable();bgAutoSave();
 }
 
 // ── 撥款 ──
@@ -3547,7 +3591,7 @@ function applyTransfer(){
   t.adjust=(+t.adjust||0)+amt;
   BG_TRANSFERS.push({fromId,toId,amount:amt,ts:Date.now()});
   closeTransfer();
-  renderBudgetTable();
+  renderBudgetTable();bgAutoSave();
 }
 function undoTransfer(i){
   const tf=BG_TRANSFERS[i];if(!tf)return;
@@ -3556,30 +3600,48 @@ function undoTransfer(i){
   if(f)f.adjust=(+f.adjust||0)+tf.amount;
   if(t)t.adjust=(+t.adjust||0)-tf.amount;
   BG_TRANSFERS.splice(i,1);
-  renderBudgetTable();
+  renderBudgetTable();bgAutoSave();
 }
 
-async function saveBudget(){
-  const btn=document.getElementById('bg-save-btn');
-  const old=btn.textContent;btn.textContent='儲存中…';btn.disabled=true;
-  const payload={brand:BRAND,year:BG_YEAR,month:0,data:{items:BG_ITEMS,transfers:BG_TRANSFERS}};
-  let ok=false,msg='';
+// 核心存檔（回傳 {ok,msg}）
+async function bgPersist(){
+  const payload={brand:BRAND,year:BG_YEAR,month:0,data:{items:BG_ITEMS,transfers:BG_TRANSFERS,targetRevenue:BG_TARGET,currentRevenue:BG_CURRENT}};
   try{
-    // 先嘗試 upsert（POST + merge-duplicates）
     let r=await fetch(`${SB_URL}/rest/v1/budget`,{method:'POST',headers:SBH,body:JSON.stringify(payload)});
-    if(r.ok||r.status===201){ok=true;}
-    else if(r.status===409){
+    if(r.ok||r.status===201)return{ok:true};
+    if(r.status===409){
       const r2=await fetch(`${SB_URL}/rest/v1/budget?brand=eq.${BRAND}&year=eq.${BG_YEAR}&month=eq.0`,
         {method:'PATCH',headers:{...SBR,'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      ok=r2.ok||r2.status===204||r2.status===200;
-      if(!ok)msg=`PATCH ${r2.status}: ${await r2.text()}`;
-    } else {
-      msg=`POST ${r.status}: ${await r.text()}`;
+      if(r2.ok||r2.status===204||r2.status===200)return{ok:true};
+      return{ok:false,msg:`PATCH ${r2.status}: ${await r2.text()}`};
     }
-  }catch(e){msg='連線錯誤：'+e.message;}
-  btn.disabled=false;
-  if(ok){btn.textContent='✓ 已儲存';setTimeout(()=>btn.textContent=old,1500);}
-  else{btn.textContent='✕ 儲存失敗';alert('儲存失敗\n\n'+(msg||'未知錯誤'));setTimeout(()=>btn.textContent=old,2500);}
+    return{ok:false,msg:`POST ${r.status}: ${await r.text()}`};
+  }catch(e){return{ok:false,msg:'連線錯誤：'+e.message};}
+}
+function bgSetStatus(txt,color){const el=document.getElementById('bg-save-status');if(el){el.textContent=txt;el.style.color=color||'var(--tx3)';}}
+
+// 手動「立即儲存」
+async function saveBudget(){
+  if(typeof IS_READONLY!=='undefined'&&IS_READONLY)return;
+  clearTimeout(BG_SAVE_T);
+  bgSetStatus('儲存中…','var(--tx3)');
+  const {ok,msg}=await bgPersist();
+  if(ok)bgSetStatus('✓ 已儲存','#16a34a');
+  else{bgSetStatus('✕ 儲存失敗','var(--dn)');alert('儲存失敗\n\n'+(msg||'未知錯誤'));}
+}
+
+// 自動儲存（防抖，編輯後 ~1 秒）
+let BG_SAVE_T=null;
+function bgAutoSave(){
+  if(typeof IS_READONLY!=='undefined'&&IS_READONLY)return;
+  bgSetStatus('編輯中…','var(--tx3)');
+  clearTimeout(BG_SAVE_T);
+  BG_SAVE_T=setTimeout(async()=>{
+    bgSetStatus('儲存中…','var(--tx3)');
+    const {ok,msg}=await bgPersist();
+    if(ok)bgSetStatus('✓ 已自動儲存','#16a34a');
+    else bgSetStatus('✕ 儲存失敗','var(--dn)');
+  },1000);
 }
 document.getElementById('bgPrevYear').onclick=()=>{BG_YEAR--;BG_LOADED_YEAR=null;renderBudgetTab();};
 document.getElementById('bgNextYear').onclick=()=>{BG_YEAR++;BG_LOADED_YEAR=null;renderBudgetTab();};
