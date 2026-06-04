@@ -3329,6 +3329,8 @@ const BG_PLAT_LABEL={'':'手動',meta:'Meta',criteo:'Criteo',google:'Google'};
 const fmtMoney=n=>'$'+Math.round(n||0).toLocaleString();
 const BG_CC=(typeof CC!=='undefined'&&CC)||['#4f86f7','#f4845f','#58c49a','#f7c94f','#a78bfa','#f472b6','#34d399','#fb923c','#60a5fa','#e879f9'];
 let BG_MONTHS_COLLAPSED=false;
+let BG_DETAIL_COLLAPSED=false;   // 收合原始預算/調整兩欄
+function bgToggleDetail(){BG_DETAIL_COLLAPSED=!BG_DETAIL_COLLAPSED;renderBudgetTable();}
 const BG_USAGE_OPEN=new Set();   // 用量圖中展開的分類
 // 同分類交替的淡底色
 const BG_GROUP_TINT=['transparent','rgba(99,102,241,.06)'];
@@ -3394,17 +3396,34 @@ function bgRowMonthly(it){
 function renderBudgetTable(){
   const ro=typeof IS_READONLY!=='undefined'&&IS_READONLY;
   const col=BG_MONTHS_COLLAPSED;
+  const det=!BG_DETAIL_COLLAPSED;        // 是否顯示原始預算/調整
+  const freeze=!col;                     // 凍結窗格僅在展開月份(會橫向捲動)時啟用
   const t=document.getElementById('bg-table');
-  // 收合時固定均分欄寬（順序：分類,行銷內容,自動帶入,原始預算,調整,可用預算,月份明細,已用,剩餘,已用%,刪除）
-  const CW=[11,17,10,11,7,11,6,9,9,6,3];
+  // 凍結欄寬度與 left 位移（分類→可用預算）
+  const W={cat:66,content:104,auto:78,annual:88,adjust:74,avail:96};
+  let _l=0;const LZ={};
+  ['cat','content','auto'].forEach(k=>{LZ[k]=_l;_l+=W[k];});
+  if(det){LZ.annual=_l;_l+=W.annual;LZ.adjust=_l;_l+=W.adjust;}
+  LZ.avail=_l;_l+=W.avail;
+  function fz(k,kind,tint){
+    if(!freeze)return '';
+    let bg=kind==='body'?((tint&&tint!=='transparent')?`background:linear-gradient(${tint},${tint}),var(--sf);`:'background:var(--sf);'):'background:var(--sf2);';
+    return `position:sticky;left:${LZ[k]}px;min-width:${W[k]}px;max-width:${W[k]}px;width:${W[k]}px;z-index:${kind==='head'?6:3};${bg}`;
+  }
+  // 收合月份時固定均分欄寬
+  let cw=[11,17,10];if(det)cw=cw.concat([11,7]);cw=cw.concat([11,6,9,9,6]);if(!ro)cw.push(3);
   t.className='bgtbl'+(col?' bgfixed':'');
-  let h=(col?('<colgroup>'+CW.slice(0,ro?10:11).map(w=>`<col style="width:${w}%">`).join('')+'</colgroup>'):'')
+  let h=(col?('<colgroup>'+cw.map(w=>`<col style="width:${w}%">`).join('')+'</colgroup>'):'')
     +'<thead><tr>'
-    +'<th class="lft">分類</th><th class="lft">行銷內容</th><th>自動帶入</th><th>原始預算</th><th>調整</th><th>可用預算</th>'
+    +`<th class="lft" style="${fz('cat','head')}">分類</th>`
+    +`<th class="lft" style="${fz('content','head')}">行銷內容</th>`
+    +`<th style="${fz('auto','head')}">自動帶入</th>`
+    +(det?`<th style="${fz('annual','head')}">原始預算</th><th style="${fz('adjust','head')}">調整</th>`:'')
+    +`<th style="${fz('avail','head')}cursor:pointer" onclick="bgToggleDetail()" title="${det?'收合原始預算/調整':'展開原始預算/調整'}">${det?'◂ ':'▸ '}可用預算</th>`
     +(col?'<th class="lft" style="cursor:pointer" onclick="bgToggleMonths()" title="展開月份明細">▸ 月份明細</th>'
          :MZ.map((m,i)=>i===0?`<th style="cursor:pointer" onclick="bgToggleMonths()" title="收合月份">◂ ${m}</th>`:`<th>${m}</th>`).join(''))
     +'<th>已用</th><th>剩餘</th><th>已用%</th>'+(ro?'':'<th></th>')+'</tr></thead><tbody>';
-  const baseCols=col?10:21;            // 不含刪除欄
+  const baseCols=3+(det?2:0)+1+(col?1:12)+3;   // 不含刪除欄
   const fullSpan=ro?baseCols:baseCols+1;
   let colTotals=Array(12).fill(0),sumAnnual=0,sumAdj=0,sumAvail=0,sumUsed=0;
   const groups=bgGroups();
@@ -3427,12 +3446,12 @@ function renderBudgetTable(){
       const adj=+it.adjust||0;
       const adjTxt=adj===0?'—':(adj>0?'+':'')+bgFmt(Math.round(adj));
       h+=`<tr data-ri="${ri}" style="background:${tint}">`
-        +`<td class="lft"><input value="${(it.cat||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="bgEdit(${ri},'cat',this.value)" placeholder="分類"></td>`
-        +`<td class="lft"><input value="${(it.content||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="bgEdit(${ri},'content',this.value)" placeholder="行銷內容"></td>`
-        +`<td>${ro?BG_PLAT_LABEL[it.link||'']:`<select onchange="bgEdit(${ri},'link',this.value)"><option value=""${!auto?' selected':''}>手動</option><option value="meta"${it.link==='meta'?' selected':''}>Meta</option><option value="criteo"${it.link==='criteo'?' selected':''}>Criteo</option><option value="google"${it.link==='google'?' selected':''}>Google</option></select>`}</td>`
-        +`<td><input inputmode="numeric" value="${it.annual?bgFmt(it.annual):''}" ${ro?'readonly':''} onchange="bgEdit(${ri},'annual',this.value)" placeholder="0"></td>`
-        +`<td style="color:${adj<0?'var(--dn)':adj>0?'#16a34a':'var(--tx3)'}" title="由撥款產生">${adjTxt}</td>`
-        +`<td style="font-weight:600">${fmtMoney(avail)}</td>`
+        +`<td class="lft" style="${fz('cat','body',tint)}"><input value="${(it.cat||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="bgEdit(${ri},'cat',this.value)" placeholder="分類"></td>`
+        +`<td class="lft" style="${fz('content','body',tint)}"><input value="${(it.content||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="bgEdit(${ri},'content',this.value)" placeholder="行銷內容"></td>`
+        +`<td style="${fz('auto','body',tint)}">${ro?BG_PLAT_LABEL[it.link||'']:`<select onchange="bgEdit(${ri},'link',this.value)"><option value=""${!auto?' selected':''}>手動</option><option value="meta"${it.link==='meta'?' selected':''}>Meta</option><option value="criteo"${it.link==='criteo'?' selected':''}>Criteo</option><option value="google"${it.link==='google'?' selected':''}>Google</option></select>`}</td>`
+        +(det?`<td style="${fz('annual','body',tint)}"><input inputmode="numeric" value="${it.annual?bgFmt(it.annual):''}" ${ro?'readonly':''} onchange="bgEdit(${ri},'annual',this.value)" placeholder="0"></td>`
+              +`<td style="${fz('adjust','body',tint)}color:${adj<0?'var(--dn)':adj>0?'#16a34a':'var(--tx3)'}" title="由撥款產生">${adjTxt}</td>`:'')
+        +`<td style="${fz('avail','body',tint)}font-weight:600">${fmtMoney(avail)}</td>`
         +(col?'<td style="text-align:center;color:var(--tx3)" title="展開月份查看明細">⋯</td>':mon.map((v,i)=>`<td class="mcell"><input inputmode="numeric" value="${v?bgFmt(v):''}" ${(auto||ro)?'readonly':''} ${auto?'title="自動帶入 '+BG_PLAT_LABEL[it.link]+' 花費"':''} onchange="bgEditMonth(${ri},${i},this.value)" placeholder="0"></td>`).join(''))
         +`<td>${fmtMoney(used)}</td>`
         +`<td style="color:${remain<0?'var(--dn)':'inherit'}">${fmtMoney(remain)}</td>`
@@ -3441,7 +3460,12 @@ function renderBudgetTable(){
         +`</tr>`;
     });
   });
-  h+='</tbody><tfoot><tr><td class="lft">合計</td><td class="lft"></td><td></td><td>'+fmtMoney(sumAnnual)+'</td><td>'+(sumAdj===0?'—':(sumAdj>0?'+':'')+bgFmt(Math.round(sumAdj)))+'</td><td>'+fmtMoney(sumAvail)+'</td>'
+  h+='</tbody><tfoot><tr>'
+    +`<td class="lft" style="${fz('cat','foot')}">合計</td>`
+    +`<td class="lft" style="${fz('content','foot')}"></td>`
+    +`<td style="${fz('auto','foot')}"></td>`
+    +(det?`<td style="${fz('annual','foot')}">${fmtMoney(sumAnnual)}</td><td style="${fz('adjust','foot')}">${sumAdj===0?'—':(sumAdj>0?'+':'')+bgFmt(Math.round(sumAdj))}</td>`:'')
+    +`<td style="${fz('avail','foot')}">${fmtMoney(sumAvail)}</td>`
     +(col?'<td></td>':colTotals.map(v=>`<td>${fmtMoney(v)}</td>`).join(''))
     +'<td>'+fmtMoney(sumUsed)+'</td><td>'+fmtMoney(sumAvail-sumUsed)+'</td><td>'+(sumAvail>0?(sumUsed/sumAvail*100).toFixed(0)+'%':'—')+'</td>'+(ro?'':'<td></td>')+'</tr></tfoot>';
   t.innerHTML=h;
