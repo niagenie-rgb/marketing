@@ -3456,11 +3456,13 @@ function renderBudgetTable(){
   const ro2=typeof IS_READONLY!=='undefined'&&IS_READONLY;
   const budgetRatio=BG_TARGET>0?sumAvail/BG_TARGET*100:null;
   const spendRatio=BG_CURRENT>0?sumUsed/BG_CURRENT*100:null;
+  const tA='background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.35)';   // 目標組（藍）
+  const tB='background:rgba(34,197,94,.09);border-color:rgba(34,197,94,.35)';     // 目前組（綠）
   document.getElementById('bg-perf').innerHTML=
-    `<div class="kc"><div class="kc-l">業績目標</div>${ro2?`<div class="kc-v">$${bgFmt(BG_TARGET)}</div>`:`<input class="kc-in" inputmode="numeric" value="${BG_TARGET?bgFmt(BG_TARGET):''}" placeholder="輸入目標營收" onchange="bgSetTarget(this.value)">`}</div>`
-   +`<div class="kc"><div class="kc-l">總行銷預算占比</div><div class="kc-v">${budgetRatio==null?'—':budgetRatio.toFixed(1)+'%'}</div><div class="kc-s">可用預算 ÷ 業績目標</div></div>`
-   +`<div class="kc"><div class="kc-l">目前業績</div>${ro2?`<div class="kc-v">$${bgFmt(BG_CURRENT)}</div>`:`<input class="kc-in" inputmode="numeric" value="${BG_CURRENT?bgFmt(BG_CURRENT):''}" placeholder="輸入目前營收" onchange="bgSetCurrent(this.value)">`}</div>`
-   +`<div class="kc"><div class="kc-l">目前行銷金額占比</div><div class="kc-v">${spendRatio==null?'—':spendRatio.toFixed(1)+'%'}</div><div class="kc-s">已用支出 ÷ 目前業績</div></div>`;
+    `<div class="kc" style="${tA}"><div class="kc-l">業績目標</div>${ro2?`<div class="kc-v">$${bgFmt(BG_TARGET)}</div>`:`<input class="kc-in" inputmode="numeric" value="${BG_TARGET?bgFmt(BG_TARGET):''}" placeholder="輸入目標營收" onchange="bgSetTarget(this.value)">`}</div>`
+   +`<div class="kc" style="${tA}"><div class="kc-l">總行銷預算占比</div><div class="kc-v">${budgetRatio==null?'—':budgetRatio.toFixed(1)+'%'}</div><div class="kc-s">可用預算 ÷ 業績目標</div></div>`
+   +`<div class="kc" style="${tB}"><div class="kc-l">目前業績</div>${ro2?`<div class="kc-v">$${bgFmt(BG_CURRENT)}</div>`:`<input class="kc-in" inputmode="numeric" value="${BG_CURRENT?bgFmt(BG_CURRENT):''}" placeholder="輸入目前營收" onchange="bgSetCurrent(this.value)">`}</div>`
+   +`<div class="kc" style="${tB}"><div class="kc-l">目前行銷金額占比</div><div class="kc-v">${spendRatio==null?'—':spendRatio.toFixed(1)+'%'}</div><div class="kc-s">已用支出 ÷ 目前業績</div></div>`;
   renderBudgetCharts();
   renderTransferLog();
 }
