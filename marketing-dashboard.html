@@ -3588,7 +3588,17 @@ function addBudgetRow(){
   renderBudgetTable();bgAutoSave();
 }
 function bgDelRow(ri){
-  if(!confirm('刪除這個項目？'))return;
+  const it=BG_ITEMS[ri];if(!it)return;
+  const related=BG_TRANSFERS.filter(tf=>tf.fromId===it.id||tf.toId===it.id);
+  let msg='刪除這個項目？';
+  if(related.length)msg='刪除「'+bgName(it)+'」？\n它有 '+related.length+' 筆撥款紀錄，刪除後會自動把撥款金額還原給對方項目。';
+  if(!confirm(msg))return;
+  // 反轉所有涉及此項目的撥款，把對方的調整還原
+  BG_TRANSFERS=BG_TRANSFERS.filter(tf=>{
+    if(tf.fromId===it.id){const o=bgById(tf.toId);if(o)o.adjust=(+o.adjust||0)-tf.amount;return false;}
+    if(tf.toId===it.id){const o=bgById(tf.fromId);if(o)o.adjust=(+o.adjust||0)+tf.amount;return false;}
+    return true;
+  });
   BG_ITEMS.splice(ri,1);renderBudgetTable();bgAutoSave();
 }
 
