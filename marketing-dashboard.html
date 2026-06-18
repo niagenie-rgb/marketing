@@ -2376,6 +2376,24 @@ function insertCodeBlockE(eid){const code=prompt('貼入程式碼：');if(!code)
 function insertMediaE(eid){const url=prompt('YouTube 或影片網址：');if(!url)return;let e='';const yt=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([\w-]+)/);if(yt)e=`<iframe src="https://www.youtube.com/embed/${yt[1]}" allowfullscreen></iframe>`;else if(url.match(/\.(mp4|webm|ogg)/i))e=`<video controls style="width:100%;border-radius:6px"><source src="${url}"></video>`;else e=`<iframe src="${url}" allowfullscreen></iframe>`;document.getElementById(eid).focus();document.execCommand('insertHTML',false,e+'<p></p>');}
 function insertRawHtmlE(eid){const html=prompt('貼入嵌入碼：');if(!html)return;document.getElementById(eid).focus();document.execCommand('insertHTML',false,`<div style="margin:.75rem 0">${html.trim()}</div><p></p>`);if(html.includes('facebook.com')&&!document.getElementById('fb-sdk')){const s=document.createElement('script');s.id='fb-sdk';s.async=s.defer=true;s.src='https://connect.facebook.net/zh_TW/sdk.js#xfbml=1&version=v18.0';document.body.appendChild(s);}else if(window.FB)window.FB.XFBML.parse();}
 function insertLinkE(eid){const url=prompt('網址：');if(!url)return;document.getElementById(eid).focus();const sel=window.getSelection();if(sel&&!sel.isCollapsed){const r=sel.getRangeAt(0);const f=r.cloneContents();if(f.querySelector('img')){const a=document.createElement('a');a.href=url;a.target='_blank';r.surroundContents(a);return;}}const text=prompt('顯示文字（留空用網址）：')||url;document.execCommand('insertHTML',false,`<a href="${url}" target="_blank">${text}</a>`);}
+// 讓 HTML 預覽 iframe 自動撐到內容完整高度（多次重量測，處理圖片/字型/輪播延遲載入）
+function hzFitIframe(f){
+  if(!f)return;
+  const fit=()=>{try{const d=f.contentDocument;if(!d||!d.body)return;const h=Math.max(d.body.scrollHeight,d.documentElement?d.documentElement.scrollHeight:0);if(h>0)f.style.height=(h+24)+'px';}catch(e){}};
+  fit();[120,300,600,1200,2500].forEach(t=>setTimeout(fit,t));
+  try{
+    const d=f.contentDocument;
+    if(d){
+      if(window.ResizeObserver&&d.body){const ro=new ResizeObserver(fit);ro.observe(d.body);}
+      d.querySelectorAll&&d.querySelectorAll('img').forEach(img=>{if(!img.complete)img.addEventListener('load',fit);});
+      if(d.fonts&&d.fonts.ready)d.fonts.ready.then(fit);
+    }
+  }catch(e){}
+}
+function hzFitAllIframes(container){
+  if(!container)return;
+  container.querySelectorAll('iframe').forEach(f=>hzFitIframe(f));
+}
 function insertHtmlPreviewE(eid){
   const html=prompt('貼入 HTML 碼（將直接渲染顯示）：');
   if(!html||!html.trim())return;
@@ -2386,7 +2404,7 @@ function insertHtmlPreviewE(eid){
       <span>HTML 預覽</span>
       <button onclick="editHtmlBlock('${id}')" style="font-size:10px;padding:1px 8px;border:1px solid var(--bdm);border-radius:8px;background:var(--sf);cursor:pointer;font-family:inherit;color:var(--tx2)">✎ 編輯原始碼</button>
     </div>
-    <iframe srcdoc="${html.replace(/"/g,'&quot;').replace(/`/g,'&#96;')}" style="width:100%;border:none;min-height:200px" onload="this.style.height=this.contentDocument.body.scrollHeight+20+'px'"></iframe>
+    <iframe srcdoc="${html.replace(/"/g,'&quot;').replace(/`/g,'&#96;')}" style="width:100%;border:none;min-height:200px" onload="hzFitIframe(this)"></iframe>
   </div><p></p>`;
   document.getElementById(eid).focus();
   document.execCommand('insertHTML',false,wrapped);
@@ -2521,6 +2539,7 @@ async function loadNotes(){
   el.innerHTML='<div style="color:var(--tx3);font-size:12px">載入中…</div>';
   const row=await dbGet('notes',CY,NOTES_MONTH);
   el.innerHTML=row?row.content:'';notesChanged=false;
+  hzFitAllIframes(el);
   const hint=document.getElementById('notes-save-hint');if(hint)hint.textContent='';
 }
 async function renderNotesMonthTabs(){
@@ -2588,6 +2607,7 @@ window.openProposal=function(id){
   </div>`;
   document.getElementById('prop-footer').style.display='flex';
   document.getElementById('notes-editor-proposals').innerHTML=p.body||'';
+  hzFitAllIframes(document.getElementById('notes-editor-proposals'));
   renderPropList();
 };
 window.saveProposal=async function(){
