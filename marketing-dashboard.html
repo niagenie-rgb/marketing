@@ -2095,6 +2095,14 @@ window.saveProj=async function(){
     parentId:parentId||null,
   };
 
+  // 防呆：父專案不能是自己 / 必須是存在的主專案
+  if(proj.parentId){
+    if(proj.parentId===proj.id){showStatus('父專案不能設成自己');return;}
+    const par=PROJ_ALL.find(p=>p.id===proj.parentId);
+    if(!par){showStatus('找不到指定的父專案');return;}
+    if(par.parentId){showStatus('父專案必須是主專案，不能選子活動');return;}
+  }
+
   if(PROJ_EDIT_ID){
     const idx=PROJ_ALL.findIndex(p=>p.id===PROJ_EDIT_ID);
     if(idx>=0)PROJ_ALL[idx]=proj;
@@ -2136,6 +2144,15 @@ function renderProjCatFilter(){
 // 甘特圖（橫軸月份＋日期線條）
 async function renderGantt(){
   await loadProjects();
+  // 防呆：自動修正非法 parentId（自己指自己、父不存在、父本身是子活動），避免整條專案消失
+  let _fixed=false;
+  PROJ_ALL.forEach(p=>{
+    if(p.parentId){
+      const par=PROJ_ALL.find(x=>x.id===p.parentId);
+      if(p.parentId===p.id||!par||par.parentId){p.parentId=null;_fixed=true;}
+    }
+  });
+  if(_fixed)saveProjects();
   renderProjCatFilter();
 
   const wrap=document.getElementById('ganttWrap');
@@ -2187,7 +2204,11 @@ async function renderGantt(){
   gh+=`<div style="width:80px;flex-shrink:0"></div></div></div>`;
 
   // 主專案列
-  mains.sort((a,b)=>a.startDate>b.startDate?1:-1).forEach((p,pi)=>{
+  mains.sort((a,b)=>{
+    if(a.pin&&!b.pin)return -1;
+    if(b.pin&&!a.pin)return 1;
+    return a.startDate>b.startDate?1:-1;
+  }).forEach((p,pi)=>{
     const subs=PROJ_ALL.filter(x=>x.parentId===p.id);
     const barColor=BC[pi%BC.length];
     const l=dateToPos(p.startDate);
