@@ -273,7 +273,10 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap">
     <div style="display:flex;gap:4px" id="ov-range-btns">
       <button class="rbtn" data-ovr="month">本月</button>
-      <button class="rbtn" data-ovr="q">本季</button>
+      <button class="rbtn" data-ovr="q1">Q1</button>
+      <button class="rbtn" data-ovr="q2">Q2</button>
+      <button class="rbtn" data-ovr="q3">Q3</button>
+      <button class="rbtn" data-ovr="q4">Q4</button>
       <button class="rbtn active" data-ovr="year">本年</button>
       <button class="rbtn" data-ovr="custom">自訂</button>
     </div>
@@ -2687,6 +2690,10 @@ function ovGetMonths(){
     const qs=Math.floor(tm/3)*3;
     return Array.from({length:tm-qs+1},(_,i)=>({y:ty,m:qs+i}));
   }
+  if(/^q[1-4]$/.test(OV_RANGE)){                 // Q1~Q4：完整三個月
+    const qs=(parseInt(OV_RANGE[1])-1)*3;
+    return Array.from({length:3},(_,i)=>({y:ty,m:qs+i}));
+  }
   if(OV_RANGE==='year') return Array.from({length:tm+1},(_,i)=>({y:ty,m:i}));
   if(OV_RANGE==='custom'){
     const y1=OV_CUSTOM_Y1||ty,m1=OV_CUSTOM_M1!=null?OV_CUSTOM_M1:0;
@@ -2699,6 +2706,7 @@ function ovGetMonths(){
 }
 
 function ovRangeLabel(){
+  if(/^q[1-4]$/.test(OV_RANGE)){const q=+OV_RANGE[1];return `${new Date().getFullYear()}年 Q${q}（${(q-1)*3+1}–${q*3}月）`;}
   const ms=ovGetMonths();
   if(!ms.length)return'';
   if(ms.length===1)return`${ms[0].y}年${MZ[ms[0].m]}`;
