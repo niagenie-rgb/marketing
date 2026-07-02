@@ -2142,6 +2142,8 @@ function renderProjCatFilter(){
 }
 
 // 甘特圖（橫軸月份＋日期線條）
+const GANTT_OPEN=new Set();   // 展開的分類
+function ganttToggleCat(enc){const c=decodeURIComponent(enc);if(GANTT_OPEN.has(c))GANTT_OPEN.delete(c);else GANTT_OPEN.add(c);renderGantt();}
 async function renderGantt(){
   await loadProjects();
   // 防呆：自動修正非法 parentId（自己指自己、父不存在、父本身是子活動），避免整條專案消失
@@ -2203,55 +2205,57 @@ async function renderGantt(){
   });
   gh+=`<div style="width:80px;flex-shrink:0"></div></div></div>`;
 
-  // 主專案列
-  mains.sort((a,b)=>{
+  // 依分類分組（分類＝上方標籤），一個分類一列，可展開逐項
+  const sortedMains=mains.slice().sort((a,b)=>{
     if(a.pin&&!b.pin)return -1;
     if(b.pin&&!a.pin)return 1;
     return a.startDate>b.startDate?1:-1;
-  }).forEach((p,pi)=>{
-    const subs=PROJ_ALL.filter(x=>x.parentId===p.id);
-    const barColor=BC[pi%BC.length];
-    const l=dateToPos(p.startDate);
-    const w=dateToWidth(p.startDate,p.endDate);
+  });
+  const catOrder=[],catMap={};
+  sortedMains.forEach(m=>{const c=m.cat||'未分類';if(!catMap[c]){catMap[c]=[];catOrder.push(c);}catMap[c].push(m);});
 
-    // 子專案條（重疊時換行）
-    const subRows=[]; // 每個 row 是一個不重疊的 sub 陣列
-    subs.sort((a,b)=>a.startDate>b.startDate?1:-1).forEach(s=>{
-      let placed=false;
-      for(const row of subRows){
-        const last=row[row.length-1];
-        if(s.startDate>last.endDate){row.push(s);placed=true;break;}
-      }
-      if(!placed)subRows.push([s]);
+  catOrder.forEach((cat,ci)=>{
+    const catMains=catMap[cat];
+    const barColor=BC[ci%BC.length];
+    const open=GANTT_OPEN.has(cat);
+    // 收集該分類所有項目（主專案 + 子項），依主專案順序
+    const items=[];
+    catMains.forEach(m=>{
+      items.push({id:m.id,name:m.name,startDate:m.startDate,endDate:m.endDate,desc:m.desc,isMain:true});
+      PROJ_ALL.filter(x=>x.parentId===m.id).sort((a,b)=>a.startDate>b.startDate?1:-1)
+        .forEach(s=>items.push({id:s.id,name:s.name,startDate:s.startDate,endDate:s.endDate,desc:s.desc,isMain:false}));
     });
-    const totalRowH=subRows.length===0?44:10+subRows.length*22+10;
 
-    gh+=`<div class="grow" style="min-height:${totalRowH}px;width:100%;position:relative" 
-      onmouseenter="document.getElementById('proj-hover-${p.id}').style.display='flex'" 
-      onmouseleave="document.getElementById('proj-hover-${p.id}').style.display='none'">`;
-    gh+=`<div class="grn" style="display:flex;flex-direction:column;justify-content:center">
-      <span style="font-size:13px;font-weight:600">${p.name}</span>
-      <span class="cat" style="font-size:10px;color:var(--tx3)">${p.cat||''}${p.desc?` · ${p.desc.slice(0,18)}${p.desc.length>18?'…':''}`:''}</span>
-    </div>`;
-    gh+=`<div style="flex:1;position:relative;height:${totalRowH}px">`;
-    // 母專案條（細線）
-    gh+=`<div class="gbar ${barColor}" style="left:${l}%;width:${w}%;height:5px;top:${Math.floor(totalRowH/2)-2}px;cursor:pointer;opacity:.3;border-radius:3px" onclick="openProjModal('${p.id}')" title="${p.name}&#10;${p.startDate} ～ ${p.endDate}${p.desc?'&#10;'+p.desc:''}"></div>`;
-    // 子專案條
-    subRows.forEach((row,ri)=>{
-      row.forEach(s=>{
-        const sl=dateToPos(s.startDate);
-        const sw=dateToWidth(s.startDate,s.endDate);
-        const top=4+ri*22;
-        gh+=`<div class="gbar ${barColor}" style="left:${sl}%;width:${sw}%;height:18px;top:${top}px;font-size:10px;cursor:pointer;border:none;opacity:1" onclick="openProjModal('${s.id}')" title="${s.name}&#10;${s.startDate} ～ ${s.endDate}${s.desc?'&#10;'+s.desc:''}">${s.name}</div>`;
+    let bodyH,body='';
+    if(open){
+      // 展開：逐項一行
+      const lineH=24;
+      bodyH=Math.max(44,items.length*lineH+8);
+      items.forEach((it,ii)=>{
+        const il=dateToPos(it.startDate),iw=dateToWidth(it.startDate,it.endDate),top=4+ii*lineH;
+        body+=`<div class="gbar ${barColor}" style="left:${il}%;width:${iw}%;height:18px;top:${top}px;font-size:10px;cursor:pointer;border:none;opacity:${it.isMain?'.9':'1'};${it.isMain?'font-weight:700;':''}" onclick="openProjModal('${it.id}')" title="${it.name}&#10;${it.startDate} ～ ${it.endDate}${it.desc?'&#10;'+it.desc:''}">${it.isMain?'▪ ':''}${it.name}</div>`;
       });
-    });
-    gh+=`</div>`;
-    // Hover 按鈕（sticky right，不佔版面）
-    gh+=`<div id="proj-hover-${p.id}" style="display:none;position:sticky;right:0;align-items:center;gap:2px;background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:2px 4px;z-index:10;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.1)">
-      <button class="rmbtn" onclick="openProjModal('${p.id}')" title="編輯" style="font-size:12px">✎</button>
-      <button class="rmbtn" onclick="openProjModal(null,'${p.id}')" title="＋子" style="font-size:11px;color:var(--meta)">＋</button>
-      <button class="rmbtn" onclick="deleteProj('${p.id}')" title="刪除" style="font-size:12px;color:var(--dn)">✕</button>
+    } else {
+      // 收合：所有項目打包到不重疊的 lane，全部顯示
+      const lanes=[];
+      items.slice().sort((a,b)=>a.startDate>b.startDate?1:-1).forEach(it=>{
+        let placed=false;
+        for(const lane of lanes){const last=lane[lane.length-1];if(it.startDate>last.endDate){lane.push(it);placed=true;break;}}
+        if(!placed)lanes.push([it]);
+      });
+      bodyH=Math.max(44,10+lanes.length*22+10);
+      lanes.forEach((lane,ri)=>lane.forEach(it=>{
+        const il=dateToPos(it.startDate),iw=dateToWidth(it.startDate,it.endDate),top=4+ri*22;
+        body+=`<div class="gbar ${barColor}" style="left:${il}%;width:${iw}%;height:18px;top:${top}px;font-size:10px;cursor:pointer;border:none;opacity:1" onclick="openProjModal('${it.id}')" title="${it.name}&#10;${it.startDate} ～ ${it.endDate}${it.desc?'&#10;'+it.desc:''}">${it.name}</div>`;
+      }));
+    }
+
+    gh+=`<div class="grow" style="min-height:${bodyH}px;width:100%;position:relative">`;
+    gh+=`<div class="grn" style="display:flex;flex-direction:column;justify-content:center;cursor:pointer" onclick="ganttToggleCat('${encodeURIComponent(cat)}')" title="${open?'收合':'展開'}">
+      <span style="font-size:13px;font-weight:700">${open?'▾':'▸'} ${cat}</span>
+      <span class="cat" style="font-size:10px;color:var(--tx3)">${catMains.length} 專案 · ${items.length} 項目</span>
     </div>`;
+    gh+=`<div style="flex:1;position:relative;height:${bodyH}px">${body}</div>`;
     gh+=`</div>`;
   });
   gh+=`</div>`;
