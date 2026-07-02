@@ -430,6 +430,16 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     <button class="ptab" data-p="criteo"><span class="dot dc"></span>Criteo</button>
     <button class="ptab" data-p="google"><span class="dot dg"></span>Google Ads</button>
   </div>
+  <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:1rem" id="ad-range-btns">
+    <span style="font-size:11px;color:var(--tx3);margin-right:4px">區間</span>
+    <button class="rbtn active" data-adr="month">單月</button>
+    <button class="rbtn" data-adr="q1">Q1</button>
+    <button class="rbtn" data-adr="q2">Q2</button>
+    <button class="rbtn" data-adr="q3">Q3</button>
+    <button class="rbtn" data-adr="q4">Q4</button>
+    <button class="rbtn" data-adr="year">全年</button>
+    <span id="ad-range-label" style="font-size:11px;color:var(--tx3);margin-left:4px"></span>
+  </div>
   <div class="uarea" id="ad-uarea">
     <span class="uicon">📁</span>
     <div class="utxt"><strong id="ad-ulabel">上傳 Meta Excel 報表</strong><span id="ad-uname">支援 .xlsx 格式</span></div>
@@ -820,6 +830,12 @@ const BC=['bp','bt','ba','bc','bb','bk'];
 const CC=['#4f86f7','#f4845f','#58c49a','#f7c94f','#a78bfa','#f472b6','#34d399','#fb923c','#60a5fa','#e879f9'];
 const CHARTS={};
 let CY=new Date().getFullYear(),CM=new Date().getMonth()-1,AP='meta';
+let AD_RANGE='month';   // 廣告成效區間：month / q1-q4 / year
+function adGetMonths(){
+  if(/^q[1-4]$/.test(AD_RANGE)){const qs=(+AD_RANGE[1]-1)*3;return [qs,qs+1,qs+2];}
+  if(AD_RANGE==='year')return Array.from({length:12},(_,i)=>i);
+  return [CM];
+}
 if(CM<0){CM=11;CY--;}
 let GA4_VIEW='month',GA4_RANGE='all';
 const CACHE={};
@@ -928,6 +944,15 @@ document.getElementById('ptabs').onclick=function(e){
   document.getElementById('ad-ulabel').textContent=L[AP];
   renderAd();
 };
+document.getElementById('ad-range-btns').addEventListener('click',e=>{
+  const b=e.target.closest('.rbtn');if(!b)return;
+  document.querySelectorAll('#ad-range-btns .rbtn').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');AD_RANGE=b.dataset.adr;
+  // 多月加總時，上傳區改唯讀提示（上傳仍針對目前單月）
+  const ua=document.getElementById('ad-uarea');
+  if(ua)ua.style.opacity=AD_RANGE==='month'?'1':'.55';
+  renderAd();
+});
 
 // ── GA4 Upload ────────────────────────────────────────────────
 window.handleGaFile=async function(e,type){
@@ -1339,20 +1364,42 @@ window.handleAdUpload=async function(e){
 };
 
 async function renderAd(){
-  const cacheKey=`ad_${CY}_${CM}_${AP}`;
-  let d=CACHE[cacheKey]?CACHE[cacheKey]:null;
-  if(!d){
-    const row=await dbGet('ad_data',CY,CM,`&platform=eq.${AP}`);
-    d=row?row.data:null;
-    if(d)CACHE[cacheKey]=d;
-  }
-  const ua=document.getElementById('ad-uarea'),ub=document.getElementById('ad-ubadge'),un=document.getElementById('ad-uname');
-  if(d&&d.rows&&d.rows.length){
-    if(!IS_READONLY){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';}
-    renderAdMetrics(d.rows, d);renderAdCharts(d.rows);renderAdTable(d.rows,d);
+  const months=adGetMonths();
+  const lblEl=document.getElementById('ad-range-label');
+  if(lblEl)lblEl.textContent=AD_RANGE==='month'?'':(AD_RANGE==='year'?`${CY} 全年加總`:`${CY} ${AD_RANGE.toUpperCase()}（${(+AD_RANGE[1]-1)*3+1}–${(+AD_RANGE[1])*3}月）加總`);
+
+  if(months.length===1){
+    // 單月：維持原本行為（含 criteo 每日總計、檔名）
+    const m=months[0];
+    const cacheKey=`ad_${CY}_${m}_${AP}`;
+    let d=CACHE[cacheKey]?CACHE[cacheKey]:null;
+    if(!d){const row=await dbGet('ad_data',CY,m,`&platform=eq.${AP}`);d=row?row.data:null;if(d)CACHE[cacheKey]=d;}
+    const ua=document.getElementById('ad-uarea'),ub=document.getElementById('ad-ubadge'),un=document.getElementById('ad-uname');
+    if(d&&d.rows&&d.rows.length){
+      if(!IS_READONLY){ua.classList.add('loaded');ub.style.display='';un.textContent=d._fn||'已載入';}
+      renderAdMetrics(d.rows, d);renderAdCharts(d.rows);renderAdTable(d.rows,d);
+    } else {
+      if(!IS_READONLY){ua.classList.remove('loaded');ub.style.display='none';const L={meta:'支援 .xlsx',criteo:'支援 .xlsx',google:'支援 .csv/.xlsx'};un.textContent=L[AP];}
+      clearAd();
+    }
   } else {
-    if(!IS_READONLY){ua.classList.remove('loaded');ub.style.display='none';const L={meta:'支援 .xlsx',criteo:'支援 .xlsx',google:'支援 .csv/.xlsx'};un.textContent=L[AP];}
-    clearAd();
+    // 多月加總：串接各月 rows
+    let allRows=[],monthsWithData=0;
+    for(const m of months){
+      const cacheKey=`ad_${CY}_${m}_${AP}`;
+      let d=CACHE[cacheKey]?CACHE[cacheKey]:null;
+      if(!d){const row=await dbGet('ad_data',CY,m,`&platform=eq.${AP}`);d=row?row.data:null;if(d)CACHE[cacheKey]=d;}
+      if(d&&d.rows&&d.rows.length){allRows=allRows.concat(d.rows);monthsWithData++;}
+    }
+    const ua=document.getElementById('ad-uarea'),ub=document.getElementById('ad-ubadge'),un=document.getElementById('ad-uname');
+    if(allRows.length){
+      if(!IS_READONLY){ua.classList.add('loaded');ub.style.display='';un.textContent=`${monthsWithData} 個月加總`;}
+      const dObj={rows:allRows};   // 不帶 _dailyTotal → 指標由 rows 加總
+      renderAdMetrics(allRows,dObj);renderAdCharts(allRows);renderAdTable(allRows,dObj);
+    } else {
+      if(!IS_READONLY){ua.classList.remove('loaded');ub.style.display='none';const L={meta:'支援 .xlsx',criteo:'支援 .xlsx',google:'支援 .csv/.xlsx'};un.textContent=L[AP];}
+      clearAd();
+    }
   }
   renderAdTrendSection();
 }
