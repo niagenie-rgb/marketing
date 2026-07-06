@@ -3086,13 +3086,17 @@ async function renderAdTrendSection(){
     drawAdTrendChart(months);
   };
 
-  // 收集所有廣告名稱，按行銷活動分組
-  const campMap={};
+  // 收集所有廣告名稱，按行銷活動分組，並統計期間總花費（用來過濾 0 元）
+  const campMap={},adSpend={},campSpend={};
   months.forEach(mo=>mo.data.rows.forEach(r=>{
     const camp=r.campaignName||'其他';
     if(!campMap[camp])campMap[camp]=new Set();
     campMap[camp].add(r.name);
+    adSpend[r.name]=(adSpend[r.name]||0)+(+r.spend||0);
+    campSpend[camp]=(campSpend[camp]||0)+(+r.spend||0);
   }));
+  const adHasSpend=n=>(adSpend[n]||0)>0;
+  const campHasSpend=c=>(campSpend[c]||0)>0;
 
   const sel=document.getElementById('ad-trend-selector');
   sel.innerHTML='';
@@ -3101,10 +3105,10 @@ async function renderAdTrendSection(){
   // 重置選取：Meta 預設顯示各「行銷活動」加總；其他平台預設前 5 廣告
   if(AD_TREND_SELECTED.size===0){
     if(hasCampaigns){
-      Object.keys(campMap).sort().slice(0,6).forEach(c=>AD_TREND_SELECTED.add('C::'+c));
+      Object.keys(campMap).filter(campHasSpend).sort((a,b)=>campSpend[b]-campSpend[a]).slice(0,6).forEach(c=>AD_TREND_SELECTED.add('C::'+c));
     } else {
       const cur=months.find(r=>r.month===CM)||months[months.length-1];
-      cur.data.rows.slice().sort((a,b)=>b.spend-a.spend).slice(0,5).forEach(r=>AD_TREND_SELECTED.add(r.name));
+      cur.data.rows.slice().sort((a,b)=>b.spend-a.spend).filter(r=>r.spend>0).slice(0,5).forEach(r=>AD_TREND_SELECTED.add(r.name));
     }
   }
 
@@ -3128,8 +3132,9 @@ async function renderAdTrendSection(){
   if(hasCampaigns){
     // 兩層：行銷活動 →（展開）各別廣告
     sel.style.display='flex';sel.style.flexDirection='column';sel.style.gap='7px';sel.style.alignItems='stretch';sel.style.flexWrap='nowrap';
-    const entries=Object.entries(campMap).sort(([a],[b])=>a.localeCompare(b));
+    const entries=Object.entries(campMap).filter(([c])=>campHasSpend(c)).sort(([a],[b])=>campSpend[b]-campSpend[a]);
     entries.forEach(([camp,names])=>{
+      const adNames=[...names].filter(adHasSpend).sort();
       const block=document.createElement('div');
       const head=document.createElement('div');
       head.style.cssText='display:flex;align-items:center;gap:5px;flex-wrap:wrap';
@@ -3141,13 +3146,13 @@ async function renderAdTrendSection(){
       campBtn.style.fontWeight='700';
       head.appendChild(exp);head.appendChild(campBtn);
       const count=document.createElement('span');
-      count.style.cssText='font-size:10px;color:var(--tx3)';count.textContent=`${names.size} 廣告`;
+      count.style.cssText='font-size:10px;color:var(--tx3)';count.textContent=`${adNames.length} 廣告`;
       head.appendChild(count);
       block.appendChild(head);
       // 各別廣告（預設收合）
       const adsWrap=document.createElement('div');
       adsWrap.style.cssText='display:none;flex-wrap:wrap;gap:4px;margin:5px 0 2px 24px';
-      [...names].sort().forEach(n=>adsWrap.appendChild(makeBtn(n,n)));
+      adNames.forEach(n=>adsWrap.appendChild(makeBtn(n,n)));
       block.appendChild(adsWrap);
       exp.onclick=()=>{const open=adsWrap.style.display==='none';adsWrap.style.display=open?'flex':'none';exp.textContent=open?'▾':'▸';};
       sel.appendChild(block);
@@ -3156,7 +3161,7 @@ async function renderAdTrendSection(){
     sel.style.display='flex';sel.style.flexDirection='row';sel.style.flexWrap='wrap';sel.style.gap='5px';sel.style.alignItems='center';
     const allNames=new Set();
     months.forEach(mo=>mo.data.rows.forEach(r=>allNames.add(r.name)));
-    [...allNames].sort().forEach(name=>sel.appendChild(makeBtn(name,name)));
+    [...allNames].filter(adHasSpend).sort().forEach(name=>sel.appendChild(makeBtn(name,name)));
   }
 
   // 月份範圍選擇器初始化
