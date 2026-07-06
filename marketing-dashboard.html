@@ -262,6 +262,7 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
   <button class="mtab" data-tab="overview">總覽</button>
   <button class="mtab active" data-tab="ga4">GA4 流量</button>
   <button class="mtab" data-tab="ad">廣告成效</button>
+  <button class="mtab" data-tab="sales">業績</button>
   <button class="mtab" data-tab="proj">專案時程</button>
   <button class="mtab" data-tab="budget">預算管理</button>
   <button class="mtab" data-tab="notes">備注</button>
@@ -521,6 +522,33 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
 </div>
 
 <!-- 時程 -->
+<!-- 業績 -->
+<div class="tab-panel" id="panel-sales">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap">
+    <button class="rbtn" id="salesPrevYear">‹</button>
+    <strong id="sales-year-label" style="font-size:15px;min-width:64px;text-align:center">—</strong>
+    <button class="rbtn" id="salesNextYear">›</button>
+    <span style="color:var(--tx3);font-size:12px">年度業績與品項銷量</span>
+    <div style="flex:1"></div>
+    <button class="rbtn" onclick="salesAddRow()" style="font-size:13px">＋ 新增列</button>
+    <button class="rbtn" onclick="document.getElementById('sales-file').click()" style="font-size:13px">📤 上傳 CSV</button>
+    <input type="file" id="sales-file" accept=".csv" style="display:none" onchange="salesUploadCsv(event)">
+    <span id="sales-save-status" style="font-size:12px;color:var(--tx3);min-width:64px;text-align:right"></span>
+    <button class="btn-p" onclick="exportAiPackage()" style="padding:6px 14px;font-size:13px">🤖 匯出 AI 分析包</button>
+  </div>
+  <div id="sales-kpis" class="bg-kpis"></div>
+  <div class="bg-charts">
+    <div class="bg-ccard"><div class="bg-ctitle">月營收趨勢</div><div style="height:240px" id="sales-rev-wrap"><canvas id="sales-rev-chart"></canvas></div></div>
+    <div class="bg-ccard"><div class="bg-ctitle">品類銷量趨勢</div><div style="height:240px" id="sales-qty-wrap"><canvas id="sales-qty-chart"></canvas></div></div>
+  </div>
+  <div style="overflow-x:auto;border:1px solid var(--bd);border-radius:var(--rl);background:var(--sf)">
+    <table class="bgtbl" id="sales-table"></table>
+  </div>
+  <div style="font-size:11px;color:var(--tx3);margin-top:8px">
+    💡 用「業績匯入範本.csv」把 Excel 數字貼進去再上傳（分類：營業額／電動床／乳膠床／折疊床；單位：元／台／件）。重複上傳同年度會覆蓋。「匯出 AI 分析包」會把行銷（GA4＋廣告）與業績打包成 JSON＋摘要下載，可丟給 AI 做關聯分析。
+  </div>
+</div>
+
 <div class="tab-panel" id="panel-proj">
 
   <!-- 工具列 -->
@@ -914,6 +942,7 @@ document.querySelectorAll('.mtab').forEach(t=>t.addEventListener('click',()=>{
   t.classList.add('active');document.getElementById('panel-'+t.dataset.tab).classList.add('active');
   if(t.dataset.tab==='overview')renderOverview();
   if(t.dataset.tab==='budget')renderBudgetTab();
+  if(t.dataset.tab==='sales')renderSalesTab();
 }));
 document.getElementById('prevBtn').onclick=()=>{CM--;if(CM<0){CM=11;CY--;}renderAll()};
 document.getElementById('nextBtn').onclick=()=>{CM++;if(CM>11){CM=0;CY++;}renderAll()};
@@ -3453,6 +3482,203 @@ async function renderAll(){
   document.getElementById('monthLabel').textContent=CY+' / '+MZ[CM];
   document.getElementById('ga-m-sel').value=CM;
   renderGaMonth();renderAd();renderGantt();renderNotes();
+}
+
+// ── 業績 ──────────────────────────────────────────────────────
+let SALES_YEAR=new Date().getFullYear();
+let SALES_ROWS=[];            // [{cat,item,unit,months:[12]}]
+let SALES_LOADED_YEAR=null;
+const salesFmt=n=>(+n||0).toLocaleString('en-US');
+
+async function renderSalesTab(){
+  document.getElementById('sales-year-label').textContent=SALES_YEAR;
+  if(SALES_LOADED_YEAR!==SALES_YEAR){
+    const rec=await dbGet('sales',SALES_YEAR,0);
+    SALES_ROWS=(rec&&rec.data&&Array.isArray(rec.data.rows))?rec.data.rows:[];
+    SALES_LOADED_YEAR=SALES_YEAR;
+  }
+  renderSalesTable();
+}
+
+function salesRowTotal(r){return (r.months||[]).reduce((a,b)=>a+(+b||0),0);}
+function salesCatTotal(cat){return SALES_ROWS.filter(r=>r.cat===cat).reduce((a,r)=>a+salesRowTotal(r),0);}
+
+function salesCatMonthly(cat){const a=Array(12).fill(0);SALES_ROWS.filter(r=>r.cat===cat).forEach(r=>(r.months||[]).forEach((v,i)=>a[i]+=(+v||0)));return a;}
+function salesRevRow(re){const r=SALES_ROWS.find(x=>x.cat==='營業額'&&re.test(x.item));return r?r.months:Array(12).fill(0);}
+
+function renderSalesTable(){
+  const ro=typeof IS_READONLY!=='undefined'&&IS_READONLY;
+  const t=document.getElementById('sales-table');
+  let colTotals=Array(12).fill(0);
+  let h='<thead><tr><th class="lft">分類</th><th class="lft">項目</th><th>單位</th>'+MZ.map(m=>`<th>${m}</th>`).join('')+'<th>合計</th>'+(ro?'':'<th></th>')+'</tr></thead><tbody>';
+  if(!SALES_ROWS.length){
+    h+=`<tr><td class="lft" colspan="${ro?16:17}" style="text-align:center;color:var(--tx3);padding:14px">尚無資料——按「＋ 新增列」手動輸入，或「上傳 CSV」匯入</td></tr>`;
+  }
+  // 依分類分組（保留出現順序）
+  const cats=[],map={};
+  SALES_ROWS.forEach((r,idx)=>{const c=r.cat||'其他';if(!map[c]){map[c]=[];cats.push(c);}map[c].push(idx);});
+  const tint=['transparent','rgba(99,102,241,.05)'];
+  cats.forEach((c,ci)=>{
+    map[c].forEach((idx,ri)=>{
+      const r=SALES_ROWS[idx];const rt=salesRowTotal(r);
+      (r.months||[]).forEach((v,i)=>colTotals[i]+=(+v||0));
+      h+=`<tr style="background:${tint[ci%2]}">`
+        +`<td class="lft"><input value="${(r.cat||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="salesEdit(${idx},'cat',this.value)" placeholder="分類"></td>`
+        +`<td class="lft"><input value="${(r.item||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="salesEdit(${idx},'item',this.value)" placeholder="項目"></td>`
+        +`<td><input value="${(r.unit||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="salesEdit(${idx},'unit',this.value)" placeholder="單位" style="width:44px;text-align:center"></td>`
+        +(r.months||Array(12).fill(0)).map((v,i)=>`<td class="mcell"><input inputmode="numeric" value="${v?salesFmt(v):''}" ${ro?'readonly':''} onchange="salesEditMonth(${idx},${i},this.value)" placeholder="0"></td>`).join('')
+        +`<td style="font-weight:600">${salesFmt(rt)}</td>`
+        +(ro?'':`<td class="delx" onclick="salesDelRow(${idx})" title="刪除">✕</td>`)
+        +`</tr>`;
+    });
+  });
+  h+='</tbody><tfoot><tr><td class="lft">合計(全部)</td><td></td><td></td>'+colTotals.map(v=>`<td>${salesFmt(v)}</td>`).join('')+`<td>${salesFmt(colTotals.reduce((a,b)=>a+b,0))}</td>`+(ro?'':'<td></td>')+'</tr></tfoot>';
+  t.innerHTML=h;
+  // KPI
+  const revTotal=SALES_ROWS.filter(r=>r.cat==='營業額'&&/總/.test(r.item)).reduce((a,r)=>a+salesRowTotal(r),0);
+  const revE=SALES_ROWS.filter(r=>r.cat==='營業額'&&/電動/.test(r.item)).reduce((a,r)=>a+salesRowTotal(r),0);
+  const revL=SALES_ROWS.filter(r=>r.cat==='營業額'&&/乳膠/.test(r.item)).reduce((a,r)=>a+salesRowTotal(r),0);
+  document.getElementById('sales-kpis').innerHTML=
+    `<div class="kc"><div class="kc-l">年度總營收</div><div class="kc-v">$${salesFmt(revTotal)}</div></div>`
+   +`<div class="kc"><div class="kc-l">電動床營收</div><div class="kc-v">$${salesFmt(revE)}</div></div>`
+   +`<div class="kc"><div class="kc-l">乳膠床營收</div><div class="kc-v">$${salesFmt(revL)}</div></div>`
+   +`<div class="kc"><div class="kc-l">電動床台數</div><div class="kc-v">${salesFmt(salesCatTotal('電動床'))}</div></div>`
+   +`<div class="kc"><div class="kc-l">乳膠床件數</div><div class="kc-v">${salesFmt(salesCatTotal('乳膠床'))}</div></div>`
+   +`<div class="kc"><div class="kc-l">折疊床件數</div><div class="kc-v">${salesFmt(salesCatTotal('折疊床'))}</div></div>`;
+  renderSalesCharts();
+}
+
+function renderSalesCharts(){
+  if(typeof Chart==='undefined')return;
+  const mkLine=(wrapId,canvasId,series,fmt)=>{
+    killChart(canvasId);
+    const wrap=document.getElementById(wrapId);
+    const has=series.some(s=>s.data.some(v=>v>0));
+    if(!has){wrap.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:13px">尚無資料</div>';return;}
+    wrap.innerHTML=`<canvas id="${canvasId}"></canvas>`;
+    CHARTS[canvasId]=new Chart(document.getElementById(canvasId),{
+      type:'line',
+      data:{labels:MZ,datasets:series.map((s,i)=>({label:s.label,data:s.data.map(v=>v||null),borderColor:s.color,backgroundColor:'transparent',tension:.35,pointRadius:3,spanGaps:false}))},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:12,padding:8}},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${fmt(ctx.raw)}`}}},scales:{y:{ticks:{callback:v=>fmt(v),font:{size:10}}},x:{ticks:{font:{size:10}}}}}
+    });
+  };
+  mkLine('sales-rev-wrap','sales-rev-chart',[
+    {label:'總營業額',data:salesRevRow(/總/),color:'#1a1a1a'},
+    {label:'電動床',data:salesRevRow(/電動/),color:'#4f86f7'},
+    {label:'乳膠床',data:salesRevRow(/乳膠/),color:'#58c49a'},
+  ],v=>'$'+fmtN(v));
+  mkLine('sales-qty-wrap','sales-qty-chart',[
+    {label:'電動床',data:salesCatMonthly('電動床'),color:'#4f86f7'},
+    {label:'乳膠床',data:salesCatMonthly('乳膠床'),color:'#58c49a'},
+    {label:'折疊床',data:salesCatMonthly('折疊床'),color:'#f4845f'},
+  ],v=>Math.round(v)+'');
+}
+
+function salesEdit(idx,key,val){const r=SALES_ROWS[idx];if(!r)return;r[key]=val;renderSalesTable();salesAutoSave();}
+function salesEditMonth(idx,mi,val){const r=SALES_ROWS[idx];if(!r)return;if(!Array.isArray(r.months))r.months=Array(12).fill(0);r.months[mi]=+String(val).replace(/[,\s]/g,'')||0;renderSalesTable();salesAutoSave();}
+function salesAddRow(){SALES_ROWS.push({cat:'',item:'',unit:'台',months:Array(12).fill(0)});renderSalesTable();salesAutoSave();}
+function salesDelRow(idx){if(!confirm('刪除這一列？'))return;SALES_ROWS.splice(idx,1);renderSalesTable();salesAutoSave();}
+function salesSetStatus(txt,c){const el=document.getElementById('sales-save-status');if(el){el.textContent=txt;el.style.color=c||'var(--tx3)';}}
+let SALES_SAVE_T=null;
+function salesAutoSave(){
+  if(typeof IS_READONLY!=='undefined'&&IS_READONLY)return;
+  salesSetStatus('編輯中…');clearTimeout(SALES_SAVE_T);
+  SALES_SAVE_T=setTimeout(async()=>{salesSetStatus('儲存中…');const ok=await salesSave();salesSetStatus(ok?'✓ 已自動儲存':'✕ 儲存失敗',ok?'#16a34a':'var(--dn)');},1000);
+}
+
+// 正確處理引號內逗號的 CSV 行解析
+function parseCsvLine(line){
+  const out=[];let cur='',q=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(q){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else { if(ch==='"')q=true; else if(ch===','){out.push(cur);cur='';} else cur+=ch; }
+  }
+  out.push(cur);return out;
+}
+// CSV 解析：分類,項目,單位,1月..12月
+function salesUploadCsv(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    try{
+      const text=e.target.result;
+      const lines=text.split(/\r?\n/).filter(l=>l.trim());
+      const rows=[];
+      for(let i=1;i<lines.length;i++){                 // 跳過標題列
+        const c=parseCsvLine(lines[i]);
+        const cat=(c[0]||'').trim();const item=(c[1]||'').trim();
+        if(!cat||!item)continue;
+        const unit=(c[2]||'').trim();
+        const months=Array.from({length:12},(_,mi)=>{const v=(c[3+mi]||'').replace(/[,\s]/g,'');return +v||0;});
+        rows.push({cat,item,unit,months});
+      }
+      if(!rows.length){alert('CSV 沒有解析到資料，請確認格式與範本一致。');return;}
+      SALES_ROWS=rows;
+      const ok=await salesSave();
+      renderSalesTable();
+      showStatus(ok?`✓ 已匯入 ${rows.length} 筆`:'匯入完成但儲存失敗');
+      if(!ok)alert('資料已顯示，但儲存失敗——請確認 Supabase 已建立 sales 資料表。');
+    }catch(err){alert('解析失敗：'+err.message);}
+    ev.target.value='';
+  };
+  reader.readAsText(f,'utf-8');
+}
+async function salesSave(){
+  return await dbUpsert('sales',{year:SALES_YEAR,month:0,data:{rows:SALES_ROWS}});
+}
+document.getElementById('salesPrevYear').onclick=()=>{SALES_YEAR--;SALES_LOADED_YEAR=null;renderSalesTab();};
+document.getElementById('salesNextYear').onclick=()=>{SALES_YEAR++;SALES_LOADED_YEAR=null;renderSalesTab();};
+
+// ── 匯出 AI 分析包（行銷＋業績 → JSON＋摘要，下載）──
+async function exportAiPackage(){
+  showStatus('彙整資料中…',8000);
+  const year=SALES_YEAR;
+  // 行銷：各平台各月
+  const adAll=await dbGetAll('ad_data',year);
+  const ads={meta:[],criteo:[],google:[]};
+  (adAll||[]).forEach(rec=>{
+    if(!ads[rec.platform])return;
+    const s=ovSumRows(rec?.data?.rows);
+    ads[rec.platform].push({month:rec.month+1,spend:Math.round(s.spend),roas:+s.roas.toFixed(2),cpc:+s.cpc.toFixed(2),ctr:+(s.ctr*100).toFixed(2)});
+  });
+  // GA4：各月
+  const gaAll=await dbGetAll('ga4_data',year);
+  const ga4=(gaAll||[]).map(rec=>{
+    const d=rec.data||{};
+    return {month:rec.month+1,users:d.users||d.activeUsers||null,newUsers:d.newUsers||null,events:d.events||d.eventCount||null};
+  });
+  // 業績
+  const salesRec=await dbGet('sales',year,0);
+  const salesRows=(salesRec&&salesRec.data&&salesRec.data.rows)||SALES_ROWS;
+  // 預算
+  const budRec=await dbGet('budget',year,0);
+  const budget=(budRec&&budRec.data)?{items:(budRec.data.items||[]).map(it=>({cat:it.cat,content:it.content,annual:(+it.annual||0)+(+it.adjust||0)})),targetRevenue:budRec.data.targetRevenue||0,currentRevenue:budRec.data.currentRevenue||0}:null;
+
+  const pkg={
+    brand:BRAND_NAME||BRAND,year,generatedAt:new Date().toISOString(),
+    marketing:{ads,ga4,budget},
+    sales:{rows:salesRows}
+  };
+
+  // 文字摘要
+  const totalSpend=Object.values(ads).flat().reduce((a,r)=>a+r.spend,0);
+  const revTotal=salesRows.filter(r=>r.cat==='營業額'&&/總/.test(r.item)).reduce((a,r)=>a+(r.months||[]).reduce((x,y)=>x+(+y||0),0),0);
+  let summary=`# ${pkg.brand} ${year} 行銷×業績分析包\n\n`;
+  summary+=`- 廣告總花費：$${totalSpend.toLocaleString()}\n`;
+  summary+=`- 年度總營收：$${revTotal.toLocaleString()}\n`;
+  if(revTotal>0)summary+=`- 行銷費用率（廣告花費 ÷ 營收）：${(totalSpend/revTotal*100).toFixed(1)}%\n`;
+  summary+=`\n## 銷量分類合計\n`;
+  ['電動床','乳膠床','折疊床'].forEach(c=>{const q=salesRows.filter(r=>r.cat===c).reduce((a,r)=>a+(r.months||[]).reduce((x,y)=>x+(+y||0),0),0);if(q)summary+=`- ${c}：${q.toLocaleString()}\n`;});
+  summary+=`\n## 建議給 AI 的分析方向\n請比對各月「廣告花費/流量」與「營收/銷量」的關聯，找出投報率最高的月份與品項，並針對下一季預算配置提出建議。\n\n---\n以下 JSON 為完整資料：\n`;
+
+  const blob=new Blob([summary+'\n```json\n'+JSON.stringify(pkg,null,2)+'\n```\n'],{type:'text/markdown;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${pkg.brand}_${year}_AI分析包.md`;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  showStatus('✓ 已下載 AI 分析包');
 }
 
 // ── 預算管理 ──────────────────────────────────────────────────
