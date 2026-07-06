@@ -3510,9 +3510,9 @@ function renderSalesTable(){
   const ro=typeof IS_READONLY!=='undefined'&&IS_READONLY;
   const t=document.getElementById('sales-table');
   let colTotals=Array(12).fill(0);
-  let h='<thead><tr><th class="lft">分類</th><th class="lft">項目</th><th>單位</th>'+MZ.map(m=>`<th>${m}</th>`).join('')+'<th>合計</th>'+(ro?'':'<th></th>')+'</tr></thead><tbody>';
+  let h='<thead><tr><th class="lft" style="min-width:70px">分類</th><th class="lft" style="min-width:140px">項目</th>'+MZ.map(m=>`<th>${m}</th>`).join('')+'<th>合計</th>'+(ro?'':'<th></th>')+'</tr></thead><tbody>';
   if(!SALES_ROWS.length){
-    h+=`<tr><td class="lft" colspan="${ro?16:17}" style="text-align:center;color:var(--tx3);padding:14px">尚無資料——按「＋ 新增列」手動輸入，或「上傳 CSV」匯入</td></tr>`;
+    h+=`<tr><td class="lft" colspan="${ro?15:16}" style="text-align:center;color:var(--tx3);padding:14px">尚無資料——按「＋ 新增列」手動輸入，或「上傳 CSV」匯入</td></tr>`;
   }
   // 依分類分組（保留出現順序）
   const cats=[],map={};
@@ -3524,15 +3524,14 @@ function renderSalesTable(){
       (r.months||[]).forEach((v,i)=>colTotals[i]+=(+v||0));
       h+=`<tr style="background:${tint[ci%2]}">`
         +`<td class="lft"><input value="${(r.cat||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="salesEdit(${idx},'cat',this.value)" placeholder="分類"></td>`
-        +`<td class="lft"><input value="${(r.item||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="salesEdit(${idx},'item',this.value)" placeholder="項目"></td>`
-        +`<td><input value="${(r.unit||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="salesEdit(${idx},'unit',this.value)" placeholder="單位" style="width:44px;text-align:center"></td>`
+        +`<td class="lft"><input value="${(r.item||'').replace(/"/g,'&quot;')}" ${ro?'readonly':''} onchange="salesEdit(${idx},'item',this.value)" placeholder="項目" style="min-width:130px"></td>`
         +(r.months||Array(12).fill(0)).map((v,i)=>`<td class="mcell"><input inputmode="numeric" value="${v?salesFmt(v):''}" ${ro?'readonly':''} onchange="salesEditMonth(${idx},${i},this.value)" placeholder="0"></td>`).join('')
         +`<td style="font-weight:600">${salesFmt(rt)}</td>`
         +(ro?'':`<td class="delx" onclick="salesDelRow(${idx})" title="刪除">✕</td>`)
         +`</tr>`;
     });
   });
-  h+='</tbody><tfoot><tr><td class="lft">合計(全部)</td><td></td><td></td>'+colTotals.map(v=>`<td>${salesFmt(v)}</td>`).join('')+`<td>${salesFmt(colTotals.reduce((a,b)=>a+b,0))}</td>`+(ro?'':'<td></td>')+'</tr></tfoot>';
+  h+='</tbody><tfoot><tr><td class="lft">合計(全部)</td><td></td>'+colTotals.map(v=>`<td>${salesFmt(v)}</td>`).join('')+`<td>${salesFmt(colTotals.reduce((a,b)=>a+b,0))}</td>`+(ro?'':'<td></td>')+'</tr></tfoot>';
   t.innerHTML=h;
   // KPI
   const revTotal=SALES_ROWS.filter(r=>r.cat==='營業額'&&/總/.test(r.item)).reduce((a,r)=>a+salesRowTotal(r),0);
