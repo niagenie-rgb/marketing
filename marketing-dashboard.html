@@ -1368,6 +1368,7 @@ window.handleAdUpload=async function(e){
         const ok=await dbUpsert('ad_data',{year:CY,month:CM,platform:AP,data:{rows,findings:result.findings,_dailyTotal:result._dailyTotal,_fn:f.name}});
         if(ok){setSyncStatus('ok','雲端已連線 ☁️');setUploadState(areaId,'ok',`✓ ${rows.length} 筆廣告`);showStatus(`✓ 載入成功：${rows.length} 筆廣告`);}
         else{setSyncStatus('err','儲存失敗');setUploadState(areaId,'err','❌ 儲存失敗');showStatus('❌ 儲存失敗',4000);}
+        AD_METRIC_ALL_DATA=null;delete CACHE[`ad_${CY}_${CM}_${AP}`];
         renderAd();
         return;
       } else {
@@ -1383,6 +1384,7 @@ window.handleAdUpload=async function(e){
       const ok=await dbUpsert('ad_data',{year:CY,month:CM,platform:AP,data:{rows,_fn:f.name}});
       if(ok){setSyncStatus('ok','雲端已連線 ☁️');setUploadState(areaId,'ok',`✓ ${rows.length} 筆廣告`);showStatus(`✓ 載入成功：${rows.length} 筆廣告`);}
       else{setSyncStatus('err','儲存失敗');setUploadState(areaId,'err','❌ 儲存失敗');showStatus('❌ 儲存失敗',4000);}
+      AD_METRIC_ALL_DATA=null;delete CACHE[`ad_${CY}_${CM}_${AP}`];
       renderAd();
     }catch(err){
       setSyncStatus('err','錯誤');
