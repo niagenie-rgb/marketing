@@ -534,6 +534,8 @@ body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;ba
     <button class="rbtn" onclick="document.getElementById('sales-file').click()" style="font-size:13px">📤 上傳 CSV</button>
     <input type="file" id="sales-file" accept=".csv" style="display:none" onchange="salesUploadCsv(event)">
     <span id="sales-save-status" style="font-size:12px;color:var(--tx3);min-width:64px;text-align:right"></span>
+    <span style="font-size:12px;color:var(--tx3)">重點月</span>
+    <select id="ai-focus-month" class="rbtn" style="font-size:13px;padding:5px 8px"></select>
     <button class="btn-p" onclick="exportAiPackage()" style="padding:6px 14px;font-size:13px">🤖 匯出 AI 分析包</button>
   </div>
   <div id="sales-kpis" class="bg-kpis"></div>
@@ -1779,7 +1781,8 @@ function parseMeta(wb){
   const iCampaign=col('行銷活動名稱');
   const iAdset=col('廣告組合名稱');
   const iSp=findCol([h=>h.includes('花費金額'),h=>h==='花費']);
-  const iRoas=findCol([h=>h.includes('成果 ROAS'),h=>h.includes('購買 ROAS')]);
+  // ROAS：優先「成果 ROAS」，其次「購買 ROAS」，最後任何含 ROAS 者（比對容忍空格/括號差異）
+  const iRoas=findCol([h=>/成果.*ROAS/i.test(h),h=>/購買.*ROAS/i.test(h),h=>/ROAS/i.test(h)]);
   const iClicks=hdrs.findIndex(h=>h==='連結點擊次數');
   const iImp=hdrs.findIndex(h=>h==='曝光次數');
   // CPC：優先「單次點擊成本」，其次「CPC（全部）」
@@ -3502,6 +3505,10 @@ async function renderSalesTab(){
     SALES_ROWS=(rec&&rec.data&&Array.isArray(rec.data.rows))?rec.data.rows:[];
     SALES_LOADED_YEAR=SALES_YEAR;
   }
+  // 重點月份下拉（預設最新有資料的月）
+  const fm=document.getElementById('ai-focus-month');
+  if(fm&&!fm.options.length){MZ.forEach((l,i)=>{const o=document.createElement('option');o.value=i;o.textContent=l;fm.appendChild(o);});
+    let last=0;SALES_ROWS.forEach(r=>(r.months||[]).forEach((v,i)=>{if(+v>0&&i>last)last=i;}));fm.value=last;}
   renderSalesTable();
 }
 
@@ -3634,54 +3641,56 @@ async function salesSave(){
 document.getElementById('salesPrevYear').onclick=()=>{SALES_YEAR--;SALES_LOADED_YEAR=null;renderSalesTab();};
 document.getElementById('salesNextYear').onclick=()=>{SALES_YEAR++;SALES_LOADED_YEAR=null;renderSalesTab();};
 
-// ── 匯出 AI 分析包（行銷＋業績 → JSON＋摘要，下載）──
+// ── 匯出 AI 分析包（重點月詳細 ＋ 其他月摘要）──
+function adFullSum(rows){
+  const s=ovSumRows(rows);let cart=0,co=0,store=0;
+  (rows||[]).forEach(r=>{cart+=+r.cart||0;co+=+r.checkout||0;store+=+r.store||0;});
+  return {spend:Math.round(s.spend),roas:+s.roas.toFixed(2),cpc:+s.cpc.toFixed(2),ctr:+(s.ctr*100).toFixed(2),cart:Math.round(cart),checkout:Math.round(co),store:Math.round(store)};
+}
 async function exportAiPackage(){
   showStatus('彙整資料中…',8000);
   const year=SALES_YEAR;
-  // 行銷：各平台各月
+  const fmi=+(document.getElementById('ai-focus-month')?.value||new Date().getMonth());  // 0-based
   const adAll=await dbGetAll('ad_data',year);
-  const ads={meta:[],criteo:[],google:[]};
-  (adAll||[]).forEach(rec=>{
-    if(!ads[rec.platform])return;
-    const s=ovSumRows(rec?.data?.rows);
-    ads[rec.platform].push({month:rec.month+1,spend:Math.round(s.spend),roas:+s.roas.toFixed(2),cpc:+s.cpc.toFixed(2),ctr:+(s.ctr*100).toFixed(2)});
-  });
-  // GA4：各月
   const gaAll=await dbGetAll('ga4_data',year);
-  const ga4=(gaAll||[]).map(rec=>{
-    const d=rec.data||{};
-    return {month:rec.month+1,users:d.users||d.activeUsers||null,newUsers:d.newUsers||null,events:d.events||d.eventCount||null};
-  });
-  // 業績
   const salesRec=await dbGet('sales',year,0);
   const salesRows=(salesRec&&salesRec.data&&salesRec.data.rows)||SALES_ROWS;
-  // 預算
   const budRec=await dbGet('budget',year,0);
-  const budget=(budRec&&budRec.data)?{items:(budRec.data.items||[]).map(it=>({cat:it.cat,content:it.content,annual:(+it.annual||0)+(+it.adjust||0)})),targetRevenue:budRec.data.targetRevenue||0,currentRevenue:budRec.data.currentRevenue||0}:null;
+  const budget=(budRec&&budRec.data)?{items:(budRec.data.items||[]).map(it=>({cat:it.cat,content:it.content,可用預算:(+it.annual||0)+(+it.adjust||0)})),業績目標:budRec.data.targetRevenue||0,目前業績:budRec.data.currentRevenue||0}:null;
+
+  // 重點月詳細
+  const platRec=p=>(adAll||[]).find(r=>r.platform===p&&r.month===fmi);
+  const focusAds={};['meta','criteo','google'].forEach(p=>{const rec=platRec(p);if(rec)focusAds[p]=adFullSum(rec.data?.rows);});
+  const gaRec=(gaAll||[]).find(r=>r.month===fmi);
+  const focusGa4=gaRec?gaRec.data:null;
+  const focusSales={};salesRows.forEach(r=>{const v=+(r.months||[])[fmi]||0;if(v){(focusSales[r.cat]=focusSales[r.cat]||{})[r.item]=v;}});
+
+  // 其他月摘要（逐月總計）
+  const monthly=[];
+  for(let m=0;m<12;m++){
+    let spend=0;['meta','criteo','google'].forEach(p=>{const rec=(adAll||[]).find(r=>r.platform===p&&r.month===m);if(rec)spend+=ovSumRows(rec.data?.rows).spend;});
+    let rev=0,qtyE=0,qtyL=0,qtyF=0;
+    salesRows.forEach(r=>{const v=+(r.months||[])[m]||0;if(r.cat==='營業額'&&/總/.test(r.item))rev+=v;if(r.cat==='電動床')qtyE+=v;if(r.cat==='乳膠床')qtyL+=v;if(r.cat==='折疊床')qtyF+=v;});
+    if(spend||rev||qtyE||qtyL||qtyF)monthly.push({月:m+1,廣告花費:Math.round(spend),總營收:rev,電動床:qtyE,乳膠床:qtyL,折疊床:qtyF,行銷費用率:rev>0?+(spend/rev*100).toFixed(1):null});
+  }
 
   const pkg={
-    brand:BRAND_NAME||BRAND,year,generatedAt:new Date().toISOString(),
-    marketing:{ads,ga4,budget},
-    sales:{rows:salesRows}
+    品牌:BRAND_NAME||BRAND, 年度:year, 重點月份:fmi+1, 產生時間:new Date().toISOString(),
+    重點月詳細:{月份:fmi+1, 廣告:focusAds, GA4流量:focusGa4, 業績銷量:focusSales, 年度預算:budget},
+    其他月摘要:monthly
   };
 
-  // 文字摘要
-  const totalSpend=Object.values(ads).flat().reduce((a,r)=>a+r.spend,0);
-  const revTotal=salesRows.filter(r=>r.cat==='營業額'&&/總/.test(r.item)).reduce((a,r)=>a+(r.months||[]).reduce((x,y)=>x+(+y||0),0),0);
-  let summary=`# ${pkg.brand} ${year} 行銷×業績分析包\n\n`;
-  summary+=`- 廣告總花費：$${totalSpend.toLocaleString()}\n`;
-  summary+=`- 年度總營收：$${revTotal.toLocaleString()}\n`;
-  if(revTotal>0)summary+=`- 行銷費用率（廣告花費 ÷ 營收）：${(totalSpend/revTotal*100).toFixed(1)}%\n`;
-  summary+=`\n## 銷量分類合計\n`;
-  ['電動床','乳膠床','折疊床'].forEach(c=>{const q=salesRows.filter(r=>r.cat===c).reduce((a,r)=>a+(r.months||[]).reduce((x,y)=>x+(+y||0),0),0);if(q)summary+=`- ${c}：${q.toLocaleString()}\n`;});
-  summary+=`\n## 建議給 AI 的分析方向\n請比對各月「廣告花費/流量」與「營收/銷量」的關聯，找出投報率最高的月份與品項，並針對下一季預算配置提出建議。\n\n---\n以下 JSON 為完整資料：\n`;
+  const fm=monthly.find(x=>x.月===fmi+1)||{};
+  let summary=`# ${pkg.品牌} ${year} 年 ${fmi+1} 月 行銷×業績分析包\n\n`;
+  summary+=`## 重點月（${fmi+1}月）速覽\n`;
+  summary+=`- 廣告總花費：$${(fm.廣告花費||0).toLocaleString()}\n- 總營收：$${(fm.總營收||0).toLocaleString()}\n`;
+  if(fm.行銷費用率!=null)summary+=`- 行銷費用率：${fm.行銷費用率}%\n`;
+  summary+=`- 銷量：電動床 ${fm.電動床||0}、乳膠床 ${fm.乳膠床||0}、折疊床 ${fm.折疊床||0}\n`;
+  summary+=`\n## 想請 AI 做的事\n請以 ${fmi+1} 月為主，分析整體行銷與業績狀況：各平台廣告投報、流量與轉換、當月各品項/檔期表現，並對照「其他月摘要」看趨勢，最後產出一份「現況分析＋具體建議（含下月預算配置方向）」報告。\n\n---\n完整資料 JSON：\n`;
 
   const blob=new Blob([summary+'\n```json\n'+JSON.stringify(pkg,null,2)+'\n```\n'],{type:'text/markdown;charset=utf-8'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`${pkg.brand}_${year}_AI分析包.md`;
-  document.body.appendChild(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${pkg.品牌}_${year}_${fmi+1}月_AI分析包.md`;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
   showStatus('✓ 已下載 AI 分析包');
 }
 
