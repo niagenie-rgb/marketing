@@ -3669,13 +3669,18 @@ async function exportAiPackage(){
   const focusGa4=gaRec?gaRec.data:null;
   const focusSales={};salesRows.forEach(r=>{const v=+(r.months||[])[fmi]||0;if(v){(focusSales[r.cat]=focusSales[r.cat]||{})[r.item]=v;}});
 
-  // 其他月摘要（逐月總計）
+  // 其他月摘要（逐月：行銷投入 → 業績產出）
   const monthly=[];
   for(let m=0;m<12;m++){
-    let spend=0;['meta','criteo','google'].forEach(p=>{const rec=(adAll||[]).find(r=>r.platform===p&&r.month===m);if(rec)spend+=ovSumRows(rec.data?.rows).spend;});
+    let spend=0,store=0,cart=0,co=0;const platStore={};
+    ['meta','criteo','google'].forEach(p=>{
+      const rec=(adAll||[]).find(r=>r.platform===p&&r.month===m);
+      if(rec){const rows=rec.data?.rows||[];spend+=ovSumRows(rows).spend;let s=0;rows.forEach(r=>{s+=+r.store||0;cart+=+r.cart||0;co+=+r.checkout||0;});store+=s;platStore[p]=Math.round(s);}
+    });
+    const ga=(gaAll||[]).find(r=>r.month===m);const users=ga&&ga.data?(ga.data.users||ga.data.activeUsers||0):0;
     let rev=0,qtyE=0,qtyL=0,qtyF=0;
     salesRows.forEach(r=>{const v=+(r.months||[])[m]||0;if(r.cat==='營業額'&&/總/.test(r.item))rev+=v;if(r.cat==='電動床')qtyE+=v;if(r.cat==='乳膠床')qtyL+=v;if(r.cat==='折疊床')qtyF+=v;});
-    if(spend||rev||qtyE||qtyL||qtyF)monthly.push({月:m+1,廣告花費:Math.round(spend),總營收:rev,電動床:qtyE,乳膠床:qtyL,折疊床:qtyF,行銷費用率:rev>0?+(spend/rev*100).toFixed(1):null});
+    if(spend||rev||store||qtyE||qtyL||qtyF||users)monthly.push({月:m+1,廣告花費:Math.round(spend),門市資訊:Math.round(store),各平台門市:platStore,加購物車:Math.round(cart),開始結帳:Math.round(co),網站使用者:users,總營收:rev,電動床:qtyE,乳膠床:qtyL,折疊床:qtyF,每筆門市成本:store>0?Math.round(spend/store):null,行銷費用率:rev>0?+(spend/rev*100).toFixed(1):null});
   }
 
   const pkg={
@@ -3685,12 +3690,15 @@ async function exportAiPackage(){
   };
 
   const fm=monthly.find(x=>x.月===fmi+1)||{};
-  let summary=`# ${pkg.品牌} ${year} 年 ${fmi+1} 月 行銷×業績分析包\n\n`;
+  let summary=`# ${pkg.品牌} ${year} 年 ${fmi+1} 月 行銷帶動業績 分析包\n\n`;
   summary+=`## 重點月（${fmi+1}月）速覽\n`;
-  summary+=`- 廣告總花費：$${(fm.廣告花費||0).toLocaleString()}\n- 總營收：$${(fm.總營收||0).toLocaleString()}\n`;
-  if(fm.行銷費用率!=null)summary+=`- 行銷費用率：${fm.行銷費用率}%\n`;
+  summary+=`- 廣告總花費：$${(fm.廣告花費||0).toLocaleString()}\n`;
+  summary+=`- 門市資訊（廣告帶來的到店互動）：${(fm.門市資訊||0).toLocaleString()}\n`;
+  if(fm.每筆門市成本)summary+=`- 每筆門市互動成本：$${fm.每筆門市成本.toLocaleString()}\n`;
+  summary+=`- 網站使用者：${(fm.網站使用者||0).toLocaleString()}\n`;
+  summary+=`- 總營收：$${(fm.總營收||0).toLocaleString()}\n`;
   summary+=`- 銷量：電動床 ${fm.電動床||0}、乳膠床 ${fm.乳膠床||0}、折疊床 ${fm.折疊床||0}\n`;
-  summary+=`\n## 想請 AI 做的事\n請以 ${fmi+1} 月為主，分析整體行銷與業績狀況：各平台廣告投報、流量與轉換、當月各品項/檔期表現，並對照「其他月摘要」看趨勢，最後產出一份「現況分析＋具體建議（含下月預算配置方向）」報告。\n\n---\n完整資料 JSON：\n`;
+  summary+=`\n## 想請 AI 做的事\n這是一份「行銷帶業績」的報告：請以行銷投入（廣告花費、網站流量、門市資訊到店互動）如何**驅動業績結果**（營收、各品項銷量）為主軸來分析——本品牌為實體門市生意，請以**「門市資訊」為主要成效指標（不要用購買 ROAS）**。以 ${fmi+1} 月為重點、對照「其他月摘要」的逐月趨勢，找出行銷投入與到店、業績之間的關聯與投報，最後產出「行銷如何帶動業績的現況分析＋下一步操作與預算配置建議」。\n\n---\n完整資料 JSON：\n`;
 
   const blob=new Blob([summary+'\n```json\n'+JSON.stringify(pkg,null,2)+'\n```\n'],{type:'text/markdown;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${pkg.品牌}_${year}_${fmi+1}月_AI分析包.md`;
