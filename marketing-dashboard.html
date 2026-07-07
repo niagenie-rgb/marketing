@@ -1801,9 +1801,11 @@ function parseMeta(wb){
   console.log('[parseMeta] hdrs:', hdrs);
 
   const map={};
+  let lastCampaign='';
   for(let i=hIdx+1;i<arr.length;i++){
     const r=arr[i];
-    const campaign=String(r[iCampaign]||'').trim();
+    let campaign=String(r[iCampaign]||'').trim();
+    if(campaign)lastCampaign=campaign;else campaign=lastCampaign;  // 合併儲存格：活動名稱往下補齊
     const adset=String(r[iAdset]||'').trim();
     if(!campaign)continue;
     const spend=parseFloat(r[iSp])||0;
