@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>迪奧斯代言人｜主管最終評選</title>
+<style>
+  :root{--navy:#1c2f4e;--navy2:#26406a;--gold:#c9a15a;--gold-lt:#e4c88a;
+    --ink:#26303f;--muted:#6b7a90;--line:#e2e7ef;--heart:#e0526b;--card:#fff}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    background:linear-gradient(160deg,#f4f6fa,#e7ecf4);color:var(--ink);min-height:100vh}
+  header{background:linear-gradient(120deg,var(--navy),var(--navy2));color:#fff;padding:22px 16px;text-align:center}
+  header .logo{font-size:22px;font-weight:800;letter-spacing:2px}
+  header .logo b{color:var(--gold-lt)}
+  header small{display:block;font-size:12px;letter-spacing:3px;color:#c6d2e6;margin-top:4px}
+  .wrap{max-width:1000px;margin:0 auto;padding:20px 16px 60px}
+  .nav{display:flex;gap:10px;justify-content:center;margin:6px 0 16px;flex-wrap:wrap}
+  .nav a{text-decoration:none;font-size:13px;font-weight:700;padding:8px 18px;border-radius:22px;
+    border:1px solid var(--line);color:var(--navy);background:#fff}
+  .nav a.on{background:linear-gradient(120deg,var(--gold),var(--gold-lt));color:#3a2c07;border-color:transparent}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:20px;
+    box-shadow:0 4px 16px rgba(28,47,78,.06)}
+  .panel h2{font-size:18px;color:var(--navy);margin-bottom:4px}
+  .panel .sub{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6}
+  .btn{border:none;border-radius:24px;padding:11px 24px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
+  .btn-primary{background:linear-gradient(120deg,var(--gold),var(--gold-lt));color:#3a2c07;box-shadow:0 6px 18px rgba(201,161,90,.3)}
+  .btn-primary:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+  .btn-ghost{background:#fff;color:var(--navy);border:1px solid var(--line);font-size:13px;padding:9px 18px}
+
+  /* 分析摘要卡 */
+  .anacard{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:#f9fbfe}
+  .anahd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;flex-wrap:wrap;gap:6px}
+  .ana-nm{font-weight:800;color:var(--navy);font-size:16px}
+  .ana-nm .fee{font-size:12px;color:var(--muted);font-weight:500;margin-left:6px}
+  .ana-w2{font-size:12px;color:var(--muted)} .ana-w2 b{color:var(--navy);font-size:15px}
+  .dims{display:flex;gap:8px;flex-wrap:wrap}
+  .dim{flex:1;min-width:110px}
+  .dim .dl{font-size:11px;color:var(--muted);display:flex;justify-content:space-between}
+  .dim .dl b{color:var(--navy)}
+  .dim .bar{height:7px;background:#e7edf5;border-radius:6px;overflow:hidden;margin-top:3px}
+  .dim .bar i{display:block;height:100%;border-radius:6px}
+  .risknote{margin-top:8px;font-size:12px;color:#6b7a90}
+  .risknote .lv{font-weight:700;padding:1px 8px;border-radius:10px;color:#fff;margin-right:6px}
+  .pop{font-size:12px;color:var(--muted);margin-top:4px}
+
+  /* 主管投票 */
+  .voter{display:flex;flex-direction:column;gap:10px}
+  .mname{border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:15px;font-family:inherit;width:100%}
+  .mname:focus{outline:none;border-color:var(--gold)}
+  .remain{text-align:center;font-size:15px;font-weight:700;color:var(--navy);margin:4px 0}
+  .remain b{color:var(--heart);font-size:22px}
+  .prow{display:flex;align-items:center;gap:12px;background:#f7f9fc;border-radius:12px;padding:10px 14px}
+  .prow .pn{flex:1;font-weight:700;color:var(--navy)}
+  .prow .pn small{color:var(--muted);font-weight:500}
+  .stepper{display:flex;align-items:center;gap:12px}
+  .stepper button{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#fff;
+    font-size:20px;font-weight:800;cursor:pointer;color:var(--navy);line-height:1}
+  .stepper button:disabled{opacity:.35;cursor:not-allowed}
+  .stepper .pv{width:26px;text-align:center;font-size:19px;font-weight:800;color:var(--heart)}
+  .done-msg{margin-top:12px;padding:12px;background:#eef7ee;border:1px solid #cfe6cf;border-radius:12px;
+    color:#3a7a3a;text-align:center;font-size:14px;display:none}
+
+  /* 最終排名 */
+  .frow{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;margin-bottom:12px;
+    background:#f7f9fc;border:1px solid var(--line)}
+  .frow.top{background:linear-gradient(120deg,#fbf3e0,#fdf8ee);border-color:var(--gold)}
+  .frow .rk{font-size:22px;font-weight:800;color:var(--gold);width:34px;text-align:center}
+  .frow .info{flex:1;min-width:0}
+  .frow .nm{font-weight:800;color:var(--navy);font-size:17px}
+  .comp{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .comp .c{flex:1;min-width:120px}
+  .comp .cl{font-size:11px;color:var(--muted);display:flex;justify-content:space-between}
+  .comp .cl b{color:var(--navy)}
+  .comp .cbar{height:8px;background:#e7edf5;border-radius:6px;overflow:hidden;margin-top:3px}
+  .comp .cbar i{display:block;height:100%;border-radius:6px}
+  .frow .tot{text-align:center;flex-shrink:0;width:80px}
+  .frow .tot .tv{font-size:28px;font-weight:800;color:var(--navy);line-height:1}
+  .frow .tot .tl{font-size:10px;color:var(--muted)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .note{background:#fff8ec;border:1px solid var(--gold);border-radius:12px;padding:14px;font-size:12.5px;color:#7a5a1a;line-height:1.8}
+  .note code{background:#fff;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+  .updated{font-size:12px;color:var(--muted);text-align:center;margin-top:4px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><b>✦ Dios</b> 迪奧斯</div>
+  <small>代言人 · 主管最終評選</small>
+</header>
+<div class="wrap">
+  <div class="nav">
+    <a href="dashboard.html">第一波人氣</a>
+    <a href="wave2.html">第二波深入評比</a>
+    <a href="#" class="on">主管最終評選</a>
+  </div>
+  <div id="app"><div class="panel"><div class="sub">載入中…</div></div></div>
+</div>
+
+<script>
+/* ====== Supabase 設定（與其他頁相同） ====== */
+const SUPABASE_URL="https://yrroqndpcgaqvgxeydgn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlycm9xbmRwY2dhcXZneGV5ZGduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1MTE0NjYsImV4cCI6MjA5MzA4NzQ2Nn0.4Zw2GWnuzbusCWrplOJSbV1_Nqp7KR_GWwQ-Ed0CDxE";
+
+/* ====== 分析設定（與 wave2 保持一致；如有調整請同步） ====== */
+const CAND=[
+  {name:"邰智源", fb:67, ig:51.6, threads:20,  yt:228,  fee:220},
+  {name:"羅時豐", fb:20, ig:6,    threads:2.7, yt:34.5, fee:250},
+  {name:"謝震武", fb:0,  ig:0,    threads:0,   yt:46.6, fee:350},
+  {name:"陳隨意", fb:31, ig:1.9,  threads:1.2, yt:10.6, fee:120}
+];
+const SUBJ={ 產品力:{邰智源:8,羅時豐:8,謝震武:9,陳隨意:6}, 促購力:{邰智源:8,羅時豐:8,謝震武:9,陳隨意:7} };
+const RISK={ 邰智源:{safety:85,level:"低風險"}, 羅時豐:{safety:65,level:"中風險"},
+             謝震武:{safety:70,level:"中風險"}, 陳隨意:{safety:75,level:"低~中風險"} };
+const W2_WEIGHTS={社群力:20,產品力:20,促購力:20,CP值:20,形象安全:20};
+
+/* ====== 完整評分權重（人氣 + 深入評比 + 主管分數；可調整） ====== */
+const FINAL_WEIGHTS={ 人氣:20, 深入評比:40, 主管分數:40 };
+const MGR_POINTS=3;   // 每位主管可分配的分數
+
+const NAMES=CAND.map(c=>c.name);
+const DIMS=["社群力","產品力","促購力","CP值","形象安全"];
+const DIMC={社群力:"#4f7cc4",產品力:"#59b39b",促購力:"#e08a5b",CP值:"#c9a15a",形象安全:"#b5577d"};
+const FC={人氣:"#e0526b",深入評比:"#4f7cc4",主管分數:"#c9a15a"};
+const app=document.getElementById("app");
+let votes=[], mgrVotes=[], myPoints={}, submitted=false;
+NAMES.forEach(n=>myPoints[n]=0);
+
+function w2(){
+  const rows=CAND.map(c=>({name:c.name,fee:c.fee,social:c.fb+c.ig+c.threads}));
+  const maxS=Math.max(...rows.map(r=>r.social),1);
+  rows.forEach(r=>{ r.社群力=Math.round(r.social/maxS*100);
+    r.產品力=(SUBJ.產品力[r.name]||0)*10; r.促購力=(SUBJ.促購力[r.name]||0)*10;
+    r.base=(r.社群力+r.產品力+r.促購力)/3; r.cpRaw=r.base/r.fee; });
+  const maxCp=Math.max(...rows.map(r=>r.cpRaw),1e-9);
+  const ws=DIMS.reduce((s,d)=>s+(W2_WEIGHTS[d]||0),0)||1;
+  rows.forEach(r=>{ r.CP值=Math.round(r.cpRaw/maxCp*100); r.形象安全=(RISK[r.name]&&RISK[r.name].safety)||0;
+    r.w2total=Math.round(DIMS.reduce((s,d)=>s+r[d]*(W2_WEIGHTS[d]||0),0)/ws); });
+  const map={}; rows.forEach(r=>map[r.name]=r); return map;
+}
+function popCounts(){ const o={}; NAMES.forEach(n=>o[n]=0);
+  votes.forEach(v=>{ if(v.winner&&o[v.winner]!==undefined)o[v.winner]++; }); return o; }
+function mgrCounts(){ const o={}; NAMES.forEach(n=>o[n]=0);
+  mgrVotes.forEach(v=>{ const p=v.points||{}; NAMES.forEach(n=>{ if(p[n])o[n]+=Number(p[n]); }); }); return o; }
+function norm(o){ const mx=Math.max(...Object.values(o),0); const r={};
+  NAMES.forEach(n=>r[n]=mx>0?Math.round(o[n]/mx*100):0); return r; }
+
+async function load(){
+  try{
+    const [a,b]=await Promise.all([
+      fetch(SUPABASE_URL+"/rest/v1/votes?select=winner",{headers:hdr()}),
+      fetch(SUPABASE_URL+"/rest/v1/manager_votes?select=points,manager,created_at&order=created_at.desc",{headers:hdr()})
+    ]);
+    votes = a.ok? await a.json():[];
+    if(b.ok){ mgrVotes=await b.json(); } else { mgrVotes=[]; window.__mgrErr=b.status; }
+  }catch(e){ window.__loadErr=e.message; }
+  render();
+}
+function hdr(){ return {"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY}; }
+
+function adjust(name,d){
+  const sum=NAMES.reduce((s,n)=>s+myPoints[n],0);
+  if(d>0 && sum>=MGR_POINTS) return;
+  if(d<0 && myPoints[name]<=0) return;
+  myPoints[name]+=d; render();
+}
+async function submitMgr(){
+  const sum=NAMES.reduce((s,n)=>s+myPoints[n],0);
+  if(sum!==MGR_POINTS) return;
+  const mgr=(document.getElementById("mname")||{}).value||"";
+  try{
+    await fetch(SUPABASE_URL+"/rest/v1/manager_votes",{method:"POST",
+      headers:{...hdr(),"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({manager:mgr.trim(),points:{...myPoints}})});
+    submitted=true;
+    await load();
+  }catch(e){ alert("送出失敗："+e.message); }
+}
+
+function render(){
+  const W=w2();
+  const pop=popCounts(), popN=norm(pop);
+  const mgr=mgrCounts(), mgrN=norm(mgr);
+  const fw=FINAL_WEIGHTS, fwsum=(fw.人氣+fw.深入評比+fw.主管分數)||1;
+  const final=NAMES.map(n=>{
+    const comp={人氣:popN[n], 深入評比:W[n].w2total, 主管分數:mgrN[n]};
+    const total=Math.round((comp.人氣*fw.人氣+comp.深入評比*fw.深入評比+comp.主管分數*fw.主管分數)/fwsum);
+    return {name:n, fee:W[n].fee, comp, total, w2:W[n], pop:pop[n], mgrPts:mgr[n]};
+  }).sort((a,b)=>b.total-a.total);
+  const sum=NAMES.reduce((s,n)=>s+myPoints[n],0), remain=MGR_POINTS-sum;
+  const mgrCount=mgrVotes.length;
+  const mgrMissing=window.__mgrErr;
+
+  app.innerHTML=`
+   <div class="panel">
+     <h2>🏁 完整評分・最終排名</h2>
+     <div class="sub">綜合＝人氣 ${fw.人氣}%＋深入評比 ${fw.深入評比}%＋主管分數 ${fw.主管分數}%（各項皆換算 0–100）。已收 ${mgrCount} 位主管評分、${votes.length} 份人氣投票。</div>
+     ${final.map((r,i)=>`
+       <div class="frow ${i===0?'top':''}">
+         <div class="rk">${i===0?'👑':'#'+(i+1)}</div>
+         <div class="info">
+           <div class="nm">${r.name} <span style="font-size:12px;color:#6b7a90;font-weight:500">代言費 ${r.fee}萬</span></div>
+           <div class="comp">
+             ${["人氣","深入評比","主管分數"].map(k=>`<div class="c">
+               <div class="cl"><span>${k}</span><b>${r.comp[k]}</b></div>
+               <div class="cbar"><i style="width:${r.comp[k]}%;background:${FC[k]}"></i></div></div>`).join("")}
+           </div>
+         </div>
+         <div class="tot"><div class="tv">${r.total}</div><div class="tl">完整評分</div></div>
+       </div>`).join("")}
+     <div class="legend">${["人氣","深入評比","主管分數"].map(k=>`<span><i style="background:${FC[k]}"></i>${k}</span>`).join("")}</div>
+     <div class="updated">更新於 ${new Date().toLocaleString("zh-TW")} · <a href="#" onclick="load();return false;">重新整理</a></div>
+   </div>
+
+   <div class="panel">
+     <h2>🗳️ 主管評分（一人 ${MGR_POINTS} 分）</h2>
+     <div class="sub">看完下方分析後，把你的 ${MGR_POINTS} 分分配給候選人——可全押一人，也可分散。送出後即計入上方完整評分。</div>
+     ${submitted?`<div class="done-msg" style="display:block">✅ 已收到你的評分，感謝參與！目前共 ${mgrCount} 位主管完成評分。</div>
+       <div style="text-align:center;margin-top:12px"><button class="btn-ghost" onclick="resetVote()">再投一位主管 ↺</button></div>`:
+     `<div class="voter">
+       <input class="mname" id="mname" placeholder="你的名字／職稱（可留白）">
+       <div class="remain">剩餘可分配：<b>${remain}</b> / ${MGR_POINTS} 分</div>
+       ${NAMES.map(n=>`<div class="prow">
+         <div class="pn">${n} <small>（代言費 ${CAND.find(c=>c.name===n).fee}萬）</small></div>
+         <div class="stepper">
+           <button onclick="adjust('${n}',-1)" ${myPoints[n]<=0?'disabled':''}>−</button>
+           <span class="pv">${myPoints[n]}</span>
+           <button onclick="adjust('${n}',1)" ${remain<=0?'disabled':''}>＋</button>
+         </div></div>`).join("")}
+       <button class="btn btn-primary" style="margin-top:8px" ${remain!==0?'disabled':''} onclick="submitMgr()">
+         ${remain===0?'送出我的評分':'請把 '+MGR_POINTS+' 分分配完'}</button>
+     </div>`}
+     ${mgrMissing?`<div class="note" style="margin-top:14px"><b>尚未建立主管投票資料表。</b>
+       請到 Supabase SQL Editor 執行建立 <code>manager_votes</code> 的 SQL（見我提供的說明），再重整本頁。</div>`:''}
+   </div>
+
+   <div class="panel">
+     <h2>📋 候選人分析摘要（評分參考）</h2>
+     <div class="sub">第二波五構面（社群力／產品力／促購力／CP值／形象安全，各滿分100）＋第一波人氣票數。</div>
+     ${NAMES.map(n=>{const r=W[n];const R=RISK[n]||{};
+       const col=(R.safety>=80)?"#3a7a3a":(R.safety>=66)?"#c9971f":"#d97a3a";
+       return `<div class="anacard">
+         <div class="anahd"><div class="ana-nm">${n}<span class="fee">代言費 ${r.fee}萬</span></div>
+           <div class="ana-w2">深入評比總分 <b>${r.w2total}</b></div></div>
+         <div class="dims">${DIMS.map(d=>`<div class="dim">
+           <div class="dl"><span>${d}</span><b>${r[d]}</b></div>
+           <div class="bar"><i style="width:${r[d]}%;background:${DIMC[d]}"></i></div></div>`).join("")}</div>
+         <div class="risknote"><span class="lv" style="background:${col}">${R.level||"—"}</span>形象安全分 ${r.形象安全}／100</div>
+         <div class="pop">第一波人氣：獲選 ${pop[n]} 票</div>
+       </div>`;}).join("")}
+     <div class="note" style="margin-top:6px">完整的負面消息與計分依據請見 <a href="wave2.html">第二波深入評比</a> 頁。</div>
+   </div>`;
+}
+function resetVote(){ submitted=false; NAMES.forEach(n=>myPoints[n]=0); render(); }
+load();
+</script>
+</body>
+</html>
